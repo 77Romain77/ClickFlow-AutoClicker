@@ -30,9 +30,11 @@ if probe != ""
 main := Gui("+Resize +MinSize900x640", "ClickFlow - AutoClicker v0.3.3")
 main.MarginX := 0
 main.MarginY := 0
-main.OnEvent("Close", (*) => ExitApp())
+main.OnEvent("Close", CloseClickFlow)
 main.OnEvent("Size", ResizeClickFlow)
 main.Show("w1120 h800")
+if probe != ""
+    FileAppend(main.Hwnd, probe ".hwnd", "UTF-8")
 
 profileData := dataRoot "\ClickFlow\WebView2"
 DirCreate(profileData)
@@ -46,6 +48,17 @@ BackendInit(main.Hwnd, web)
 web.NavigateToString(FileRead(htmlPath, "UTF-8"))
 if probe != ""
     FileAppend("ready", probe, "UTF-8")
+
+CloseClickFlow(*) {
+    global controller, web, webEvent
+    ; Sauvegarder et desactiver le moteur AVANT la fermeture de la fenetre.
+    BackendExit()
+    try webEvent := 0
+    try web := 0
+    try controller.Close()
+    try controller := 0
+    ExitApp()
+}
 
 ResizeClickFlow(gui, state, width, height) {
     global controller
