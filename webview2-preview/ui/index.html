@@ -152,7 +152,10 @@ body.compact #page-dashboard{display:block!important}
  </section>
  <section id="page-about" class="hidden">
   <div class="hero"><div><h2>ClickFlow, autrement.</h2><p>Une nouvelle interface graphique, sans réécrire la logique des clics.</p></div></div>
-  <div class="card" style="max-width:690px"><span class="pill"><i class="dot"></i> Prototype WebView2</span><h3 style="margin:18px 0 8px">Interface HTML/CSS dans une fenêtre Windows</h3><p style="color:var(--muted)">Cette version intègre le moteur AutoHotkey et les profils existants.</p><p style="color:var(--muted)">AutoHotkey v2 gère les raccourcis, les CPS et la sauvegarde.</p><div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
+  <div class="card" style="max-width:690px"><span class="pill"><i class="dot"></i> Application Windows</span><h3 style="margin:18px 0 8px">ClickFlow, prêt à être lancé depuis Windows</h3><p style="color:var(--muted)">ClickFlow utilise AutoHotkey v2 et WebView2 pour ouvrir une fenêtre indépendante, avec sauvegarde des profils et des réglages.</p><p style="color:var(--muted)">Le fichier unique peut créer des raccourcis avec notre icône dans le menu Démarrer et sur ton bureau. Aucun exécutable ClickFlow n'est nécessaire.</p>
+     <div style="display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 8px"><button id="installShortcuts" class="btn primary">Créer / actualiser les raccourcis</button><button id="removeShortcuts" class="btn quiet">Supprimer les raccourcis</button></div>
+     <p class="subnote">Les raccourcis pointent vers une copie locale stable de ClickFlow. Les mises à jour remplacent cette copie sans supprimer les profils.</p>
+     <div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
  </section>
 </main>
 </div>
@@ -376,7 +379,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v0.3.5 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v0.3.6 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
@@ -409,6 +412,16 @@ $('demoToggle').onclick=()=>{
     $('demoToggle').textContent=model.demo?"Revenir à l'état inactif":"Simuler l'état actif";
     $('demoToggle').classList.toggle('danger',model.demo);
     $('demoToggle').classList.toggle('primary',!model.demo);
+};
+$('installShortcuts').onclick=()=>{
+    if(!connected){toast('Cette commande nécessite ClickFlow dans sa fenêtre Windows.');return;}
+    send('shortcuts','create');
+    toast('Création des raccourcis demandée à Windows.');
+};
+$('removeShortcuts').onclick=()=>{
+    if(!connected){toast('Cette commande nécessite ClickFlow dans sa fenêtre Windows.');return;}
+    send('shortcuts','remove');
+    toast('Suppression des raccourcis demandée à Windows.');
 };
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
     const page=btn.dataset.page;
