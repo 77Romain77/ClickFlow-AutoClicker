@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'webview2-ready.txt'
-          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/silent', 'webview2-preview/ClickFlow-WebView2.ahk' -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', 'webview2-preview/ClickFlow-WebView2.ahk' -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
           try {
             Start-Sleep -Seconds 8
             $p.Refresh()
