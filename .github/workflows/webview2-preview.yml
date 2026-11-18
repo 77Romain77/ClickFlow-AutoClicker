@@ -157,7 +157,9 @@ jobs:
           $err = if (Test-Path shortcuts.err) { Get-Content shortcuts.err -Raw } else { '' }
           $out = if (Test-Path shortcuts.out) { Get-Content shortcuts.out -Raw } else { '' }
           if ($p.ExitCode -ne 0 -or $err) {
-            throw "Shortcuts installer failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+            $problem = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.shortcut-error'
+            $reason = if (Test-Path $problem) { Get-Content $problem -Raw } else { '<no scripted error>' }
+            throw "Shortcuts installer failed: exit=$($p.ExitCode) stderr=$err stdout=$out reason=$reason"
           }
           $icon = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ico'
           $installed = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ahk'
