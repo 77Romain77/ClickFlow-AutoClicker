@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ClickFlow - Prototype WebView2</title>
+<title>ClickFlow - ClickFlow WebView2</title>
 <style>
 :root{color-scheme:dark;--bg:#090e1a;--side:#0e1423;--card:#131e31;--card2:#172439;--line:#283751;--white:#f2f6ff;--muted:#96a9c7;--blue:#5792ff;--blue2:#3467e9;--teal:#3ed2ad;--red:#ff6683;--radius:18px}
 *{box-sizing:border-box}html{height:100%;background:var(--bg)}body{margin:0;color:var(--white);background:var(--bg);font:14px/1.45 "Segoe UI",Inter,Arial,sans-serif;min-height:100%;overflow-x:hidden}
@@ -40,11 +40,11 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
   </nav>
  </div>
  <div class="side-spacer"></div>
- <div class="small-card"><span class="pill"><i class="dot"></i> Prototype de design</span><strong>Interface WebView2</strong><p>Ce test n'envoie aucun clic. Les modifications des profils sont temporaires.</p></div>
- <div class="side-footer">ClickFlow v0.3.0-preview · AHK v2</div>
+ <div class="small-card"><span class="pill"><i class="dot"></i> Prototype de design</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
+ <div class="side-footer">ClickFlow v0.3.2 · AHK v2</div>
 </aside>
 <main>
- <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><span class="badge">APERÇU INTERACTIF</span></div>
+ <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><span class="badge">INITIALISATION</span></div>
  <section id="page-dashboard">
   <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Essai visuel sans clics automatiques</div></div>
   <div class="dashboard">
@@ -72,15 +72,15 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
      <div class="card-head"><div><div class="card-title">Profil actif</div><div class="card-description">Un profil par utilisation.</div></div><span class="number">03 / PROFIL</span></div>
      <label class="label" for="profileSelect">Votre configuration</label><div class="profile-line"><select id="profileSelect" class="select"></select><button class="btn primary" id="newProfile" title="Créer un profil">+</button></div>
      <div class="profile-actions"><button class="btn sm" id="renameProfile">Renommer</button><button class="btn sm" id="duplicateProfile">Dupliquer</button><button class="btn sm danger" id="deleteProfile">Supprimer</button></div>
-     <div class="mutedline">Profils de démonstration : les données actuelles de ClickFlow ne sont pas modifiées.</div>
+     <div class="mutedline">Les profils chargés seront synchronisés avec AutoHotkey.</div>
     </div>
     <div class="status-box">
      <div class="status-icon" id="sessionIcon">◉</div>
      <div class="status-title" id="sessionTitle">Prêt à configurer</div>
-     <div class="status-sub" id="sessionSub">Le moteur réel est désactivé dans ce prototype.</div>
+     <div class="status-sub" id="sessionSub">Connexion au moteur AutoHotkey en cours.</div>
      <div class="stats"><div class="stat"><span>CPS réels</span><b>0</b></div><div class="stat"><span>Clics envoyés</span><b>0</b></div></div>
      <button class="btn primary full" id="demoToggle" style="margin-top:14px">Simuler l'état actif</button>
-     <div class="safe"><span class="dot"></span><span>Ce bouton ne produit aucun clic : il permet uniquement de tester l'apparence de l'état actif.</span></div>
+     <div class="safe"><span class="dot"></span><span>La touche F12 permet toujours l'arrêt d'urgence.</span></div>
     </div>
     <div class="note"><span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Un nouveau design, sans perdre le moteur.</b><br>Une fois ce rendu validé, nous reconnecterons les fonctions AutoHotkey et la sauvegarde de vos profils existants.</span></div>
    </div>
@@ -88,11 +88,11 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
  </section>
  <section id="page-profiles" class="hidden">
   <div class="hero"><div><h2>Vos profils de clics.</h2><p>Testez la création, la duplication et le changement de profil.</p></div></div>
-  <div class="card"><div class="card-head"><div class="card-title">Profils de démonstration</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Cette page est une maquette interactive. Elle n'utilise pas encore le fichier settings.ini.</div></div>
+  <div class="card"><div class="card-head"><div class="card-title">Profils de démonstration</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Les profils synchronisés seront conservés au prochain lancement.</div></div>
  </section>
  <section id="page-about" class="hidden">
   <div class="hero"><div><h2>ClickFlow, autrement.</h2><p>Une nouvelle interface graphique, sans réécrire la logique des clics.</p></div></div>
-  <div class="card" style="max-width:690px"><span class="pill"><i class="dot"></i> Prototype WebView2</span><h3 style="margin:18px 0 8px">Interface HTML/CSS dans une fenêtre Windows</h3><p style="color:var(--muted)">Cette version vérifie le design et le lancement de WebView2. Elle ne crée aucun clic et n'écrit pas dans vos profils existants.</p><p style="color:var(--muted)">AutoHotkey v2 restera responsable des raccourcis, du moteur CPS et de la sauvegarde après la validation du prototype.</p><div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
+  <div class="card" style="max-width:690px"><span class="pill"><i class="dot"></i> Prototype WebView2</span><h3 style="margin:18px 0 8px">Interface HTML/CSS dans une fenêtre Windows</h3><p style="color:var(--muted)">Cette version intègre le moteur AutoHotkey et les profils existants.</p><p style="color:var(--muted)">AutoHotkey v2 gère les raccourcis, les CPS et la sauvegarde.</p><div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
  </section>
 </main>
 </div>
@@ -104,42 +104,252 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
 'use strict';
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
-const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'left',focus:true});
-const model={profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false};
-let toastTimer=0,modalTask=null;
-const active=()=>model.profiles.find(p=>p.id===model.selected);
-const config=()=>active().settings;
-function toast(message){const e=$('toast');e.textContent=message;e.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('visible'),2600)}
-function selectedButtons(container,attr,val){document.querySelectorAll('#'+container+' [data-'+attr+']').forEach(x=>x.classList.toggle('active',x.dataset[attr]===val))}
-function setSwitch(id,enabled){$(id).classList.toggle('on',!!enabled);$(id).setAttribute('aria-pressed',String(!!enabled))}
-function clamp(v){return Math.max(1,Math.min(100,Math.round(Number(v)||1)))}
-function updateRanges(){const c=config();$('minRange').value=$('minNumber').value=c.min;$('maxRange').value=$('maxNumber').value=c.max;$('maxGroup').classList.toggle('hidden',c.mode==='fixed');$('minLabel').textContent=c.mode==='fixed'?'CPS fixe':'CPS minimum';$('intensityBlock').classList.toggle('hidden',c.mode!=='natural');}
-function render(){const c=config();selectedButtons('modeSeg','mode',c.mode);selectedButtons('intensitySeg','intensity',c.intensity);selectedButtons('activationSeg','activation',c.activation);updateRanges();$('mouseButton').value=c.mouse;$('gateButton').value=c.gateButton;$('hotkeyView').textContent=c.hotkey;setSwitch('gateSwitch',c.gate);setSwitch('focusSwitch',c.focus);$('gateChoose').style.display=c.gate?'flex':'none';renderProfiles()}
-function renderProfiles(){const sel=$('profileSelect');sel.replaceChildren();model.profiles.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.append(o)});sel.value=model.selected;const list=$('profileList');list.replaceChildren();model.profiles.forEach(p=>{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 2px;border-bottom:1px solid #2b3b54';const box=document.createElement('div');const name=document.createElement('strong');name.textContent=p.name;const small=document.createElement('div');small.className='subnote';small.textContent=(p.settings.mode==='fixed'?'Fixe':p.settings.mode==='natural'?'Naturel':'Aléatoire')+' · '+p.settings.min+(p.settings.mode==='fixed'?'':' - '+p.settings.max)+' CPS';box.append(name,small);const btn=document.createElement('button');btn.className='btn sm '+(model.selected===p.id?'primary':'quiet');btn.textContent=model.selected===p.id?'Sélectionné':'Sélectionner';btn.onclick=()=>{model.selected=p.id;render();toast('Profil '+p.name+' sélectionné')};row.append(box,btn);list.append(row)})}
-function openModal(title,description,defaultValue,confirm){$('modalTitle').textContent=title;$('modalDescription').textContent=description;$('modalInput').value=defaultValue||'';$('modalBg').classList.remove('hidden');modalTask=confirm;setTimeout(()=>$('modalInput').focus(),50)}
-function closeModal(){$('modalBg').classList.add('hidden');modalTask=null}
+const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
+const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false};
+let connected = false, toastTimer = 0, modalTask = null;
+const bridge = !!(window.chrome && window.chrome.webview);
+const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
+const config = () => active().settings;
+const send = (cmd,...args) => {
+    if (!connected || !bridge) return;
+    window.chrome.webview.postMessage([cmd,...args.map(x => String(x).replace(/[\t\r\n]/g,' '))].join('\t'));
+};
+function toast(message) {
+    const e = $('toast');
+    e.textContent = message;
+    e.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => e.classList.remove('visible'), 2500);
+}
+function selectedButtons(container,attr,val) {
+    document.querySelectorAll('#'+container+' [data-'+attr+']').forEach(x => x.classList.toggle('active', x.dataset[attr] === val));
+}
+function setSwitch(id,enabled) {
+    $(id).classList.toggle('on',!!enabled);
+    $(id).setAttribute('aria-pressed',String(!!enabled));
+}
+function clamp(v) {return Math.max(1,Math.min(100,Math.round(Number(v)||1)));}
+function updateRanges() {
+    const c=config();
+    $('minRange').value=$('minNumber').value=c.min;
+    $('maxRange').value=$('maxNumber').value=c.max;
+    $('maxGroup').classList.toggle('hidden',c.mode==='fixed');
+    $('minLabel').textContent=c.mode==='fixed'?'CPS fixe':'CPS minimum';
+    $('intensityBlock').classList.toggle('hidden',c.mode!=='natural');
+}
+function render() {
+    const c=config();
+    selectedButtons('modeSeg','mode',c.mode);
+    selectedButtons('intensitySeg','intensity',c.intensity);
+    selectedButtons('activationSeg','activation',c.activation);
+    updateRanges();
+    $('mouseButton').value=c.mouse;
+    $('gateButton').value=c.gateButton;
+    $('hotkeyView').textContent=c.hotkey;
+    setSwitch('gateSwitch',c.gate);
+    setSwitch('focusSwitch',c.focus);
+    $('gateChoose').style.display=c.gate?'flex':'none';
+    renderProfiles();
+}
+function renderProfiles() {
+    const sel=$('profileSelect');
+    sel.replaceChildren();
+    model.profiles.forEach(p => {
+        const o=document.createElement('option');
+        o.value=p.id;
+        o.textContent=p.name;
+        sel.append(o);
+    });
+    sel.value=model.selected;
+    const list=$('profileList');
+    list.replaceChildren();
+    model.profiles.forEach(p => {
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 2px;border-bottom:1px solid #2b3b54';
+        const box=document.createElement('div');
+        const name=document.createElement('strong');
+        name.textContent=p.name;
+        const small=document.createElement('div');
+        small.className='subnote';
+        small.textContent=(p.settings.mode==='fixed'?'Fixe':p.settings.mode==='natural'?'Naturel':'Aléatoire')+' · '+p.settings.min+(p.settings.mode==='fixed'?'':' - '+p.settings.max)+' CPS';
+        box.append(name,small);
+        const btn=document.createElement('button');
+        btn.className='btn sm '+(model.selected===p.id?'primary':'quiet');
+        btn.textContent=model.selected===p.id?'Sélectionné':'Sélectionner';
+        btn.onclick=()=>chooseProfile(p.id);
+        row.append(box,btn);
+        list.append(row);
+    });
+}
+function chooseProfile(id) {
+    if(connected) {
+        send('select',id);
+    } else {
+        model.selected=id;
+        render();
+        toast('Profil sélectionné');
+    }
+}
+function openModal(title,description,defaultValue,confirm) {
+    $('modalTitle').textContent=title;
+    $('modalDescription').textContent=description;
+    $('modalInput').value=defaultValue||'';
+    $('modalBg').classList.remove('hidden');
+    modalTask=confirm;
+    setTimeout(()=>$('modalInput').focus(),50);
+}
+function closeModal() {$('modalBg').classList.add('hidden'); modalTask=null;}
 $('modalCancel').onclick=closeModal;
-$('modalConfirm').onclick=()=>{const name=$('modalInput').value.trim();if(!name||name.length>36){toast('Indiquez un nom de 1 à 36 caractères.');return}if(model.profiles.some(p=>p.id!==model.selected&&p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom est déjà utilisé.');return}const fn=modalTask;closeModal();if(fn)fn(name)};
-$('modalInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('modalConfirm').click();if(e.key==='Escape')closeModal()});
-function createProfile(copyCurrent=false){const nextName=copyCurrent?active().name+' - copie':'Nouveau profil';openModal(copyCurrent?'Dupliquer le profil':'Nouveau profil','Choisissez un nom pour cette configuration.',nextName,name=>{if(model.profiles.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom existe déjà.');return}const p={id:model.nextId++,name,settings:copyCurrent?clone(config()):defaults()};model.profiles.push(p);model.selected=p.id;render();toast('Profil créé : '+name)})}
-$('newProfile').onclick=()=>createProfile();$('addProfilePage').onclick=()=>createProfile();$('duplicateProfile').onclick=()=>createProfile(true);
-$('renameProfile').onclick=()=>openModal('Renommer le profil','Modifiez le nom de votre profil.',active().name,name=>{active().name=name;render();toast('Profil renommé')});
-$('deleteProfile').onclick=()=>{if(model.profiles.length<=1){toast('Conservez au moins un profil.');return}openModal('Supprimer le profil','Saisissez SUPPRIMER pour confirmer la suppression.','',val=>{if(val.toLocaleUpperCase()!=='SUPPRIMER'){toast('Suppression annulée.');return}model.profiles=model.profiles.filter(p=>p.id!==model.selected);model.selected=model.profiles[0].id;render();toast('Profil supprimé')})};
-$('profileSelect').onchange=e=>{model.selected=Number(e.target.value);render()};
-function changeCps(which,input){const c=config();const next=clamp(input);c[which]=next;if(c.min>c.max){if(which==='min')c.max=c.min;else c.min=c.max}updateRanges()}
-for(const which of ['min','max']){for(const type of ['Range','Number']){$(which+type).addEventListener('input',e=>changeCps(which,e.target.value))}}
-document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{config().mode=b.dataset.mode;render()});
-document.querySelectorAll('[data-intensity]').forEach(b=>b.onclick=()=>{config().intensity=b.dataset.intensity;render()});
-document.querySelectorAll('[data-activation]').forEach(b=>b.onclick=()=>{config().activation=b.dataset.activation;render()});
-$('mouseButton').onchange=e=>config().mouse=e.target.value;$('gateButton').onchange=e=>config().gateButton=e.target.value;
-$('gateSwitch').onclick=()=>{config().gate=!config().gate;render()};
-$('focusSwitch').onclick=()=>{config().focus=!config().focus;render()};
-$('captureButton').onclick=()=>{model.capturing=true;$('hotkeyView').textContent='Appuyez...';toast('Appuyez sur une touche, ou Échap pour annuler.')};
-document.addEventListener('keydown',e=>{if(!model.capturing)return;e.preventDefault();e.stopPropagation();model.capturing=false;if(e.key!=='Escape'){config().hotkey=e.key===' '?'Espace':e.key;toast('Raccourci défini pour la maquette')}render()});
-$('demoToggle').onclick=()=>{model.demo=!model.demo;$('sessionIcon').textContent=model.demo?'●':'◉';$('sessionIcon').style.color=model.demo?'#64dfb8':'#97d0ff';$('sessionTitle').textContent=model.demo?'Aperçu actif':'Prêt à configurer';$('sessionSub').textContent=model.demo?'Simulation visuelle uniquement - 0 clic envoyé.':'Le moteur réel est désactivé dans ce prototype.';$('demoToggle').textContent=model.demo?"Revenir à l'état inactif":"Simuler l'état actif";$('demoToggle').classList.toggle('danger',model.demo);$('demoToggle').classList.toggle('primary',!model.demo)};
-document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{const page=btn.dataset.page;document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));['dashboard','profiles','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));$('crumb').textContent='VOTRE ESPACE / '+(page==='dashboard'?'TABLEAU DE BORD':page==='profiles'?'PROFILS':'À PROPOS')});
-window.addEventListener('message',()=>{});
-if(window.chrome&&window.chrome.webview){window.chrome.webview.addEventListener('message',event=>{if(event.data==='pong')$('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle.'});window.chrome.webview.postMessage('ping')}else{$('bridgeStatus').textContent='Affichage dans un navigateur : le pont AutoHotkey n\'est disponible que dans la fenêtre WebView2.'}
+$('modalConfirm').onclick=()=>{
+    const name=$('modalInput').value.trim();
+    if(!name||name.length>36){toast('Indiquez un nom de 1 à 36 caractères.');return;}
+    const compareId=($('modalTitle').textContent==='Renommer le profil')?model.selected:-1;
+    if(model.profiles.some(p=>p.id!==compareId && p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom est déjà utilisé.');return;}
+    const task=modalTask;
+    closeModal();
+    if(task) task(name);
+};
+$('modalInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter')$('modalConfirm').click();
+    if(e.key==='Escape')closeModal();
+});
+function createProfile(copyCurrent=false) {
+    const nextName=copyCurrent?active().name+' - copie':'Nouveau profil';
+    openModal(copyCurrent?'Dupliquer le profil':'Nouveau profil','Choisissez un nom pour cette configuration.',nextName,name=>{
+        if(connected) {send(copyCurrent?'duplicate':'new',name);return;}
+        if(model.profiles.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom existe déjà.');return;}
+        const p={id:model.nextId++,name,settings:copyCurrent?clone(config()):defaults()};
+        model.profiles.push(p);
+        model.selected=p.id;
+        render();toast('Profil créé : '+name);
+    });
+}
+$('newProfile').onclick=()=>createProfile();
+$('addProfilePage').onclick=()=>createProfile();
+$('duplicateProfile').onclick=()=>createProfile(true);
+$('renameProfile').onclick=()=>openModal('Renommer le profil','Modifiez le nom de votre profil.',active().name,name=>{
+    if(connected){send('rename',name);return;}
+    active().name=name;render();toast('Profil renommé');
+});
+$('deleteProfile').onclick=()=>{
+    if(model.profiles.length<=1){toast('Conservez au moins un profil.');return;}
+    openModal('Supprimer le profil','Saisissez SUPPRIMER pour confirmer la suppression.','',val=>{
+        if(val.toLocaleUpperCase()!=='SUPPRIMER'){toast('Suppression annulée.');return;}
+        if(connected){send('delete');return;}
+        model.profiles=model.profiles.filter(p=>p.id!==model.selected);
+        model.selected=model.profiles[0].id;
+        render();toast('Profil supprimé');
+    });
+};
+$('profileSelect').onchange=e=>chooseProfile(Number(e.target.value));
+function changeCps(which,input) {
+    const c=config();
+    const n=clamp(input);
+    c[which]=n;
+    if(c.min>c.max){if(which==='min') c.max=c.min; else c.min=c.max;}
+    updateRanges();
+    send('set',which,n);
+}
+for(const which of ['min','max']) {
+    for(const type of ['Range','Number'])
+        $(which+type).addEventListener('input',e=>changeCps(which,e.target.value));
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{
+    config().mode=b.dataset.mode;
+    render();send('set','mode',b.dataset.mode);
+});
+document.querySelectorAll('[data-intensity]').forEach(b=>b.onclick=()=>{
+    config().intensity=b.dataset.intensity;
+    render();send('set','intensity',b.dataset.intensity);
+});
+document.querySelectorAll('[data-activation]').forEach(b=>b.onclick=()=>{
+    config().activation=b.dataset.activation;
+    render();send('set','activation',b.dataset.activation);
+});
+$('mouseButton').onchange=e=>{config().mouse=e.target.value;send('set','mouse',e.target.value);};
+$('gateButton').onchange=e=>{config().gateButton=e.target.value;send('set','gateButton',e.target.value);};
+$('gateSwitch').onclick=()=>{config().gate=!config().gate;render();send('set','gate',config().gate?1:0);};
+$('focusSwitch').onclick=()=>{config().focus=!config().focus;render();send('set','focus',config().focus?1:0);};
+$('captureButton').onclick=()=>{
+    model.capturing=true;
+    $('hotkeyView').textContent='Appuyez...';
+    if(connected) send('capture');
+    else toast('Appuyez sur une touche, ou Échap pour annuler.');
+};
+document.addEventListener('keydown',e=>{
+    if(!model.capturing || connected) return;
+    e.preventDefault();e.stopPropagation();
+    model.capturing=false;
+    if(e.key!=='Escape')config().hotkey=e.key===' '?'Espace':e.key;
+    render();
+});
+function setLiveAppearance() {
+    if(!connected)return;
+    document.querySelector('.badge').textContent='VERSION FONCTIONNELLE';
+    document.querySelector('.hero .save').textContent='Moteur AutoHotkey connecté';
+    document.querySelector('.small-card .pill').textContent='Moteur connecté';
+    document.querySelector('.small-card strong').textContent='ClickFlow Windows';
+    document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
+    document.querySelector('.side-footer').textContent='ClickFlow v0.3.2 · AutoHotkey v2';
+    document.querySelector('.status-box .safe').textContent='F12 : arrêt d’urgence. Les clics se déclenchent avec votre raccourci dans la fenêtre cible.';
+    document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
+    document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
+    $('demoToggle').textContent='Arrêter les clics (F12)';
+    $('demoToggle').classList.remove('primary');
+    $('demoToggle').classList.add('danger');
+}
+function updateLiveStats(data) {
+    if(!connected)return;
+    model.capturing=!!data.capturing;
+    const title=data.capturing?'Choix du raccourci':data.waiting?'En attente du bouton souris':data.armed?'Clics actifs':'Prêt à configurer';
+    $('sessionTitle').textContent=title;
+    $('sessionIcon').textContent=data.armed?'●':'◉';
+    $('sessionIcon').style.color=data.armed?'#64dfb8':'#97d0ff';
+    $('sessionSub').textContent=data.notice||'Utilisez votre raccourci pour lancer les clics.';
+    const counters=document.querySelectorAll('.status-box .stat b');
+    if(counters.length>1){counters[0].textContent=String(data.cps||0);counters[1].textContent=String(data.total||0);}
+    $('hotkeyView').textContent=data.capturing?'Appuyez...':data.hotkey;
+    $('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle. Les profils et les clics sont synchronisés.';
+}
+$('demoToggle').onclick=()=>{
+    if(connected){send('stop');return;}
+    model.demo=!model.demo;
+    $('sessionIcon').textContent=model.demo?'●':'◉';
+    $('sessionIcon').style.color=model.demo?'#64dfb8':'#97d0ff';
+    $('sessionTitle').textContent=model.demo?'Aperçu actif':'Prêt à configurer';
+    $('sessionSub').textContent=model.demo?'Simulation visuelle uniquement - 0 clic envoyé.':'Le moteur réel est désactivé dans ce prototype.';
+    $('demoToggle').textContent=model.demo?"Revenir à l'état inactif":"Simuler l'état actif";
+    $('demoToggle').classList.toggle('danger',model.demo);
+    $('demoToggle').classList.toggle('primary',!model.demo);
+};
+document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
+    const page=btn.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));
+    ['dashboard','profiles','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));
+    $('crumb').textContent='VOTRE ESPACE / '+(page==='dashboard'?'TABLEAU DE BORD':page==='profiles'?'PROFILS':'À PROPOS');
+});
+if(bridge) {
+    window.chrome.webview.addEventListener('message',event=>{
+        let msg=event.data;
+        if(typeof msg==='string') {
+            if(msg==='pong') {$('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle.';return;}
+            try {msg=JSON.parse(msg);} catch {return;}
+        }
+        if(!msg||typeof msg!=='object')return;
+        if(msg.type==='state' && Array.isArray(msg.profiles) && msg.profiles.length) {
+            connected=true;
+            model.profiles=msg.profiles;
+            model.selected=msg.selected;
+            model.nextId=Math.max(...model.profiles.map(p=>p.id))+1;
+            model.capturing=false;
+            setLiveAppearance();
+            render();
+        } else if(msg.type==='stats') updateLiveStats(msg);
+    });
+    window.chrome.webview.postMessage('ready');
+} else {
+    $('bridgeStatus').textContent='Aperçu navigateur : aucune connexion au moteur AutoHotkey. Les clics et les profils restent simulés.';
+}
 render();
 </script>
 </body>
