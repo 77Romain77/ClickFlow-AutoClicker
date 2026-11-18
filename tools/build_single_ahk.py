@@ -121,8 +121,9 @@ if startDir = ""
 if A_Args.Length && A_Args[1] = "--shortcuts" {
     try {
         InstallClickFlowShortcuts()
-        MsgBox("Raccourcis ClickFlow créés sur le Bureau et dans le menu Démarrer.",
-            "ClickFlow", "Iconi")
+        if EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE") = ""
+            MsgBox("Raccourcis ClickFlow créés sur le Bureau et dans le menu Démarrer.",
+                "ClickFlow", "Iconi")
     } catch as err {
         MsgBox("Impossible de créer les raccourcis : " err.Message, "ClickFlow", "Icon!")
     }
@@ -132,7 +133,8 @@ if A_Args.Length && A_Args[1] = "--remove-shortcuts" {
     try {
         FileDelete(desktopDir "\ClickFlow.lnk")
         FileDelete(startDir "\ClickFlow.lnk")
-        MsgBox("Raccourcis ClickFlow supprimés.", "ClickFlow", "Iconi")
+        if EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE") = ""
+            MsgBox("Raccourcis ClickFlow supprimés.", "ClickFlow", "Iconi")
     } catch as err {
         MsgBox("Erreur : " err.Message, "ClickFlow", "Icon!")
     }
