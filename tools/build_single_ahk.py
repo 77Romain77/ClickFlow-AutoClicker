@@ -50,8 +50,8 @@ if !FileExist(readyFlag) || !FileExist(launchFile) {
     try {
         DirCreate(runtimeDir)
         thisScript := FileRead(A_ScriptFullPath, "UTF-8")
-        startMarker := ";--BEGIN-CLICKFLOW-PAYLOAD--"
-        endMarker := ";--END-CLICKFLOW-PAYLOAD--"
+        startMarker := ";" "--BEGIN-CLICKFLOW-PAYLOAD--"
+        endMarker := ";" "--END-CLICKFLOW-PAYLOAD--"
         first := InStr(thisScript, startMarker)
         last := InStr(thisScript, endMarker)
         if first = 0 || last <= first
