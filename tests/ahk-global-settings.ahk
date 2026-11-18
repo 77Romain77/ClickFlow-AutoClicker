@@ -1,11 +1,11 @@
 #Requires AutoHotkey v2.0
 #ErrorStdOut "UTF-8"
-#Include ..\webview2-preview\ClickFlow-Backend.ahk
+#Include ..\src\ClickFlow-Backend.ahk
 
 ; Tests sans clics : persistance des reglages globaux et mode de fenetre.
 global CF
 CF.loading := false
-CF.configFile := A_Temp "\clickflow-0.3.5-test-" A_TickCount ".ini"
+CF.configFile := A_Temp "\clickflow-1.0.0-test-" A_TickCount ".ini"
 CF.emergencyKey := "F10"
 CF.compactMode := true
 CF.profiles := [{id: 1, name: "Principal", cfg: DefaultConfig()}]

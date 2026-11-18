@@ -4,9 +4,9 @@
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v0.3.7 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v1.0.0 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
-; Utiliser F12 pour arrêter immédiatement les clics.
+; La touche d'arrêt d'urgence est personnalisable (F12 par défaut).
 
 htmlPath := A_ScriptDir "\ui\index.html"
 dllPath := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
@@ -31,7 +31,7 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v0.3.7")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.0.0")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)

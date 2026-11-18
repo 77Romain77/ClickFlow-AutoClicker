@@ -1,76 +1,66 @@
-# ClickFlow - AutoClicker
+# ClickFlow - AutoCliker
 
-Un autoclicker Windows léger, avec une interface sombre, plusieurs modes CPS, des raccourcis configurables et des profils sauvegardés.
+**Version stable 1.0.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
-> **Statut :** prototype 0.1.0. Aucune promesse d'indétectabilité ni de compatibilité avec les systèmes anti-triche. Respectez les règles des jeux et des applications utilisés.
+ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
+
+## Télécharger
+
+Télécharger le fichier unique **[ClickFlow-v1.0.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.0.0)** depuis les Releases GitHub.
+
+**Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
+
+1. Installer AutoHotkey v2 si nécessaire.
+2. Télécharger `ClickFlow-v1.0.0.ahk`.
+3. Double-cliquer sur ce fichier.
+4. Accepter, si souhaité, la création des raccourcis Bureau et menu Démarrer.
+
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.0.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+
+Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
 ## Fonctionnalités
 
-- Fréquence de 1 à 100 CPS, réglable par sliders et par saisie numérique.
-- Modes **Fixed**, **Random** et **Natural** (variations progressives, trois intensités).
-- Bouton généré : gauche, droit ou central. Les clics physiques continuent de fonctionner en parallèle.
-- Capture d'une touche clavier ou d'un bouton souris (gauche, droit, central, Mouse 4 ou Mouse 5).
-- Activation **Hold** (maintien) ou **Toggle** (bascule), avec condition facultative de maintien d'un bouton de souris.
-- Arrêt au changement de fenêtre (activé par défaut). Aucune reprise automatique après ce changement.
-- Arrêt d'urgence global, F12 par défaut. Les raccourcis ne sont pas interceptés, ils conservent leur action normale dans Windows et les applications.
-- Profils locaux : créer, renommer, dupliquer et supprimer.
-- Statistiques : CPS sur la dernière seconde, total de clics générés.
-- Icône dans la zone de notification Windows, raccourcis actifs même lorsque la fenêtre est masquée.
-- Installateur avec mises à jour Velopack depuis les GitHub Releases, et archive portable autonome.
+- De 1 à 100 CPS, en modes **Fixe**, **Aléatoire** et **Naturel**.
+- Clic gauche, droit ou central, en complément des clics physiques.
+- Déclenchement configurable par touche du clavier ou bouton de souris.
+- Modes **Maintenir** et **Basculer**.
+- Option **Conditionner à un bouton de souris** : déclencher les clics uniquement pendant le maintien physique d'un bouton.
+- Arrêt au changement de fenêtre et arrêt d'urgence personnalisable, **F12 par défaut**.
+- **Interface compacte ou étendue**, choix mémorisé.
+- Profils locaux : création, duplication, renommage, suppression et sauvegarde.
+- Statistiques de CPS et de clics générés.
+- Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
-## Installer / essayer
+## Profils et mises à jour
 
-Les versions publiées sont disponibles dans [Releases](https://github.com/77Romain77/ClickFlow-AutoClicker/releases).
+Les réglages se trouvent dans `%APPDATA%\ClickFlow\settings.ini`, séparément du programme. Une sauvegarde de sécurité `settings.ini.backup-webview2` est créée lors de la première utilisation WebView2 si nécessaire.
 
-- **Setup** : installation par utilisateur, sans compte ni service. Les réglages sont stockés dans `%LOCALAPPDATA%\\ClickFlow\\settings.json`. Recherche et téléchargement automatiques des mises à jour au démarrage si l'option est activée ; application au lancement suivant.
-- **Portable** : extraire le ZIP dans un dossier inscriptible puis ouvrir `ClickFlow.exe`. Les réglages sont dans le même dossier que le programme. La mise à jour automatique de l'archive portable n'est pas prise en charge.
+Chaque version publiée possède un numéro et son cache de composants. Télécharger et lancer un nouveau fichier `.ahk` met à jour la copie locale utilisée par les raccourcis, sans supprimer les profils.
 
-La première version n'est pas encore signée numériquement ; Windows SmartScreen peut afficher un avertissement. Les applications exécutées avec élévation de privilèges peuvent ignorer les clics provenant d'un processus non élevé.
+## Code source
 
-## Compiler
+| Chemin | Rôle |
+| --- | --- |
+| `src/ClickFlow-WebView2.ahk` | Lanceur de fenêtre Windows |
+| `src/ClickFlow-Backend.ahk` | Moteur CPS, raccourcis, profils, sauvegarde |
+| `src/lib/` | Dépendances WebView2/AutoHotkey et licence de thqby |
+| `ui/index.html` | Interface HTML/CSS/JavaScript |
+| `tools/build_single_ahk.py` | Création du fichier `.ahk` unique |
+| `tools/make_icon.py` | Génération de l'icône Windows |
+| `tests/` | Vérifications automatiques AutoHotkey |
+| `.github/workflows/windows.yml` | Build, validation et publication Windows |
 
-Sur **Windows 10 ou 11**, avec le **SDK .NET 10** :
+Pour reconstruire le fichier unique, consulter [CONTRIBUTING.md](CONTRIBUTING.md).
 
-```powershell
-dotnet restore ClickFlow/ClickFlow.csproj
-dotnet run --project ClickFlow/ClickFlow.csproj
-```
+## Versions historiques
 
-Pour produire un dossier autonome Windows x64 :
+L'ancienne tentative en C#/WPF produisant un `.exe` a été déplacée dans la branche **[archive/dotnet-wpf](https://github.com/77Romain77/ClickFlow-AutoClicker/tree/archive/dotnet-wpf)**. Elle ne fait plus partie de `main` et ne sera plus compilée par le workflow officiel.
 
-```powershell
-dotnet publish ClickFlow/ClickFlow.csproj -c Release -r win-x64 --self-contained true -o publish
-```
+Les anciennes releases (notamment v0.1.0 et les prototypes v0.3.x) sont conservées pour l'historique. Voir [docs/ARCHIVES.md](docs/ARCHIVES.md).
 
-Un workflow GitHub Actions compile le projet sur Windows et fournit un artefact portable de test à chaque push sur `main`.
+## Sécurité et limites
 
-## Publier une version
+ClickFlow ne contourne pas les anti-triches et ne garantit pas la compatibilité avec tous les jeux ou applications. Respecter leurs règles. Les clics simulés peuvent être ignorés par certains programmes et la fréquence réelle dépend des minuteries Windows. **Ne pas désactiver Smart App Control** pour installer ClickFlow.
 
-La publication est automatisée à chaque tag `vMAJOR.MINOR.PATCH` (par exemple `v0.1.0`). Elle peut aussi être lancée dans GitHub > Actions > Release ClickFlow > Run workflow, en saisissant `0.1.0`.
-
-1. Compiler l'application autonome pour Windows x64.
-2. Fabriquer le ZIP portable.
-3. Créer l'installateur Velopack et le flux de mise à jour `releases.win.json`.
-4. Publier le tout sur une GitHub Release.
-
-La version du tag doit correspondre à la version de l'application ; GitHub Actions la fournit pendant la publication. Publier un tag seulement après validation du workflow de compilation.
-
-## Architecture
-
-- `ClickFlow/MainWindow.xaml` : interface WPF.
-- `ClickFlow/MainWindow.xaml.cs` : interactions, profil actif et sécurité liée à la fenêtre cible.
-- `ClickFlow/Services/PhysicalInputMonitor.cs` : raccourcis et détection des entrées physiques par hooks Windows, sans les bloquer.
-- `ClickFlow/Services/ClickEngine.cs` : moteur CPS et génération des clics Win32.
-- `ClickFlow/Services/SettingsStore.cs` : sauvegarde JSON locale.
-- `ClickFlow/Services/UpdateService.cs` : Velopack et GitHub Releases.
-
-## Limites connues
-
-- Windows uniquement ; architecture win-x64 pour les releases actuelles.
-- Les jeux utilisant des entrées brutes, certaines fenêtres protégées et les logiciels anti-triche peuvent bloquer les clics générés.
-- L'intervalle entre les clics dépend de la précision de planification Windows ; le CPS mesuré peut différer légèrement de la valeur demandée.
-- Aucune option de contournement d'un anti-triche, d'injection dans un processus cible ou de masquage du programme n'est incluse.
-
-## Licence
-
-MIT. Voir [LICENSE](LICENSE).
+Licence MIT : [LICENSE](LICENSE). La bibliothèque WebView2 de thqby possède sa licence propre dans `src/lib/LICENSE-thqby`.

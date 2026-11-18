@@ -1,21 +1,18 @@
-name: Build WebView2 visual preview
+name: ClickFlow Windows - AutoHotkey v2
 
 on:
   push:
-    branches: [experimental/webview2]
-    paths:
-      - 'webview2-preview/**'
-      - 'tests/ahk-global-settings.ahk'
-      - 'tools/build_single_ahk.py'
-      - 'tools/make_icon.py'
-      - '.github/workflows/webview2-preview.yml'
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  preview:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,23 +35,33 @@ jobs:
             Where-Object { $_.FullName -match '[\\/]win-x64[\\/]' } |
             Select-Object -First 1 -ExpandProperty FullName
           if (!$dll) { throw "Microsoft WebView2Loader.dll win-x64 missing" }
-          New-Item -ItemType Directory -Force 'webview2-preview/lib/WebView2/64bit' | Out-Null
-          Copy-Item $dll 'webview2-preview/lib/WebView2/64bit/WebView2Loader.dll'
+          New-Item -ItemType Directory -Force 'src/lib/WebView2/64bit' | Out-Null
+          Copy-Item $dll 'src/lib/WebView2/64bit/WebView2Loader.dll'
           Write-Host "Copied official Microsoft loader: $dll"
 
       - name: Generate branded ClickFlow icon (standard library only)
         shell: pwsh
         run: |
-          python tools/make_icon.py --output 'webview2-preview/assets/ClickFlow.ico'
-          $icon = 'webview2-preview/assets/ClickFlow.ico'
+          python tools/make_icon.py --output 'src/assets/ClickFlow.ico'
+          $icon = 'src/assets/ClickFlow.ico'
           if (!(Test-Path $icon) -or (Get-Item $icon).Length -lt 5000) {
             throw 'Generated ICO missing or invalid.'
+          }
+
+      - name: Stage app sources for packaging
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force 'stage/ui' | Out-Null
+          Copy-Item 'src/*' 'stage/' -Recurse -Force
+          Copy-Item 'ui/index.html' 'stage/ui/index.html'
+          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
+            if (!(Test-Path (Join-Path 'stage' $required))) { throw "Stage missing: $required" }
           }
 
       - name: Validate mouse hold regression fix
         shell: pwsh
         run: |
-          $backend = Get-Content 'webview2-preview/ClickFlow-Backend.ahk' -Raw
+          $backend = Get-Content 'src/ClickFlow-Backend.ahk' -Raw
           $init = [regex]::Match($backend, '(?s)BackendInit\(hwnd, web\)\s*\{(.*?)\n\}')
           if (-not $init.Success) { throw 'BackendInit missing' }
           if ($init.Groups[1].Value -notmatch 'InstallMouseHook\(\)') { throw 'Mouse hook missing from initialization' }
@@ -82,7 +89,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'webview2-ready.txt'
-          $script = (Resolve-Path 'webview2-preview/ClickFlow-WebView2.ahk').Path
+          $script = (Resolve-Path 'stage/ClickFlow-WebView2.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', "`"$script`"" -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
           try {
             # WebView2 initializes asynchronously. Allow slower hosted runners
@@ -102,7 +109,7 @@ jobs:
               $out = if (Test-Path startup.out) { Get-Content startup.out -Raw } else { "" }
               $started = Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.start')
               $entered = Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.first')
-              $entry = Test-Path 'webview2-preview/entry-debug.txt'
+              $entry = Test-Path 'stage/entry-debug.txt'
               throw "WebView2 did not initialize. fixedEntry=$entry globalEntered=$entered scriptStarted=$started stderr=$err stdout=$out"
             }
             if ($p.HasExited) { throw "AHK process exited with $($p.ExitCode)" }
@@ -143,9 +150,9 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root webview2-preview --output ClickFlow-v0.3.7.ahk
-          if (!(Test-Path 'ClickFlow-v0.3.7.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v0.3.7.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.0.ahk
+          if (!(Test-Path 'ClickFlow-v1.0.0.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.0.0.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
       - name: Verify one-file desktop and Start menu shortcuts
         shell: pwsh
@@ -153,8 +160,8 @@ jobs:
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'shortcut-probe'
           $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $env:TEMP 'ClickFlowCI-Desktop'
           $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $env:TEMP 'ClickFlowCI-StartMenu'
-          $bundle = (Resolve-Path 'ClickFlow-v0.3.7.ahk').Path
-          # Simuler des raccourcis de v0.3.6 afin de valider la migration.
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.0.ahk').Path
+          # Simuler des raccourcis de v1.0.0 afin de valider la migration.
           $shell = New-Object -ComObject WScript.Shell
           foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -216,7 +223,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v0.3.7.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.0.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -227,7 +234,7 @@ jobs:
             $out = if (Test-Path one-file.out) { Get-Content one-file.out -Raw } else { '' }
             throw "Bundled launcher did not open WebView2 and connect to AutoHotkey. stderr=$errors stdout=$out"
           }
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-0.3.7'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.0'
           foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
             if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
           }
@@ -250,26 +257,41 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.7-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.0-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v0.3.7-win-x64
-          path: ClickFlow-WebView2-v0.3.7-win-x64.zip
+          name: ClickFlow-WebView2-v1.0.0-win-x64
+          path: ClickFlow-WebView2-v1.0.0-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v0.3.7-single-file
-          path: ClickFlow-v0.3.7.ahk
+          name: ClickFlow-v1.0.0-single-file
+          path: ClickFlow-v1.0.0.ahk
 
-      - name: Publish preview release
+      - name: Publish stable release
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release: v')) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = 'v0.3.7-app-rename'
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid VERSION' }
+          $tag = "v$version"
+          if ($env:GITHUB_REF -like 'refs/tags/v*' -and $env:GITHUB_REF -ne "refs/tags/$tag") {
+            throw "VERSION $version does not match the pushed tag $env:GITHUB_REF"
+          }
+          if ($env:GITHUB_REF -eq 'refs/heads/main') {
+            $subject = (git log -1 --pretty=%s).Trim()
+            if ($subject -ne "release: $tag") { throw "Expected release: $tag, found $subject" }
+          }
+          $single = "ClickFlow-v$version.ahk"
+          $zip = "ClickFlow-WebView2-v$version-win-x64.zip"
+          if (!(Test-Path $single) -or !(Test-Path $zip)) {
+            throw 'Release assets missing'
+          }
           if (gh release view $tag 2>$null) {
-            gh release upload $tag ClickFlow-WebView2-v0.3.7-win-x64.zip ClickFlow-v0.3.7.ahk --clobber
+            gh release upload $tag $single $zip --clobber
           } else {
-            gh release create $tag ClickFlow-WebView2-v0.3.7-win-x64.zip ClickFlow-v0.3.7.ahk --title 'ClickFlow - AutoCliker v0.3.7' --notes 'Nouvelle denomination : ClickFlow - AutoCliker. Fenetre Windows, icone, raccourcis Bureau et menu Demarrer renommes, avec migration des anciens raccourcis. Moteur AutoHotkey, profils, mode compact et fichier unique conserves. AutoHotkey v2 x64 requis; aucun EXE ClickFlow.' --target "$env:GITHUB_SHA" --prerelease
+            gh release create $tag $single $zip --target "$env:GITHUB_SHA" --title "ClickFlow - AutoCliker v$version" --notes "Version stable de ClickFlow - AutoCliker. Telecharger le fichier unique $single et le lancer avec AutoHotkey v2 64 bits. Un seul fichier AHK, sans nouvel EXE. Profils conserves, CPS, mode compact et etendu, touche d'arret d'urgence configurable, icone et raccourcis Windows. Ancienne tentative .exe conservee dans archive/dotnet-wpf." --latest
           }

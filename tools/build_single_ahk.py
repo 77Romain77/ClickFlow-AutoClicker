@@ -13,7 +13,7 @@ from pathlib import Path
 import textwrap
 import zipfile
 
-VERSION = "0.3.7"
+VERSION = "1.0.0"
 
 RUNTIME_FILES = [
     "ClickFlow-WebView2.ahk",
@@ -31,7 +31,7 @@ BOOTSTRAP = r'''#Requires AutoHotkey v2.0
 #SingleInstance Force
 #ErrorStdOut "UTF-8"
 
-; ClickFlow v0.3.7 : un seul script a telecharger, AutoHotkey v2 x64 requis.
+; ClickFlow v1.0.0 : un seul script a telecharger, AutoHotkey v2 x64 requis.
 ; Les composants sont extraits en local, sans EXE ClickFlow et sans telechargement.
 
 if A_PtrSize != 8 {
@@ -44,7 +44,7 @@ if localAppData = "" {
     ExitApp(1)
 }
 appDir := localAppData "\ClickFlow"
-runtimeDir := appDir "\Runtime-0.3.7"
+runtimeDir := appDir "\Runtime-1.0.0"
 launchFile := runtimeDir "\ClickFlow-WebView2.ahk"
 readyFlag := runtimeDir "\.extracted-ok"
 stableScript := appDir "\ClickFlow.ahk"
@@ -87,7 +87,7 @@ if !FileExist(readyFlag) || !FileExist(launchFile) || !FileExist(runtimeDir "\as
         if exitCode != 0 || !FileExist(launchFile)
             throw Error("Extraction impossible (code " exitCode ").")
         FileDelete(zipFile)
-        FileAppend("0.3.7", readyFlag, "UTF-8")
+        FileAppend("1.0.0", readyFlag, "UTF-8")
     } catch as err {
         MsgBox("Impossible de préparer ClickFlow : " err.Message, "ClickFlow", "Icon!")
         ExitApp(1)
@@ -184,7 +184,7 @@ InstallClickFlowShortcuts() {
     DirCreate(desktopDir)
     DirCreate(startDir)
     args := '"' stableScript '"'
-    ; Migration des anciens raccourcis "ClickFlow" de la v0.3.6.
+    ; Migration des anciens raccourcis "ClickFlow" publiés avant v1.0.0.
     ; On ne touche qu'aux raccourcis qui ciblent notre script local.
     RemoveLegacyClickFlowShortcut(desktopDir)
     RemoveLegacyClickFlowShortcut(startDir)
@@ -225,8 +225,8 @@ FOOTER = ";--END-CLICKFLOW-PAYLOAD--\n"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=Path, default=Path("webview2-preview"))
-    parser.add_argument("--output", type=Path, default=Path("ClickFlow-v0.3.7.ahk"))
+    parser.add_argument("--root", type=Path, default=Path("stage"))
+    parser.add_argument("--output", type=Path, default=Path("ClickFlow-v1.0.0.ahk"))
     args = parser.parse_args()
     root: Path = args.root
     for rel in RUNTIME_FILES:

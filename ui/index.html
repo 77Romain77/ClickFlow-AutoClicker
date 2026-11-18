@@ -99,13 +99,13 @@ body.compact #page-dashboard{display:block!important}
   </nav>
  </div>
  <div class="side-spacer"></div>
- <div class="small-card"><span class="pill"><i class="dot"></i> Prototype de design</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v0.3.7 · AHK v2</div>
+ <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
+ <div class="side-footer">ClickFlow v1.0.0 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
  <section id="page-dashboard">
-  <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Essai visuel sans clics automatiques</div></div>
+  <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Connexion au moteur AutoHotkey...</div></div>
   <div class="dashboard">
    <div class="stack">
     <div class="card">
@@ -139,16 +139,16 @@ body.compact #page-dashboard{display:block!important}
      <div class="status-title" id="sessionTitle">Prêt à configurer</div>
      <div class="status-sub" id="sessionSub">Connexion au moteur AutoHotkey en cours.</div>
      <div class="stats"><div class="stat"><span>CPS réels</span><b>0</b></div><div class="stat"><span>Clics envoyés</span><b>0</b></div></div>
-     <button class="btn primary full" id="demoToggle" style="margin-top:14px">Simuler l'état actif</button>
+     <button class="btn primary full" id="demoToggle" style="margin-top:14px">Arrêter les clics</button>
      <div class="safe"><span class="dot"></span><span>La touche d'arrêt d'urgence personnalisée fonctionne dans toutes les fenêtres.</span></div>
     </div>
-    <div class="note"><span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Un nouveau design, sans perdre le moteur.</b><br>Une fois ce rendu validé, nous reconnecterons les fonctions AutoHotkey et la sauvegarde de vos profils existants.</span></div>
+    <div class="note"><span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Un moteur fiable, une interface simple.</b><br>Les paramètres et profils sont conservés automatiquement dans ClickFlow.</span></div>
    </div>
   </div>
  </section>
  <section id="page-profiles" class="hidden">
-  <div class="hero"><div><h2>Vos profils de clics.</h2><p>Testez la création, la duplication et le changement de profil.</p></div></div>
-  <div class="card"><div class="card-head"><div class="card-title">Profils de démonstration</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Les profils synchronisés seront conservés au prochain lancement.</div></div>
+  <div class="hero"><div><h2>Vos profils de clics.</h2><p>Créez, dupliquez et gérez vos profils enregistrés.</p></div></div>
+  <div class="card"><div class="card-head"><div class="card-title">Profils enregistrés</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Les profils synchronisés seront conservés au prochain lancement.</div></div>
  </section>
  <section id="page-about" class="hidden">
   <div class="hero"><div><h2>ClickFlow, autrement.</h2><p>Une nouvelle interface graphique, sans réécrire la logique des clics.</p></div></div>
@@ -379,7 +379,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v0.3.7 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.0.0 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
