@@ -4,6 +4,8 @@
 #Include lib\WebView2\WebView2.ahk
 
 ; Test de démarrage de WebView2 - sans clics.
+if FileExist(A_ScriptDir "\ui\index.html")
+    FileAppend("entry", A_ScriptDir "\entry-debug.txt", "UTF-8")
 probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
 if probe != ""
     FileAppend("started", probe ".first", "UTF-8")
