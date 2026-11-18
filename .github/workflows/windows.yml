@@ -1,0 +1,298 @@
+name: ClickFlow Windows - AutoHotkey v2
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download official AutoHotkey v2
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.29/AutoHotkey_2.0.29.zip' -OutFile ahk.zip
+          Expand-Archive ahk.zip -DestinationPath ahk
+          $exe = Get-ChildItem ahk -Recurse -Filter AutoHotkey64.exe | Select-Object -First 1 -ExpandProperty FullName
+          if (!$exe) { throw "AutoHotkey64.exe missing" }
+          "AHK_EXE=$exe" >> $env:GITHUB_ENV
+
+      - name: Obtain official Microsoft WebView2Loader x64
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.2903.40' -OutFile webview2-sdk.zip
+          Expand-Archive webview2-sdk.zip -DestinationPath webview2-sdk
+          $dll = Get-ChildItem webview2-sdk -Recurse -Filter WebView2Loader.dll |
+            Where-Object { $_.FullName -match '[\\/]win-x64[\\/]' } |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (!$dll) { throw "Microsoft WebView2Loader.dll win-x64 missing" }
+          New-Item -ItemType Directory -Force 'src/lib/WebView2/64bit' | Out-Null
+          Copy-Item $dll 'src/lib/WebView2/64bit/WebView2Loader.dll'
+          Write-Host "Copied official Microsoft loader: $dll"
+
+      - name: Generate branded ClickFlow icon (standard library only)
+        shell: pwsh
+        run: |
+          python tools/make_icon.py --output 'src/assets/ClickFlow.ico'
+          $icon = 'src/assets/ClickFlow.ico'
+          if (!(Test-Path $icon) -or (Get-Item $icon).Length -lt 5000) {
+            throw 'Generated ICO missing or invalid.'
+          }
+
+      - name: Stage app sources for packaging
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force 'stage/ui' | Out-Null
+          Copy-Item 'src/*' 'stage/' -Recurse -Force
+          Copy-Item 'ui/index.html' 'stage/ui/index.html'
+          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
+            if (!(Test-Path (Join-Path 'stage' $required))) { throw "Stage missing: $required" }
+          }
+
+      - name: Validate mouse hold regression fix
+        shell: pwsh
+        run: |
+          $backend = Get-Content 'src/ClickFlow-Backend.ahk' -Raw
+          $init = [regex]::Match($backend, '(?s)BackendInit\(hwnd, web\)\s*\{(.*?)\n\}')
+          if (-not $init.Success) { throw 'BackendInit missing' }
+          if ($init.Groups[1].Value -notmatch 'InstallMouseHook\(\)') { throw 'Mouse hook missing from initialization' }
+          if ($init.Groups[1].Value -notmatch 'InstallKeybdHook\(\)') { throw 'Keyboard hook missing from initialization' }
+          if ($backend -notmatch 'GetKeyState\(CF.cfg.gateButton, "P"\)') { throw 'Physical mouse state check missing' }
+          Write-Host 'Mouse gate hook wiring verified (hardware behavior requires local test).'
+
+      - name: Verify emergency key persistence and window sizes
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-global-settings.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError settings-test.err -RedirectStandardOutput settings-test.out
+          if (-not $p.WaitForExit(15000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Global settings test timed out'
+          }
+          $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
+          $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
+          Write-Host "AHK global settings test: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Global settings test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
+      - name: Probe WebView2 initialization (experimental)
+        shell: pwsh
+        run: |
+          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'webview2-ready.txt'
+          $script = (Resolve-Path 'stage/ClickFlow-WebView2.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', "`"$script`"" -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
+          try {
+            # WebView2 initializes asynchronously. Allow slower hosted runners
+            # up to 20 seconds to finish the HTML/AHK handshake.
+            $bridgeFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
+            for ($attempt=0; $attempt -lt 40 -and !(Test-Path $bridgeFile); $attempt++) {
+              Start-Sleep -Milliseconds 500
+            }
+            $p.Refresh()
+            if (Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.error')) {
+              throw ("WebView2 AHK startup failed: " + (Get-Content ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.error') -Raw))
+            }
+            if (!(Test-Path $env:CLICKFLOW_WEBVIEW_SMOKE_FILE)) {
+              $p.Refresh()
+              if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force; Start-Sleep -Seconds 1 }
+              $err = if (Test-Path startup.err) { Get-Content startup.err -Raw } else { "" }
+              $out = if (Test-Path startup.out) { Get-Content startup.out -Raw } else { "" }
+              $started = Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.start')
+              $entered = Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.first')
+              $entry = Test-Path 'stage/entry-debug.txt'
+              throw "WebView2 did not initialize. fixedEntry=$entry globalEntered=$entered scriptStarted=$started stderr=$err stdout=$out"
+            }
+            if ($p.HasExited) { throw "AHK process exited with $($p.ExitCode)" }
+            if (!(Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'))) {
+              throw "WebView2 loaded, but the JavaScript/AHK bridge did not complete its two-way handshake."
+            }
+            Write-Host "WebView2 initialized and JavaScript/AHK state exchange confirmed."
+            # Reproduce a user pressing the window X: WM_CLOSE, not Stop-Process.
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public static class ClickFlowWin32 {
+                [DllImport("user32.dll")]
+                public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wp, IntPtr lp);
+            }
+          '@
+            $p.Refresh()
+            $hwndFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.hwnd'
+            if (!(Test-Path $hwndFile)) { throw "GUI did not report its exact HWND." }
+            $guiHwndText = (Get-Content $hwndFile -Raw).Trim()
+            $hwnd = [IntPtr]::new([long]$guiHwndText)
+            if ($hwnd -eq [IntPtr]::Zero) { throw "ClickFlow GUI HWND invalid." }
+            Write-Host "Closing exact ClickFlow GUI HWND $guiHwndText"
+            if (-not [ClickFlowWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
+              throw "WM_CLOSE could not be posted to ClickFlow window."
+            }
+            if (-not $p.WaitForExit(5000)) { throw "ClickFlow did not exit within 5 seconds after WM_CLOSE." }
+            $errors = if (Test-Path startup.err) { Get-Content startup.err -Raw } else { '' }
+            if ($p.ExitCode -ne 0 -or $errors) {
+              throw "ClickFlow close error: exit=$($p.ExitCode) stderr=$errors"
+            }
+            Write-Host "GUI close via WM_CLOSE succeeded without errors."
+          } finally {
+            $p.Refresh()
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          }
+
+      - name: Create single-file AutoHotkey launcher
+        shell: pwsh
+        run: |
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.0.ahk
+          if (!(Test-Path 'ClickFlow-v1.0.0.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.0.0.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+
+      - name: Verify one-file desktop and Start menu shortcuts
+        shell: pwsh
+        run: |
+          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'shortcut-probe'
+          $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $env:TEMP 'ClickFlowCI-Desktop'
+          $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $env:TEMP 'ClickFlowCI-StartMenu'
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.0.ahk').Path
+          # Simuler des raccourcis de v1.0.0 afin de valider la migration.
+          $shell = New-Object -ComObject WScript.Shell
+          foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            $old = $shell.CreateShortcut((Join-Path $dir 'ClickFlow.lnk'))
+            $old.TargetPath = $env:AHK_EXE
+            $old.Arguments = '"' + (Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ahk') + '"'
+            $old.Save()
+          }
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle, '--shortcuts' -PassThru -RedirectStandardError shortcuts.err -RedirectStandardOutput shortcuts.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Shortcut creation timed out.'
+          }
+          $err = if (Test-Path shortcuts.err) { Get-Content shortcuts.err -Raw } else { '' }
+          $out = if (Test-Path shortcuts.out) { Get-Content shortcuts.out -Raw } else { '' }
+          if ($p.ExitCode -ne 0 -or $err) {
+            $problem = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.shortcut-error'
+            $reason = if (Test-Path $problem) { Get-Content $problem -Raw } else { '<no scripted error>' }
+            throw "Shortcuts installer failed: exit=$($p.ExitCode) stderr=$err stdout=$out reason=$reason"
+          }
+          $icon = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ico'
+          $installed = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ahk'
+          if (!(Test-Path $icon) -or !(Test-Path $installed)) {
+            throw 'Persistent ClickFlow script and/or icon missing.'
+          }
+          $shell = New-Object -ComObject WScript.Shell
+          foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
+            $file = Join-Path $dir 'ClickFlow - AutoCliker.lnk'
+            if (!(Test-Path $file)) { throw "Missing shortcut: $file" }
+            if (Test-Path (Join-Path $dir 'ClickFlow.lnk')) {
+              throw 'The previous ClickFlow shortcut was not migrated.'
+            }
+            $shortcut = $shell.CreateShortcut($file)
+            if ($shortcut.TargetPath -ne $env:AHK_EXE) {
+              throw "Shortcut target is not AutoHotkey: $($shortcut.TargetPath)"
+            }
+            if ($shortcut.Arguments -notlike '*ClickFlow.ahk*') {
+              throw "Shortcut does not target the stable single-file script."
+            }
+            if ($shortcut.IconLocation -notlike '*ClickFlow.ico*') {
+              throw "Shortcut is not branded with ClickFlow.ico."
+            }
+          }
+          Write-Host 'ClickFlow - AutoCliker shortcuts migrated and point to stable local ClickFlow.ahk.'
+          $p2 = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle, '--remove-shortcuts' -PassThru -RedirectStandardError remove.err -RedirectStandardOutput remove.out
+          if (-not $p2.WaitForExit(15000)) {
+            Stop-Process -Id $p2.Id -Force
+            throw 'Shortcut removal timed out.'
+          }
+          if (Test-Path (Join-Path $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP 'ClickFlow - AutoCliker.lnk')) {
+            throw 'Desktop shortcut removal did not work.'
+          }
+          if (Test-Path (Join-Path $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU 'ClickFlow - AutoCliker.lnk')) {
+            throw 'Start menu shortcut removal did not work.'
+          }
+          Write-Host 'Shortcut creation and removal both passed.'
+
+      - name: Smoke-test self-extracting AHK script
+        shell: pwsh
+        run: |
+          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.0.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
+          $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
+          for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
+            Start-Sleep -Milliseconds 500
+          }
+          if (!(Test-Path $bridge)) {
+            $errors = if (Test-Path one-file.err) { Get-Content one-file.err -Raw } else { '' }
+            $out = if (Test-Path one-file.out) { Get-Content one-file.out -Raw } else { '' }
+            throw "Bundled launcher did not open WebView2 and connect to AutoHotkey. stderr=$errors stdout=$out"
+          }
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.0'
+          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
+            if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
+          }
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ClickFlowStandaloneWin32 {
+              [DllImport("user32.dll")]
+              public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wp, IntPtr lp);
+          }
+          '@
+          $hwndFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.hwnd'
+          $hwnd = [IntPtr]::new([long](Get-Content $hwndFile -Raw).Trim())
+          if (-not [ClickFlowStandaloneWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
+            throw "Standalone GUI did not receive WM_CLOSE"
+          }
+          Start-Sleep -Seconds 1
+          Write-Host 'Single .ahk unpacked locally, started real WebView2 and responded to WM_CLOSE.'
+
+      - name: Package complete ClickFlow preview folder
+        shell: pwsh
+        run: |
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.0-win-x64.zip' -CompressionLevel Optimal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClickFlow-WebView2-v1.0.0-win-x64
+          path: ClickFlow-WebView2-v1.0.0-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClickFlow-v1.0.0-single-file
+          path: ClickFlow-v1.0.0.ahk
+
+      - name: Publish stable release
+        if: >-
+          ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release: v')) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid VERSION' }
+          $tag = "v$version"
+          if ($env:GITHUB_REF -like 'refs/tags/v*' -and $env:GITHUB_REF -ne "refs/tags/$tag") {
+            throw "VERSION $version does not match the pushed tag $env:GITHUB_REF"
+          }
+          if ($env:GITHUB_REF -eq 'refs/heads/main') {
+            $subject = (git log -1 --pretty=%s).Trim()
+            if ($subject -ne "release: $tag") { throw "Expected release: $tag, found $subject" }
+          }
+          $single = "ClickFlow-v$version.ahk"
+          $zip = "ClickFlow-WebView2-v$version-win-x64.zip"
+          if (!(Test-Path $single) -or !(Test-Path $zip)) {
+            throw 'Release assets missing'
+          }
+          if (gh release view $tag 2>$null) {
+            gh release upload $tag $single $zip --clobber
+          } else {
+            gh release create $tag $single $zip --target "$env:GITHUB_SHA" --title "ClickFlow - AutoCliker v$version" --notes "Version stable de ClickFlow - AutoCliker. Telecharger le fichier unique $single et le lancer avec AutoHotkey v2 64 bits. Un seul fichier AHK, sans nouvel EXE. Profils conserves, CPS, mode compact et etendu, touche d'arret d'urgence configurable, icone et raccourcis Windows. Ancienne tentative .exe conservee dans archive/dotnet-wpf." --latest
+          }

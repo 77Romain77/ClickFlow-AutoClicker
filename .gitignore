@@ -1,11 +1,23 @@
-**/bin/
-**/obj/
-.vs/
-.idea/
+# Generated Windows release artifacts
+stage/
+build/
+dist/
 publish/
 Releases/
+*.zip
+*.nupkg
+*.exe
+*.dll
+*.pdb
+*.pyc
+__pycache__/
 *.user
 *.suo
+.vs/
+.idea/
+# Per-user settings, never ship private profiles
+settings.ini
 settings.json
 settings.json.tmp
-settings.json.invalid-*
+# Generated CI assets (not required in the source tree)
+src/assets/*.ico
