@@ -11,6 +11,8 @@ global CW := {gui: 0, controller: 0, web: 0, event: 0}
 htmlPath := A_ScriptDir "\ui\index.html"
 loaderPath := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
 probePath := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+if probePath != ""
+    try FileAppend("AHK script entered", probePath ".start", "UTF-8")
 
 try {
     if A_PtrSize != 8
