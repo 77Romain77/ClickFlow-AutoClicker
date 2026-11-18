@@ -452,7 +452,7 @@ CapturedKey(ih, vk, sc) {
     }
     if name = "F12" {
         FinishCapture("")
-        SetNotice("F12 est reservee pour l'arrêt d'urgence.")
+        SetNotice("F12 est réservée à l'arrêt d'urgence.")
         return
     }
     if name = "" || InStr("|Shift|LShift|RShift|Ctrl|LCtrl|RCtrl|Alt|LAlt|RAlt|LWin|RWin|", "|" name "|")
@@ -494,7 +494,7 @@ FinishCapture(key) {
         SaveSettings()
         SetNotice("Activation définie : " DisplayKey(CF.cfg.activation) ".")
     } else if old = CF.cfg.activation {
-        SetNotice("Capture annulée. Activation conservee : " DisplayKey(old) ".")
+        SetNotice("Capture annulée. Activation conservée : " DisplayKey(old) ".")
     }
 }
 
@@ -689,7 +689,7 @@ SelectProfile(index) {
     global CF
     if index < 1 || index > CF.profiles.Length
         return
-    StopAll("Changement de profil : clics arrêtes.")
+    StopAll("Changement de profil : clics arrêtés.")
     UnregisterActivation()
     oldCfg := CF.cfg
     oldId := CF.selectedId
