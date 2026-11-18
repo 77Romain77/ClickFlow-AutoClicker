@@ -51,8 +51,11 @@ jobs:
               throw ("WebView2 AHK startup failed: " + (Get-Content ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.error') -Raw))
             }
             if (!(Test-Path $env:CLICKFLOW_WEBVIEW_SMOKE_FILE)) {
+              $p.Refresh()
+              if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force; Start-Sleep -Seconds 1 }
               $err = if (Test-Path startup.err) { Get-Content startup.err -Raw } else { "" }
-              throw "WebView2 did not initialize. $err"
+              $out = if (Test-Path startup.out) { Get-Content startup.out -Raw } else { "" }
+              throw "WebView2 did not initialize. stderr=$err stdout=$out"
             }
             if ($p.HasExited) { throw "AHK process exited with $($p.ExitCode)" }
             Write-Host "WebView2 actually initialized."
