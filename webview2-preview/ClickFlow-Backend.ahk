@@ -220,6 +220,18 @@ BackendMessage(sender, args) {
             StartCapture("emergency")
             return
         }
+        if cmd = "shortcuts" && parts.Length >= 2 {
+            stable := EnvGet("LOCALAPPDATA") "\ClickFlow\ClickFlow.ahk"
+            if !FileExist(stable) {
+                SetNotice("L'installation des raccourcis nécessite le fichier unique ClickFlow.")
+                return
+            }
+            if parts[2] != "create" && parts[2] != "remove"
+                return
+            arg := parts[2] = "create" ? "--shortcuts" : "--remove-shortcuts"
+            Run('"' A_AhkPath '" "' stable '" ' arg)
+            return
+        }
         if cmd = "view" && parts.Length >= 2 {
             compact := parts[2] = "compact"
             if compact != CF.compactMode {
