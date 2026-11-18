@@ -46,9 +46,9 @@ try {
 } catch as err {
     if probePath != ""
         try FileAppend(err.Message, probePath ".error", "UTF-8")
-    MsgBox("Impossible de lancer le prototype WebView2." Chr(10) Chr(10) err.Message
-        Chr(10) Chr(10) "La version AutoHotkey classique de ClickFlow reste disponible.",
-        "ClickFlow - WebView2", "Icon!")
+    details := "Impossible de lancer le prototype WebView2." Chr(10) Chr(10) err.Message
+    details .= Chr(10) Chr(10) "La version AutoHotkey classique de ClickFlow reste disponible."
+    MsgBox(details, "ClickFlow - WebView2", "Icon!")
     ExitApp(1)
 }
 
