@@ -6,10 +6,9 @@
 ; ClickFlow WebView2: lancement indépendant sans clics automatiques.
 ; Les profils et settings.ini ne sont pas modifiés par ce prototype.
 
+global CW := {gui: 0, controller: 0, web: 0, handler: 0}
 FileAppend("whole-parse", EnvGet("CLICKFLOW_DIAG_FILE"), "UTF-8")
 ExitApp()
-
-global CW := {gui: 0, controller: 0, web: 0, handler: 0}
 probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
 if probe != ""
     FileAppend("script entered", probe ".start", "UTF-8")
