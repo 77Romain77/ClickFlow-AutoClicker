@@ -1,48 +1,50 @@
-# ClickFlow - AutoClicker Windows v0.3.5 beta
+# ClickFlow - AutoClicker Windows v0.3.6
 
-Le nouveau design WebView2 et le moteur AutoHotkey v2 sont reunis dans une version Windows. La branche `experimental/autohotkey` conserve la version classique 0.2.5, et la branche `main` reste intacte.
+ClickFlow est une application à fenêtre Windows, avec interface WebView2 et moteur AutoHotkey v2. **Aucun exécutable ClickFlow n'est créé.** La branche `main` (C#) et les anciennes versions AutoHotkey ne sont pas modifiées.
 
-## Le fichier unique recommande
+## Lancer ClickFlow avec un seul fichier
 
-1. Installer **AutoHotkey v2 64 bits** une fois, si ce n'est pas deja fait : https://www.autohotkey.com/.
-2. Telecharger **`ClickFlow-v0.3.5.ahk`** depuis la release v0.3.5-webview2-beta.
-3. Fermer les anciennes fenetres ClickFlow, puis double-cliquer sur le fichier `.ahk`.
-4. Le premier lancement extrait automatiquement les composants integres dans `%LOCALAPPDATA%\ClickFlow\Runtime-0.3.5`, puis ouvre ClickFlow dans sa propre fenetre Windows. Les lancements suivants reutilisent ces fichiers locaux.
+1. Vérifier qu'**AutoHotkey v2 64 bits** est installé : https://www.autohotkey.com/.
+2. Télécharger `ClickFlow-v0.3.6.ahk` depuis la release `v0.3.6-windows-shortcuts`.
+3. Fermer les anciennes fenêtres ClickFlow puis double-cliquer sur le fichier téléchargé.
+4. Accepter ou refuser la proposition de création des raccourcis sur le **Bureau** et dans le **menu Démarrer**.
 
-Le fichier unique est **un script AutoHotkey**, pas un executable signe. Il ne demande pas de compilation, ne telecharge aucun composant au lancement et ne desactive aucune protection Windows. Le runtime WebView2 de Microsoft doit etre present (normalement inclus avec Windows 11).
+Le fichier unique extrait ses composants sous `%LOCALAPPDATA%\ClickFlow\Runtime-0.3.6` puis ouvre la fenêtre Windows, sans navigateur externe. Il installe aussi une copie stable du fichier unique à l'adresse `%LOCALAPPDATA%\ClickFlow\ClickFlow.ahk` et une icône `ClickFlow.ico`. Les raccourcis (si acceptés) pointent vers cette copie stable et peuvent donc continuer à fonctionner après la suppression du fichier téléchargé.
 
-**Alternative :** telecharger `ClickFlow-WebView2-v0.3.5-win-x64.zip`, extraire le dossier et lancer `ClickFlow-WebView2.ahk` comme dans la version precedente.
+## Une icône ClickFlow
 
-## Les nouveautes v0.3.5
+- Une nouvelle icône est utilisée dans les raccourcis, la fenêtre et la zone de notification Windows.
+- Sur le bureau, le raccourci `ClickFlow.lnk` présente cette icône. Le fichier `.ahk` lui-même conserve l'icône de son association Windows.
+- Le menu Démarrer contient une entrée **ClickFlow** accessible via la recherche Windows.
+- Dans **À propos**, les boutons **Créer / actualiser les raccourcis** et **Supprimer les raccourcis** permettent de revenir sur le choix initial.
 
-- **Raccourci d'arret d'urgence configurable** : touche F12 par defaut, modifiable depuis le bouton d'arret d'urgence de l'interface, y compris une touche souris compatible.
-- Cette touche est **globale pour tous les profils** et sauvegardee. Le logiciel refuse une touche deja utilisee pour l'activation d'un profil.
-- **Mode compact / mode etendu** : bouton en haut de la fenetre, affichage reduit avec les commandes essentielles (profil, CPS, activation, touche d'urgence, statut et arret). Revenir au mode etendu pour les autres options.
-- Le mode choisi et la touche d'urgence sont sauvegardes dans `[General]` dans `%APPDATA%\ClickFlow\settings.ini`.
-- Les profils, boutons, CPS, modes Hold/Toggle et condition de bouton souris sont conserves comme avant.
+Aucun programme exécutable ClickFlow n'est installé. Les raccourcis ouvrent le script à l'aide de l'interpréteur AutoHotkey déjà présent sur le PC.
 
-## Test conseille
+## Mises à jour
 
-1. Choisir Fixe et 5 CPS dans une application de test sans action sensible.
-2. Tester le raccourci d'activation, puis F12 pour arreter.
-3. Definir une autre touche d'arret d'urgence, l'essayer, fermer et rouvrir ClickFlow pour verifier qu'elle reste enregistree.
-4. Basculer en mode compact puis etendu, fermer et rouvrir afin de verifier que le mode d'affichage est memorise.
-5. Verifier que les profils existants apparaissent et que l'option de maintien d'un bouton souris fonctionne toujours.
+Chaque version utilisera un numéro différent. Si une future v0.3.7 est téléchargée et lancée, elle remplacera la copie locale stable `ClickFlow.ahk` et rafraîchira les raccourcis existants. Les composants seront extraits dans un dossier correspondant au nouveau numéro de version.
 
-**Attention :** le test automatique Windows verifie le demarrage WebView2, l'echange de donnees avec AutoHotkey, la sauvegarde des parametres, la taille des fenetres et la fermeture avec la croix. Les raccourcis et clics physiques doivent etre verifies sur ton PC.
+Cette version **ne vérifie pas les mises à jour automatiquement**.
 
-## Sauvegarde et fonctionnement
+## Fonctionnalités conservées
 
-- Configuration : `%APPDATA%\ClickFlow\settings.ini`.
-- Sauvegarde creee a la premiere utilisation de WebView2 : `settings.ini.backup-webview2`, si elle n'existe pas.
-- Cache des composants du fichier unique : `%LOCALAPPDATA%\ClickFlow\Runtime-0.3.5`.
-- Les versions dans un ZIP restent disponibles si l'extraction automatique est bloquee.
-- Aucune promesse de compatibilite avec les jeux interdisant les clics automatises.
+- CPS fixes, aléatoires ou naturels, réglages numériques et curseurs.
+- Raccourci d'activation libre, modes Maintenir et Basculer.
+- Conditionnement à un bouton physique de souris, avec les hooks souris.
+- Arrêt au changement de fenêtre, touche d'arrêt d'urgence personnalisable (F12 par défaut).
+- Affichage compact ou étendu, choix sauvegardé.
+- Profils personnalisés conservés et sauvegardés.
 
-## Code et licences
+Les profils et réglages continuent d'être enregistrés dans `%APPDATA%\ClickFlow\settings.ini` : créer ou supprimer les raccourcis ne modifie pas ce fichier.
 
-- `ClickFlow-Backend.ahk` : moteur et sauvegarde.
-- `ClickFlow-WebView2.ahk` : fenetre Windows.
-- `ui/index.html` : interface graphique.
-- `tools/build_single_ahk.py` : fabrication du fichier unique a partir du code source.
-- Bibliotheque WebView2 AHK par thqby sous licence MIT et chargeur WebView2 officiel Microsoft, inclus dans les archives.
+## Alternative en ZIP
+
+`ClickFlow-WebView2-v0.3.6-win-x64.zip` reste disponible. Extraire le ZIP et lancer `ClickFlow-WebView2.ahk` pour utiliser le logiciel sans créer de raccourcis.
+
+## Tests et limites
+
+GitHub Actions vérifie le démarrage du moteur, la communication WebView2, la fermeture de la fenêtre, l'extraction du fichier unique et la création des raccourcis avec leur icône. Les clics physiques et le rendu visuel final doivent toujours être vérifiés sur le PC de l'utilisateur.
+
+Smart App Control peut aussi bloquer un composant inconnu ; ne pas désactiver la sécurité Windows pour tester ClickFlow. Aucun nouveau fichier `.exe` ClickFlow n'est produit.
+
+Bibliothèque WebView2 de thqby sous licence MIT, composant Microsoft WebView2Loader officiel empaqueté dans l'archive de distribution.
