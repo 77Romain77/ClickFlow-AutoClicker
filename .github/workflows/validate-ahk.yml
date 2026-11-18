@@ -1,0 +1,37 @@
+name: Validate AutoHotkey v2
+
+on:
+  push:
+    branches:
+      - experimental/autohotkey
+    paths:
+      - "ClickFlow.ahk"
+      - ".github/workflows/validate-ahk.yml"
+  pull_request:
+    paths:
+      - "ClickFlow.ahk"
+      - ".github/workflows/validate-ahk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official AutoHotkey v2 interpreter
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.29/AutoHotkey_2.0.29.zip'
+          Invoke-WebRequest -Uri $url -OutFile ahk.zip
+          Expand-Archive -Path ahk.zip -DestinationPath ahk
+      - name: Validate ClickFlow syntax without running clicks
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem ahk -Recurse -Filter AutoHotkey64.exe | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $exe) { throw "AutoHotkey64.exe not found in archive" }
+          & $exe /ErrorStdOut /Validate ClickFlow.ahk
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host 'AutoHotkey syntax validation succeeded.'
