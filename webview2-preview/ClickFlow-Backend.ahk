@@ -164,6 +164,12 @@ BackendMessage(sender, args) {
             SendStats()
             return
         }
+        if cmd = "connected" {
+            probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+            if probe != ""
+                FileAppend("WebView2 and backend connected", probe ".bridge", "UTF-8")
+            return
+        }
         if cmd = "set" && parts.Length >= 3 {
             EditConfig(parts[2], parts[3])
             return
