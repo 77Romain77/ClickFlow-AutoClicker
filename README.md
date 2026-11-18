@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.0.0 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.0.1 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.0.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.0.0)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.0.1.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.0.1)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.0.0.ahk`.
+2. Télécharger `ClickFlow-v1.0.1.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Accepter, si souhaité, la création des raccourcis Bureau et menu Démarrer.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.0.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.0.1`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -31,6 +31,12 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Profils locaux : création, duplication, renommage, suppression et sauvegarde.
 - Statistiques de CPS et de clics générés.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Lancer ClickFlow plusieurs fois et nettoyer les caches
+
+Si ClickFlow est déjà ouvert, un nouveau lancement **ne ferme plus l'application en cours** : la fenêtre existante est remise au premier plan. Ceci évite le crash WebView2 observé lors d'un lancement multiple avec v1.0.0.
+
+Après un démarrage réussi d'une nouvelle version, ClickFlow supprime automatiquement les anciens dossiers de programme de la forme `Runtime-X.Y.Z` créés par son lanceur. Il conserve le dossier courant, les paramètres, les profils, `ClickFlow.ahk`, `ClickFlow.ico`, `shortcuts.ini` et les dossiers de données WebView2. Si une ancienne version est encore ouverte, ferme-la avant de démarrer la nouvelle pour permettre le nettoyage.
 
 ## Profils et mises à jour
 

@@ -1,12 +1,31 @@
 #Requires AutoHotkey v2.0
-#SingleInstance Force
+#SingleInstance Off
 #ErrorStdOut "UTF-8"
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v1.0.0 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v1.0.1 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
 ; La touche d'arrêt d'urgence est personnalisable (F12 par défaut).
+
+ ; Un mutex par session empêche deux moteurs WebView2 de partager le même profil.
+; #SingleInstance Force arrêtait brutalement l'ancien processus, ce qui
+; pouvait provoquer un appel COM après libération du contrôleur WebView2.
+global cfMutex := DllCall("Kernel32\CreateMutexW", "Ptr", 0, "Int", 0,
+    "Str", "Local\ClickFlow-AutoCliker-OneInstance", "Ptr")
+mutexAlreadyHeld := A_LastError = 183
+if !cfMutex {
+    MsgBox("Impossible de sécuriser le lancement de ClickFlow.", "ClickFlow", "Icon!")
+    ExitApp(1)
+}
+
+; La détection de fenêtre gère aussi les versions v1.0.0 déjà ouvertes,
+; qui n'avaient pas de mutex et ne doivent pas être fermées de force.
+if mutexAlreadyHeld || FindRunningClickFlow() {
+    RaiseRunningClickFlow()
+    DllCall("Kernel32\CloseHandle", "Ptr", cfMutex)
+    ExitApp()
+}
 
 htmlPath := A_ScriptDir "\ui\index.html"
 dllPath := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
@@ -31,7 +50,7 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.0.0")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.0.1")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)
@@ -68,6 +87,8 @@ try {
     web.NavigateToString(FileRead(htmlPath, "UTF-8"))
     if probe != ""
         FileAppend("ready", probe, "UTF-8")
+    ; Nettoyage après initialisation réussie, jamais pendant la fermeture.
+    SetTimer(CleanOldRuntimeCaches, -1200)
 } catch as err {
     details := err.Message " (" err.File ":" err.Line ")"
     if probe != ""
@@ -75,6 +96,50 @@ try {
     else
         MsgBox("Impossible de démarrer ClickFlow : " details, "ClickFlow", "Icon!")
     ExitApp(1)
+}
+
+FindRunningClickFlow() {
+    ; Limiter la recherche aux fenêtres GUI AHK de ClickFlow.
+    SetTitleMatchMode(2)
+    return WinExist("ClickFlow - AutoCliker ahk_class AutoHotkeyGUI")
+}
+
+RaiseRunningClickFlow() {
+    ; Une instance peut encore être en train d'initialiser sa fenêtre.
+    Loop 35 {
+        hwnd := FindRunningClickFlow()
+        if hwnd {
+            try WinRestore("ahk_id " hwnd)
+            try WinActivate("ahk_id " hwnd)
+            return true
+        }
+        Sleep(100)
+    }
+    return false
+}
+
+CleanOldRuntimeCaches(*) {
+    ; Seuls les caches versionnés créés par notre lanceur sont supprimés.
+    ; Ne jamais toucher aux profils, aux paramètres ou au dossier WebView2.
+    root := EnvGet("LOCALAPPDATA") "\ClickFlow"
+    if !RegExMatch(A_ScriptDir, "i)\\Runtime-\d+\.\d+\.\d+$")
+        return
+    Loop Files root "\Runtime-*", "D" {
+        name := A_LoopFileName
+        oldDir := A_LoopFileFullPath
+        if !RegExMatch(name, "^Runtime-\d+\.\d+\.\d+$")
+            continue
+        if StrLower(oldDir) = StrLower(A_ScriptDir)
+            continue
+        ; Ne pas suivre les jonctions ou les liens symboliques Windows.
+        attrs := DllCall("Kernel32\GetFileAttributesW", "Str", oldDir, "UInt")
+        if attrs = 0xFFFFFFFF || (attrs & 0x400)
+            continue
+        ; Ne supprimer que les anciens runtimes dont on connaît le format.
+        if !FileExist(oldDir "\.extracted-ok")
+            continue
+        try DirDelete(oldDir, true)
+    }
 }
 
 CloseClickFlow(*) {

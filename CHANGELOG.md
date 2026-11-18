@@ -1,5 +1,12 @@
 # Historique des versions
 
+## 1.0.1 - 2026-11-18
+
+- Une seule instance active : relancer ClickFlow remet la fenêtre existante au premier plan.
+- Suppression du conflit WebView2 entre deux instances qui causait une erreur de lecture/écriture mémoire.
+- Nettoyage des anciens dossiers `Runtime-X.Y.Z` après démarrage réussi, en conservant la version active.
+- Profils, paramètres, raccourcis et données WebView2 toujours préservés.
+
 ## 1.0.0 - 2026-11-18
 
 Première version stable de **ClickFlow - AutoCliker** sur AutoHotkey v2 et WebView2.
