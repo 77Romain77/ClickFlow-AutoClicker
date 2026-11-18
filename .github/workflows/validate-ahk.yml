@@ -55,7 +55,8 @@ jobs:
           try {
             Start-Sleep -Seconds 3
             $process.Refresh()
-            $errors = if (Test-Path startup.err) { (Get-Content startup.err -Raw).Trim() } else { '' }
+            $errors = if (Test-Path startup.err) { [string](Get-Content startup.err -Raw) } else { '' }
+            $errors = $errors.Trim()
             if ($errors) { throw "AutoHotkey GUI startup error: $errors" }
             if ($process.HasExited) { throw "AutoHotkey GUI closed unexpectedly with code $($process.ExitCode)" }
             Write-Host 'GUI startup smoke test succeeded.'
