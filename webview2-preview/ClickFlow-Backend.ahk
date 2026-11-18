@@ -40,10 +40,10 @@ BackendInit(hwnd, web) {
     ; avec l'activation du profil actuel. On préfère une touche de secours.
     for p in CF.profiles {
         if SameKey(p.cfg.activation, CF.emergencyKey)
-            p.cfg.activation := "F6"
+            p.cfg.activation := SameKey(CF.emergencyKey, "F6") ? "F7" : "F6"
     }
     if SameKey(CF.cfg.activation, CF.emergencyKey)
-        CF.cfg.activation := "F6"
+        CF.cfg.activation := SameKey(CF.emergencyKey, "F6") ? "F7" : "F6"
     CF.loading := false
     RegisterEmergency()
     RegisterActivation()
@@ -113,7 +113,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -288,7 +288,10 @@ BackendMessage(sender, args) {
 SameKey(a, b) {
     if a = b
         return true
-    try return GetKeyVK(a) = GetKeyVK(b)
+    try {
+        vka := GetKeyVK(a)
+        return vka != 0 && vka = GetKeyVK(b)
+    }
     return false
 }
 
@@ -572,6 +575,7 @@ SelectedProfileIndex() {
 }
 
 ReadConfig(file, section, base) {
+    global CF
     cfg := CopyConfig(base)
     if !FileExist(file)
         return cfg
@@ -595,7 +599,7 @@ ReadConfig(file, section, base) {
     if !HasValue(["LButton", "RButton", "MButton", "XButton1", "XButton2"], cfg.gateButton)
         cfg.gateButton := "RButton"
     if cfg.activation = "" || cfg.activation = "!" || SameKey(cfg.activation, CF.emergencyKey)
-        cfg.activation := "F6"
+        cfg.activation := SameKey(CF.emergencyKey, "F6") ? "F7" : "F6"
     return cfg
 }
 
