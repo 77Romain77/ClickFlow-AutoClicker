@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClickFlow - Prototype WebView2</title>
+<style>
+:root{color-scheme:dark;--bg:#090e1a;--side:#0e1423;--card:#131e31;--card2:#172439;--line:#283751;--white:#f2f6ff;--muted:#96a9c7;--blue:#5792ff;--blue2:#3467e9;--teal:#3ed2ad;--red:#ff6683;--radius:18px}
+*{box-sizing:border-box}html{height:100%;background:var(--bg)}body{margin:0;color:var(--white);background:var(--bg);font:14px/1.45 "Segoe UI",Inter,Arial,sans-serif;min-height:100%;overflow-x:hidden}
+button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #86b9ff;outline-offset:3px}
+.app{min-height:100vh;display:grid;grid-template-columns:226px minmax(0,1fr)}aside{background:var(--side);border-right:1px solid #263148;padding:24px 14px 20px;display:flex;flex-direction:column;gap:24px;min-height:100vh;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:11px;padding:0 8px}.logo{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(135deg,#4a91ff,#3565e6);box-shadow:0 7px 22px #1c55ee33;color:white;font-size:22px;font-weight:750}.brand h1{margin:0;font-size:18px;font-weight:730;letter-spacing:-.6px}.brand small{color:var(--muted);font-size:11px;display:block;margin-top:-2px}
+.nav-label,.tiny-label{font-size:10px;font-weight:750;color:#748caf;letter-spacing:1.55px;text-transform:uppercase}.nav-label{padding:0 14px;margin-bottom:10px}nav{display:flex;flex-direction:column;gap:5px}.nav-item{display:flex;gap:12px;align-items:center;border:1px solid transparent;background:transparent;color:#a4b4cf;border-radius:11px;text-align:left;padding:11px 13px;font-weight:590;font-size:13px}.nav-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}.nav-item.active{color:#e6f0ff;background:#20355b;border-color:#2c4b84}.nav-item:hover:not(.active){background:#172338;color:#f2f7ff}
+.side-spacer{flex:1}.small-card{border:1px solid #263a5a;background:#162238;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:7px}.small-card strong{font-size:12px}.small-card p{margin:0;color:var(--muted);font-size:11px}.pill{display:inline-flex;gap:7px;align-items:center;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700;background:#23334e;color:#adc9fa;width:max-content}.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}.pill .dot{background:#8fbaff}.side-footer{color:#7184a5;font-size:10px;padding:0 10px}
+main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:100%;margin:auto}.topline{display:flex;justify-content:space-between;align-items:center;gap:12px}.breadcrumb{font-size:11px;font-weight:780;letter-spacing:1.3px;color:#89a7d6;text-transform:uppercase}.badge{background:#183958;color:#8bd5ff;border:1px solid #28597c;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:800;letter-spacing:.3px}.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:24px 0 23px}.hero h2{margin:0 0 5px;font-size:clamp(23px,3vw,31px);letter-spacing:-1.35px;font-weight:760}.hero p{margin:0;color:var(--muted);font-size:12.5px}.save{display:flex;align-items:center;gap:7px;color:#83d7be;font-size:11px;font-weight:650}.save .dot{background:#3ed2ad}
+.dashboard{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.85fr);gap:16px;align-items:start}.stack{display:flex;flex-direction:column;gap:15px;min-width:0}.card{border:1px solid #263653;background:linear-gradient(145deg,#162238,#121c2e);border-radius:var(--radius);box-shadow:0 7px 24px #03091525;padding:19px}.card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:17px}.card-title{font-size:14px;font-weight:750;letter-spacing:-.15px}.card-description{margin-top:3px;font-size:11px;color:var(--muted)}.number{font-size:11px;color:#7aa9fc;font-weight:800;letter-spacing:1px}.label{display:block;font-size:12px;font-weight:680;color:#cbd8ed;margin:0 0 8px}.subnote{font-size:11px;color:var(--muted)}.input,.select{width:100%;background:#0e1829;border:1px solid #354765;border-radius:10px;color:#f0f5ff;padding:10px 12px;min-height:40px}.select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23a9bbd8' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:31px}.input:focus,.select:focus{border-color:#5c93fd;outline:0;box-shadow:0 0 0 3px #4f8dff24}
+.seg{display:flex;background:#0c1729;border:1px solid #2a3b59;padding:4px;border-radius:12px;gap:3px}.seg button{border:0;background:transparent;color:#8fa4c2;flex:1;padding:9px 7px;border-radius:8px;font-weight:680;font-size:12px;transition:.15s}.seg button.active{background:#284a88;color:#eff6ff;box-shadow:0 2px 7px #08132766}.seg button:not(.active):hover{color:white;background:#1b2b43}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.range-group{margin-top:17px}.range-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.range-top b{font-size:12px}.value-row{display:grid;grid-template-columns:1fr 74px;gap:13px;align-items:center}.range{width:100%;height:6px;appearance:none;border-radius:999px;background:#263955;cursor:pointer;accent-color:var(--blue)}.range::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:#e8f2ff;border:4px solid var(--blue);box-shadow:0 2px 10px #2859af99}.number-input{text-align:center;font-variant-numeric:tabular-nums;padding:8px;min-height:36px}.mutedline{border-top:1px solid #283a54;margin-top:19px;padding-top:12px;font-size:11px;color:#7f98ba}
+.mini-tab{display:flex;gap:5px;margin-top:14px}.mini-tab button{background:#172843;border:1px solid #293f60;border-radius:8px;color:#b9c8e0;padding:6px 13px;font-size:11px}.mini-tab button.active{background:#224e8a;border-color:#3877c1;color:white}.mini-tab button:disabled,.seg button:disabled{opacity:.38;cursor:not-allowed}
+.btn{border:1px solid transparent;background:#293b58;border-radius:10px;color:#eaf1fd;padding:10px 12px;font-weight:700;font-size:12px;transition:background .15s,transform .12s;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px}.btn:hover{background:#354d72}.btn:active{transform:translateY(1px)}.btn.primary{background:#3c74ed;color:white;box-shadow:0 5px 16px #245ee82a}.btn.primary:hover{background:#5489fa}.btn.quiet{border-color:#354866;background:#192a41}.btn.danger{color:#ffc2cc;background:#512638;border-color:#633144}.btn.danger:hover{background:#71394e}.btn.full{width:100%}.btn.sm{font-size:11px;padding:7px 10px;min-height:34px}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.profile-line{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:center}.profile-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.profile-actions .btn{flex:1}.key-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}.key{font-weight:730;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}.kbd{padding:3px 6px;border-radius:5px;border:1px solid #3a5180;background:#1a2c49;color:#b6d4ff;font-weight:780;font-size:11px;white-space:nowrap}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:15px;padding:12px 0 0;border-top:1px solid #2b3a55}.toggle-row strong{font-size:12px}.toggle-row span{color:var(--muted);font-size:11px}.switch{width:39px;height:23px;border-radius:999px;border:1px solid #42587a;background:#24314a;position:relative;flex:0 0 auto}.switch::after{content:"";position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:#9bacc4;transition:.17s}.switch.on{background:#275eb8;border-color:#3e81fd}.switch.on::after{transform:translateX(16px);background:white}
+.status-box{padding:21px 18px;background:radial-gradient(circle at 85% 0,#193b54 0,#15243a 60%,#111b2b);border:1px solid #2a4764;border-radius:17px}.status-icon{display:grid;place-items:center;width:45px;height:45px;border-radius:14px;background:#28415d;font-size:21px;color:#97d0ff}.status-title{font-size:20px;font-weight:775;margin:13px 0 3px;letter-spacing:-.5px}.status-sub{color:var(--muted);font-size:11px;margin-bottom:18px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#0c192a;border:1px solid #223d58;border-radius:11px;padding:12px}.stat span{display:block;font-size:10px;letter-spacing:.7px;color:#8fa8c9;text-transform:uppercase}.stat b{display:block;font-size:21px;font-weight:760;margin-top:6px}.safe{margin-top:13px;color:#a6cbd9;font-size:10px;line-height:1.5;display:flex;gap:8px}.safe .dot{background:#58b9d2;flex:0 0 auto;margin-top:4px}
+.note{display:flex;align-items:flex-start;gap:10px;color:#b9c7da;font-size:11px;line-height:1.6;border-radius:13px;padding:13px;background:#182941;border:1px solid #2c435e}.note b{color:#e4efff}.section-title{font-size:18px;margin:0 0 13px;letter-spacing:-.5px}.hidden{display:none!important}
+.modal-backdrop{position:fixed;inset:0;background:#030711bb;display:grid;place-items:center;padding:18px;z-index:100}.modal{background:#172338;border:1px solid #385173;box-shadow:0 15px 65px #0009;border-radius:17px;padding:22px;max-width:390px;width:100%}.modal h3{margin:0 0 8px;font-size:18px}.modal p{margin:0 0 14px;color:var(--muted);font-size:12px}.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.toast{position:fixed;right:20px;bottom:20px;border:1px solid #345b86;background:#193356;border-radius:12px;color:#fff;padding:12px 16px;box-shadow:0 10px 35px #0006;font-size:12px;z-index:200;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:translateY(0)}
+@media(max-width:1020px){.app{grid-template-columns:190px 1fr}main{padding:20px}.dashboard{grid-template-columns:1fr}.side-footer{display:none}}
+@media(max-width:670px){.app{display:block}aside{position:static;height:auto;min-height:unset;padding:12px 15px}.nav-label,.side-spacer,.small-card,.side-footer{display:none}nav{flex-direction:row}.nav-item{padding:8px}.brand{padding:3px}main{padding:20px 15px}.hero{display:block}.hero .save{margin-top:12px}.row2,.key-row{grid-template-columns:1fr}.card{padding:15px}.profile-line{grid-template-columns:1fr}.profile-actions{display:grid;grid-template-columns:1fr 1fr}.dashboard{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+ <div class="brand"><div class="logo">↗</div><div><h1>ClickFlow</h1><small>AutoClicker</small></div></div>
+ <div>
+  <div class="nav-label">ESPACE DE TRAVAIL</div>
+  <nav>
+   <button class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg> Tableau de bord</button>
+   <button class="nav-item" data-page="profiles"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-7 8-7s8 2 8 7"/></svg> Profils</button>
+   <button class="nav-item" data-page="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg> À propos</button>
+  </nav>
+ </div>
+ <div class="side-spacer"></div>
+ <div class="small-card"><span class="pill"><i class="dot"></i> Prototype de design</span><strong>Interface WebView2</strong><p>Ce test n'envoie aucun clic. Les modifications des profils sont temporaires.</p></div>
+ <div class="side-footer">ClickFlow v0.3.0-preview · AHK v2</div>
+</aside>
+<main>
+ <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><span class="badge">APERÇU INTERACTIF</span></div>
+ <section id="page-dashboard">
+  <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Essai visuel sans clics automatiques</div></div>
+  <div class="dashboard">
+   <div class="stack">
+    <div class="card">
+     <div class="card-head"><div><div class="card-title">Fréquence des clics</div><div class="card-description">Configurez votre cadence en quelques secondes.</div></div><span class="number">01 / CPS</span></div>
+     <span class="label">Mode de fonctionnement</span>
+     <div class="seg" id="modeSeg"><button data-mode="fixed">Fixe</button><button data-mode="random">Aléatoire</button><button data-mode="natural" class="active">Naturel</button></div>
+     <div class="range-group"><div class="range-top"><b id="minLabel">CPS minimum</b><span class="subnote">1 à 100 CPS</span></div><div class="value-row"><input aria-label="CPS minimum" id="minRange" class="range" type="range" min="1" max="100" value="8"><input aria-label="Valeur minimum" id="minNumber" class="input number-input" type="number" min="1" max="100" value="8"></div></div>
+     <div class="range-group" id="maxGroup"><div class="range-top"><b>CPS maximum</b><span class="subnote">Valeur supérieure ou égale au minimum</span></div><div class="value-row"><input aria-label="CPS maximum" id="maxRange" class="range" type="range" min="1" max="100" value="14"><input aria-label="Valeur maximum" id="maxNumber" class="input number-input" type="number" min="1" max="100" value="14"></div></div>
+     <div id="intensityBlock"><div class="range-top" style="margin-top:20px"><b>Intensité des variations</b></div><div class="mini-tab" id="intensitySeg"><button data-intensity="low">Faible</button><button data-intensity="medium" class="active">Moyenne</button><button data-intensity="high">Élevée</button></div></div>
+     <div class="mutedline">La précision réelle dépend des minuteries de Windows et de l'application cible.</div>
+    </div>
+    <div class="card">
+     <div class="card-head"><div><div class="card-title">Activation</div><div class="card-description">Choisissez comment vous souhaitez lancer les clics.</div></div><span class="number">02 / INPUT</span></div>
+     <div class="key-row"><div><label class="label" for="mouseButton">Bouton généré</label><select id="mouseButton" class="select"><option value="left">Clic gauche</option><option value="right">Clic droit</option><option value="middle">Clic central</option></select></div><div><span class="label">Activation</span><div class="seg" id="activationSeg"><button data-activation="hold">Maintenir</button><button data-activation="toggle" class="active">Basculer</button></div></div></div>
+     <div style="margin-top:16px"><span class="label">Touche de raccourci</span><button id="captureButton" class="btn quiet full key">Définir la touche <span id="hotkeyView" class="kbd">F6</span></button></div>
+     <div class="toggle-row"><div><strong>Conditionner à un bouton de souris</strong><br><span>Clics uniquement si le bouton choisi est maintenu.</span></div><button id="gateSwitch" class="switch" aria-label="Activer la condition souris" aria-pressed="false"></button></div>
+     <div class="toggle-row" id="gateChoose" style="display:none"><label class="label" for="gateButton" style="margin:0">Bouton de maintien</label><select id="gateButton" class="select" style="max-width:175px"><option value="left">Clic gauche</option><option value="right">Clic droit</option><option value="middle">Clic central</option><option value="mouse4">Mouse 4</option><option value="mouse5">Mouse 5</option></select></div>
+     <div class="toggle-row"><div><strong>Arrêt au changement de fenêtre</strong><br><span>Recommandé pour éviter les clics accidentels.</span></div><button id="focusSwitch" class="switch on" aria-label="Arrêt au changement de fenêtre" aria-pressed="true"></button></div>
+    </div>
+   </div>
+   <div class="stack">
+    <div class="card">
+     <div class="card-head"><div><div class="card-title">Profil actif</div><div class="card-description">Un profil par utilisation.</div></div><span class="number">03 / PROFIL</span></div>
+     <label class="label" for="profileSelect">Votre configuration</label><div class="profile-line"><select id="profileSelect" class="select"></select><button class="btn primary" id="newProfile" title="Créer un profil">+</button></div>
+     <div class="profile-actions"><button class="btn sm" id="renameProfile">Renommer</button><button class="btn sm" id="duplicateProfile">Dupliquer</button><button class="btn sm danger" id="deleteProfile">Supprimer</button></div>
+     <div class="mutedline">Profils de démonstration : les données actuelles de ClickFlow ne sont pas modifiées.</div>
+    </div>
+    <div class="status-box">
+     <div class="status-icon" id="sessionIcon">◉</div>
+     <div class="status-title" id="sessionTitle">Prêt à configurer</div>
+     <div class="status-sub" id="sessionSub">Le moteur réel est désactivé dans ce prototype.</div>
+     <div class="stats"><div class="stat"><span>CPS réels</span><b>0</b></div><div class="stat"><span>Clics envoyés</span><b>0</b></div></div>
+     <button class="btn primary full" id="demoToggle" style="margin-top:14px">Simuler l'état actif</button>
+     <div class="safe"><span class="dot"></span><span>Ce bouton ne produit aucun clic : il permet uniquement de tester l'apparence de l'état actif.</span></div>
+    </div>
+    <div class="note"><span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Un nouveau design, sans perdre le moteur.</b><br>Une fois ce rendu validé, nous reconnecterons les fonctions AutoHotkey et la sauvegarde de vos profils existants.</span></div>
+   </div>
+  </div>
+ </section>
+ <section id="page-profiles" class="hidden">
+  <div class="hero"><div><h2>Vos profils de clics.</h2><p>Testez la création, la duplication et le changement de profil.</p></div></div>
+  <div class="card"><div class="card-head"><div class="card-title">Profils de démonstration</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Cette page est une maquette interactive. Elle n'utilise pas encore le fichier settings.ini.</div></div>
+ </section>
+ <section id="page-about" class="hidden">
+  <div class="hero"><div><h2>ClickFlow, autrement.</h2><p>Une nouvelle interface graphique, sans réécrire la logique des clics.</p></div></div>
+  <div class="card" style="max-width:690px"><span class="pill"><i class="dot"></i> Prototype WebView2</span><h3 style="margin:18px 0 8px">Interface HTML/CSS dans une fenêtre Windows</h3><p style="color:var(--muted)">Cette version vérifie le design et le lancement de WebView2. Elle ne crée aucun clic et n'écrit pas dans vos profils existants.</p><p style="color:var(--muted)">AutoHotkey v2 restera responsable des raccourcis, du moteur CPS et de la sauvegarde après la validation du prototype.</p><div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
+ </section>
+</main>
+</div>
+<div id="modalBg" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+ <div class="modal"><h3 id="modalTitle">Profil</h3><p id="modalDescription">Choisissez un nom.</p><input id="modalInput" class="input" maxlength="36" aria-label="Nom du profil"><div class="modal-foot"><button class="btn" id="modalCancel">Annuler</button><button class="btn primary" id="modalConfirm">Valider</button></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const clone = o => JSON.parse(JSON.stringify(o));
+const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'left',focus:true});
+const model={profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false};
+let toastTimer=0,modalTask=null;
+const active=()=>model.profiles.find(p=>p.id===model.selected);
+const config=()=>active().settings;
+function toast(message){const e=$('toast');e.textContent=message;e.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('visible'),2600)}
+function selectedButtons(container,attr,val){document.querySelectorAll('#'+container+' [data-'+attr+']').forEach(x=>x.classList.toggle('active',x.dataset[attr]===val))}
+function setSwitch(id,enabled){$(id).classList.toggle('on',!!enabled);$(id).setAttribute('aria-pressed',String(!!enabled))}
+function clamp(v){return Math.max(1,Math.min(100,Math.round(Number(v)||1)))}
+function updateRanges(){const c=config();$('minRange').value=$('minNumber').value=c.min;$('maxRange').value=$('maxNumber').value=c.max;$('maxGroup').classList.toggle('hidden',c.mode==='fixed');$('minLabel').textContent=c.mode==='fixed'?'CPS fixe':'CPS minimum';$('intensityBlock').classList.toggle('hidden',c.mode!=='natural');}
+function render(){const c=config();selectedButtons('modeSeg','mode',c.mode);selectedButtons('intensitySeg','intensity',c.intensity);selectedButtons('activationSeg','activation',c.activation);updateRanges();$('mouseButton').value=c.mouse;$('gateButton').value=c.gateButton;$('hotkeyView').textContent=c.hotkey;setSwitch('gateSwitch',c.gate);setSwitch('focusSwitch',c.focus);$('gateChoose').style.display=c.gate?'flex':'none';renderProfiles()}
+function renderProfiles(){const sel=$('profileSelect');sel.replaceChildren();model.profiles.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.append(o)});sel.value=model.selected;const list=$('profileList');list.replaceChildren();model.profiles.forEach(p=>{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 2px;border-bottom:1px solid #2b3b54';const box=document.createElement('div');const name=document.createElement('strong');name.textContent=p.name;const small=document.createElement('div');small.className='subnote';small.textContent=(p.settings.mode==='fixed'?'Fixe':p.settings.mode==='natural'?'Naturel':'Aléatoire')+' · '+p.settings.min+(p.settings.mode==='fixed'?'':' - '+p.settings.max)+' CPS';box.append(name,small);const btn=document.createElement('button');btn.className='btn sm '+(model.selected===p.id?'primary':'quiet');btn.textContent=model.selected===p.id?'Sélectionné':'Sélectionner';btn.onclick=()=>{model.selected=p.id;render();toast('Profil '+p.name+' sélectionné')};row.append(box,btn);list.append(row)})}
+function openModal(title,description,defaultValue,confirm){$('modalTitle').textContent=title;$('modalDescription').textContent=description;$('modalInput').value=defaultValue||'';$('modalBg').classList.remove('hidden');modalTask=confirm;setTimeout(()=>$('modalInput').focus(),50)}
+function closeModal(){$('modalBg').classList.add('hidden');modalTask=null}
+$('modalCancel').onclick=closeModal;
+$('modalConfirm').onclick=()=>{const name=$('modalInput').value.trim();if(!name||name.length>36){toast('Indiquez un nom de 1 à 36 caractères.');return}if(model.profiles.some(p=>p.id!==model.selected&&p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom est déjà utilisé.');return}const fn=modalTask;closeModal();if(fn)fn(name)};
+$('modalInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('modalConfirm').click();if(e.key==='Escape')closeModal()});
+function createProfile(copyCurrent=false){const nextName=copyCurrent?active().name+' - copie':'Nouveau profil';openModal(copyCurrent?'Dupliquer le profil':'Nouveau profil','Choisissez un nom pour cette configuration.',nextName,name=>{if(model.profiles.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom existe déjà.');return}const p={id:model.nextId++,name,settings:copyCurrent?clone(config()):defaults()};model.profiles.push(p);model.selected=p.id;render();toast('Profil créé : '+name)})}
+$('newProfile').onclick=()=>createProfile();$('addProfilePage').onclick=()=>createProfile();$('duplicateProfile').onclick=()=>createProfile(true);
+$('renameProfile').onclick=()=>openModal('Renommer le profil','Modifiez le nom de votre profil.',active().name,name=>{active().name=name;render();toast('Profil renommé')});
+$('deleteProfile').onclick=()=>{if(model.profiles.length<=1){toast('Conservez au moins un profil.');return}openModal('Supprimer le profil','Saisissez SUPPRIMER pour confirmer la suppression.','',val=>{if(val.toLocaleUpperCase()!=='SUPPRIMER'){toast('Suppression annulée.');return}model.profiles=model.profiles.filter(p=>p.id!==model.selected);model.selected=model.profiles[0].id;render();toast('Profil supprimé')})};
+$('profileSelect').onchange=e=>{model.selected=Number(e.target.value);render()};
+function changeCps(which,input){const c=config();const next=clamp(input);c[which]=next;if(c.min>c.max){if(which==='min')c.max=c.min;else c.min=c.max}updateRanges()}
+for(const which of ['min','max']){for(const type of ['Range','Number']){$(which+type).addEventListener('input',e=>changeCps(which,e.target.value))}}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{config().mode=b.dataset.mode;render()});
+document.querySelectorAll('[data-intensity]').forEach(b=>b.onclick=()=>{config().intensity=b.dataset.intensity;render()});
+document.querySelectorAll('[data-activation]').forEach(b=>b.onclick=()=>{config().activation=b.dataset.activation;render()});
+$('mouseButton').onchange=e=>config().mouse=e.target.value;$('gateButton').onchange=e=>config().gateButton=e.target.value;
+$('gateSwitch').onclick=()=>{config().gate=!config().gate;render()};
+$('focusSwitch').onclick=()=>{config().focus=!config().focus;render()};
+$('captureButton').onclick=()=>{model.capturing=true;$('hotkeyView').textContent='Appuyez...';toast('Appuyez sur une touche, ou Échap pour annuler.')};
+document.addEventListener('keydown',e=>{if(!model.capturing)return;e.preventDefault();e.stopPropagation();model.capturing=false;if(e.key!=='Escape'){config().hotkey=e.key===' '?'Espace':e.key;toast('Raccourci défini pour la maquette')}render()});
+$('demoToggle').onclick=()=>{model.demo=!model.demo;$('sessionIcon').textContent=model.demo?'●':'◉';$('sessionIcon').style.color=model.demo?'#64dfb8':'#97d0ff';$('sessionTitle').textContent=model.demo?'Aperçu actif':'Prêt à configurer';$('sessionSub').textContent=model.demo?'Simulation visuelle uniquement - 0 clic envoyé.':'Le moteur réel est désactivé dans ce prototype.';$('demoToggle').textContent=model.demo?"Revenir à l'état inactif":"Simuler l'état actif";$('demoToggle').classList.toggle('danger',model.demo);$('demoToggle').classList.toggle('primary',!model.demo)};
+document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{const page=btn.dataset.page;document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));['dashboard','profiles','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));$('crumb').textContent='VOTRE ESPACE / '+(page==='dashboard'?'TABLEAU DE BORD':page==='profiles'?'PROFILS':'À PROPOS')});
+window.addEventListener('message',()=>{});
+if(window.chrome&&window.chrome.webview){window.chrome.webview.addEventListener('message',event=>{if(event.data==='pong')$('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle.'});window.chrome.webview.postMessage('ping')}else{$('bridgeStatus').textContent='Affichage dans un navigateur : le pont AutoHotkey n\'est disponible que dans la fenêtre WebView2.'}
+render();
+</script>
+</body>
+</html>
