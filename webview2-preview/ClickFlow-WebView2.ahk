@@ -4,7 +4,7 @@
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v0.3.4 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v0.3.5 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
 ; Utiliser F12 pour arrêter immédiatement les clics.
 
@@ -27,12 +27,13 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize900x640", "ClickFlow - AutoClicker v0.3.4")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoClicker v0.3.5")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)
 main.OnEvent("Size", ResizeClickFlow)
-main.Show("w1120 h800")
+compactAtStart := IniRead(A_AppData "\ClickFlow\settings.ini", "General", "CompactMode", "0") = "1"
+main.Show(compactAtStart ? "w540 h700" : "w1120 h800")
 if probe != ""
     FileAppend(main.Hwnd, probe ".hwnd", "UTF-8")
 
