@@ -14,6 +14,7 @@ global CF := {
     pressed: false, armed: false, target: 0, nextAt: 0,
     cpsNow: 0, naturalCps: 12, naturalTarget: 12, nextVariation: 0,
     total: 0, recent: [], lastUi: 0, loading: true,
+    profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
     cfg: { mode: 1, variation: 2, min: 8, max: 14,
            clickButton: "Left", activation: "F6", hold: 1,
@@ -27,13 +28,14 @@ Hotkey("~*F12", EmergencyStop, "On")
 SetTimer(EngineTick, 10)
 SetTimer(UpdateStats, 200)
 OnExit(Cleanup)
-CF.gui.Show("w700 h742")
+CF.gui.Show("w700 h844")
 CF.loading := false
+SaveSettings()
 SetNotice("Pret. Passe sur ta fenetre cible, puis appuie sur " DisplayKey(CF.cfg.activation) ".")
 
 BuildGui() {
     global CF
-    g := Gui("-Resize", "ClickFlow - AutoClicker | AHK v2.2")
+    g := Gui("-Resize", "ClickFlow - AutoClicker | AHK v2.3")
     g.BackColor := "0C1423"
     CF.gui := g
 
@@ -41,72 +43,90 @@ BuildGui() {
     g.SetFont("s23 Bold cF0F4FF", "Segoe UI")
     g.AddText("x28 y20 w485 h42", "ClickFlow")
     g.SetFont("s10 Norm c9DB1D1", "Segoe UI")
-    g.AddText("x30 y66 w570 h23", "AutoClicker  /  AutoHotkey v2  /  Version de test 0.2.2")
+    g.AddText("x30 y66 w570 h23", "AutoClicker  /  AutoHotkey v2  /  Version de test 0.2.3")
     g.SetFont("s9 Bold c70A1FF", "Segoe UI")
     g.AddText("x575 y38 w96 h25 Center", "AHK v2")
 
-    ; Carte 1 : rythme des clics.
-    g.AddText("x18 y106 w664 h274 Background17243A", "")
+    ; Profils persistants : chaque profil possede son raccourci et ses reglages.
+    g.AddText("x18 y106 w664 h84 Background17243A", "")
     g.SetFont("s9 Bold c8CAFF9", "Segoe UI")
-    g.AddText("x36 y121 w610 h21 Background17243A", "01   CADENCE")
+    g.AddText("x36 y116 w610 h19 Background17243A", "01   PROFILS")
+    choices := []
+    for p in CF.profiles
+        choices.Push(p.name)
     g.SetFont("s10 Norm cF0F4FF", "Segoe UI")
-    g.AddText("x36 y149 w260 h20 Background17243A", "Mode CPS")
-    g.AddText("x352 y149 w260 h20 Background17243A", "Variation naturelle")
-    cMode := g.AddDropDownList("x36 y174 w277 Choose" CF.cfg.mode, ["Fixed", "Random", "Natural"])
-    cVariation := g.AddDropDownList("x352 y174 w294 Choose" CF.cfg.variation, ["Low", "Medium", "High"])
+    cProfile := g.AddDropDownList("x36 y145 w253 Choose" SelectedProfileIndex(), choices)
+    g.SetFont("s9 Norm c17243A", "Segoe UI")
+    cNewProfile := g.AddButton("x299 y143 w82 h32", "Nouveau")
+    cRenameProfile := g.AddButton("x387 y143 w83 h32", "Renommer")
+    cDuplicateProfile := g.AddButton("x476 y143 w84 h32", "Dupliquer")
+    cDeleteProfile := g.AddButton("x566 y143 w94 h32", "Supprimer")
+    g.SetFont("s10 Norm cF0F4FF", "Segoe UI")
 
-    g.AddText("x36 y221 w380 h22 Background17243A", "CPS minimum / fixe")
+    ; Carte 1 : rythme des clics.
+    g.AddText("x18 y200 w664 h274 Background17243A", "")
+    g.SetFont("s9 Bold c8CAFF9", "Segoe UI")
+    g.AddText("x36 y215 w610 h21 Background17243A", "02   CADENCE")
+    g.SetFont("s10 Norm cF0F4FF", "Segoe UI")
+    g.AddText("x36 y243 w260 h20 Background17243A", "Mode CPS")
+    g.AddText("x352 y243 w260 h20 Background17243A", "Variation naturelle")
+    cMode := g.AddDropDownList("x36 y268 w277 Choose" CF.cfg.mode, ["Fixed", "Random", "Natural"])
+    cVariation := g.AddDropDownList("x352 y268 w294 Choose" CF.cfg.variation, ["Low", "Medium", "High"])
+
+    g.AddText("x36 y315 w380 h22 Background17243A", "CPS minimum / fixe")
     ; AltSubmit notifie l'interface pendant le glissement, avant le relachement.
-    cMinSlider := g.AddSlider("x36 y245 w473 h34 Range1-100 AltSubmit", CF.cfg.min)
-    cMinEdit := g.AddEdit("x541 y245 w104 h30 Number Center c17243A", CF.cfg.min)
+    cMinSlider := g.AddSlider("x36 y339 w473 h34 Range1-100 AltSubmit", CF.cfg.min)
+    cMinEdit := g.AddEdit("x541 y339 w104 h30 Number Center c17243A", CF.cfg.min)
 
-    g.AddText("x36 y290 w380 h22 Background17243A", "CPS maximum")
-    cMaxSlider := g.AddSlider("x36 y315 w473 h34 Range1-100 AltSubmit", CF.cfg.max)
-    cMaxEdit := g.AddEdit("x541 y315 w104 h30 Number Center c17243A", CF.cfg.max)
+    g.AddText("x36 y384 w380 h22 Background17243A", "CPS maximum")
+    cMaxSlider := g.AddSlider("x36 y409 w473 h34 Range1-100 AltSubmit", CF.cfg.max)
+    cMaxEdit := g.AddEdit("x541 y409 w104 h30 Number Center c17243A", CF.cfg.max)
 
     g.SetFont("s9 Norm cA1B2CF", "Segoe UI")
-    g.AddText("x36 y354 w604 h18 Background17243A", "1 a 100 CPS - la frequence reelle depend de Windows.")
+    g.AddText("x36 y448 w604 h18 Background17243A", "1 a 100 CPS - la frequence reelle depend de Windows.")
 
     ; Carte 2 : touches et comportements.
-    g.AddText("x18 y392 w664 h196 Background17243A", "")
+    g.AddText("x18 y486 w664 h196 Background17243A", "")
     g.SetFont("s9 Bold c8CAFF9", "Segoe UI")
-    g.AddText("x36 y408 w605 h20 Background17243A", "02   ACTIVATION")
+    g.AddText("x36 y502 w605 h20 Background17243A", "03   ACTIVATION")
     g.SetFont("s10 Norm cF0F4FF", "Segoe UI")
-    g.AddText("x36 y439 w165 h20 Background17243A", "Bouton genere")
-    g.AddText("x219 y439 w145 h20 Background17243A", "Mode")
-    g.AddText("x384 y439 w260 h20 Background17243A", "Raccourci")
-    cButton := g.AddDropDownList("x36 y465 w165", ["Gauche", "Droit", "Central"])
+    g.AddText("x36 y533 w165 h20 Background17243A", "Bouton genere")
+    g.AddText("x219 y533 w145 h20 Background17243A", "Mode")
+    g.AddText("x384 y533 w260 h20 Background17243A", "Raccourci")
+    cButton := g.AddDropDownList("x36 y559 w165", ["Gauche", "Droit", "Central"])
     cButton.Choose(CF.cfg.clickButton = "Left" ? 1 : CF.cfg.clickButton = "Right" ? 2 : 3)
-    cHold := g.AddDropDownList("x219 y465 w145", ["Hold", "Toggle"])
+    cHold := g.AddDropDownList("x219 y559 w145", ["Hold", "Toggle"])
     cHold.Choose(CF.cfg.hold)
 
     ; Les boutons Windows sont clairs : leur texte doit etre fonce, et non blanc.
     g.SetFont("s10 Norm c17243A", "Segoe UI")
-    cCapture := g.AddButton("x384 y463 w262 h35", "Definir la touche : " DisplayKey(CF.cfg.activation))
+    cCapture := g.AddButton("x384 y557 w262 h35", "Definir la touche : " DisplayKey(CF.cfg.activation))
     g.SetFont("s10 Norm cF0F4FF", "Segoe UI")
-    cGate := g.AddCheckBox("x36 y510 w302 h23 Background17243A", "Exiger un bouton souris maintenu")
+    cGate := g.AddCheckBox("x36 y604 w302 h23 Background17243A", "Exiger un bouton souris maintenu")
     cGate.Value := CF.cfg.mouseGate
-    cGateButton := g.AddDropDownList("x352 y510 w192", ["Clic gauche", "Clic droit", "Clic central", "Mouse 4", "Mouse 5"])
+    cGateButton := g.AddDropDownList("x352 y604 w192", ["Clic gauche", "Clic droit", "Clic central", "Mouse 4", "Mouse 5"])
     gateIndexes := Map("LButton", 1, "RButton", 2, "MButton", 3, "XButton1", 4, "XButton2", 5)
     cGateButton.Choose(gateIndexes.Get(CF.cfg.gateButton, 2))
-    cFocus := g.AddCheckBox("x36 y549 w610 h24 Background17243A", "Arreter au changement de fenetre (recommande)")
+    cFocus := g.AddCheckBox("x36 y643 w610 h24 Background17243A", "Arreter au changement de fenetre (recommande)")
     cFocus.Value := CF.cfg.focusStop
 
     ; Carte 3 : etat et statistiques, sans chevauchement.
-    g.AddText("x18 y600 w664 h121 Background17243A", "")
+    g.AddText("x18 y694 w664 h121 Background17243A", "")
     g.SetFont("s9 Bold c8CAFF9", "Segoe UI")
-    g.AddText("x36 y611 w438 h20 Background17243A", "03   ETAT EN TEMPS REEL")
+    g.AddText("x36 y705 w438 h20 Background17243A", "04   ETAT EN TEMPS REEL")
     g.SetFont("s11 Bold cA5BDDF", "Segoe UI")
-    cStatus := g.AddText("x36 y637 w415 h25 Background17243A", "INACTIF")
+    cStatus := g.AddText("x36 y731 w415 h25 Background17243A", "INACTIF")
 
     g.SetFont("s10 Bold c17243A", "Segoe UI")
-    cStop := g.AddButton("x501 y622 w145 h36", "Arreter (F12)")
+    cStop := g.AddButton("x501 y716 w145 h36", "Arreter (F12)")
     g.SetFont("s9 Norm cC6D4EA", "Segoe UI")
-    cStats := g.AddText("x36 y669 w610 h20 Background17243A", "CPS reels : 0     Clics envoyes : 0")
+    cStats := g.AddText("x36 y763 w610 h20 Background17243A", "CPS reels : 0     Clics envoyes : 0")
     g.SetFont("s9 Norm c9DB1D1", "Segoe UI")
-    cNotice := g.AddText("x36 y692 w610 h20 Background17243A", "Pret.")
+    cNotice := g.AddText("x36 y786 w610 h20 Background17243A", "Pret.")
 
     CF.controls := Map(
+        "profile", cProfile, "newProfile", cNewProfile, "renameProfile", cRenameProfile,
+        "duplicateProfile", cDuplicateProfile, "deleteProfile", cDeleteProfile,
         "mode", cMode, "variation", cVariation,
         "minSlider", cMinSlider, "maxSlider", cMaxSlider,
         "minEdit", cMinEdit, "maxEdit", cMaxEdit,
@@ -115,6 +135,11 @@ BuildGui() {
         "status", cStatus, "stats", cStats, "notice", cNotice
     )
 
+    cProfile.OnEvent("Change", ProfileChanged)
+    cNewProfile.OnEvent("Click", NewProfile)
+    cRenameProfile.OnEvent("Click", RenameProfile)
+    cDuplicateProfile.OnEvent("Click", DuplicateProfile)
+    cDeleteProfile.OnEvent("Click", DeleteProfile)
     cMode.OnEvent("Change", ConfigChanged)
     cVariation.OnEvent("Change", ConfigChanged)
     cButton.OnEvent("Change", ConfigChanged)
@@ -171,7 +196,6 @@ SliderChanged(which) {
     if CF.loading
         return
     control := CF.controls[which "Slider"]
-    CF.controls[which "Edit"].Text := Round(control.Value)
     SetCps(which, Round(control.Value))
 }
 
