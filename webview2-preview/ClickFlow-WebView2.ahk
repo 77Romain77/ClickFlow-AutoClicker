@@ -1,5 +1,4 @@
 #Requires AutoHotkey v2.0
-#SingleInstance Force
 #ErrorStdOut "UTF-8"
 #Include lib\WebView2\WebView2.ahk
 
