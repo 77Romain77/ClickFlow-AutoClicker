@@ -77,6 +77,27 @@ jobs:
               throw "WebView2 loaded, but the JavaScript/AHK bridge did not complete its two-way handshake."
             }
             Write-Host "WebView2 initialized and JavaScript/AHK state exchange confirmed."
+            # Reproduce a user pressing the window X: WM_CLOSE, not Stop-Process.
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public static class ClickFlowWin32 {
+                [DllImport("user32.dll")]
+                public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wp, IntPtr lp);
+            }
+          '@
+            $p.Refresh()
+            $hwnd = $p.MainWindowHandle
+            if ($hwnd -eq [IntPtr]::Zero) { throw "ClickFlow window handle not found." }
+            if (-not [ClickFlowWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
+              throw "WM_CLOSE could not be posted to ClickFlow window."
+            }
+            if (-not $p.WaitForExit(5000)) { throw "ClickFlow did not exit within 5 seconds after WM_CLOSE." }
+            $errors = if (Test-Path startup.err) { Get-Content startup.err -Raw } else { '' }
+            if ($p.ExitCode -ne 0 -or $errors) {
+              throw "ClickFlow close error: exit=$($p.ExitCode) stderr=$errors"
+            }
+            Write-Host "GUI close via WM_CLOSE succeeded without errors."
           } finally {
             $p.Refresh()
             if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
@@ -85,21 +106,21 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.3-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.4-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v0.3.3-win-x64
-          path: ClickFlow-WebView2-v0.3.3-win-x64.zip
+          name: ClickFlow-WebView2-v0.3.4-win-x64
+          path: ClickFlow-WebView2-v0.3.4-win-x64.zip
 
       - name: Publish preview release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = 'v0.3.3-webview2-beta'
+          $tag = 'v0.3.4-webview2-beta'
           if (gh release view $tag 2>$null) {
-            gh release upload $tag ClickFlow-WebView2-v0.3.3-win-x64.zip --clobber
+            gh release upload $tag ClickFlow-WebView2-v0.3.4-win-x64.zip --clobber
           } else {
-            gh release create $tag ClickFlow-WebView2-v0.3.3-win-x64.zip --title 'ClickFlow v0.3.3 - Beta Windows WebView2' --notes 'Version beta : interface Windows WebView2, moteur de clics AutoHotkey et profils enregistres. Extraire tout le ZIP, lancer ClickFlow-WebView2.ahk avec AutoHotkey v2 64 bits. Premier test recommande : 5 CPS et F12 pour stop.' --target "$env:GITHUB_SHA" --prerelease
+            gh release create $tag ClickFlow-WebView2-v0.3.4-win-x64.zip --title 'ClickFlow v0.3.4 - Beta Windows WebView2' --notes 'Version beta : interface Windows WebView2, moteur de clics AutoHotkey et profils enregistres. Extraire tout le ZIP, lancer ClickFlow-WebView2.ahk avec AutoHotkey v2 64 bits. Premier test recommande : 5 CPS et F12 pour stop.' --target "$env:GITHUB_SHA" --prerelease
           }
