@@ -87,8 +87,12 @@ jobs:
             }
           '@
             $p.Refresh()
-            $hwnd = $p.MainWindowHandle
-            if ($hwnd -eq [IntPtr]::Zero) { throw "ClickFlow window handle not found." }
+            $hwndFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.hwnd'
+            if (!(Test-Path $hwndFile)) { throw "GUI did not report its exact HWND." }
+            $guiHwndText = (Get-Content $hwndFile -Raw).Trim()
+            $hwnd = [IntPtr]::new([long]$guiHwndText)
+            if ($hwnd -eq [IntPtr]::Zero) { throw "ClickFlow GUI HWND invalid." }
+            Write-Host "Closing exact ClickFlow GUI HWND $guiHwndText"
             if (-not [ClickFlowWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
               throw "WM_CLOSE could not be posted to ClickFlow window."
             }
