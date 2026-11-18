@@ -41,7 +41,10 @@ try {
     CF.compactMode := false
     ApplyWindowMode()
     WinGetPos(, , &w, &h, "ahk_id " g.Hwnd)
-    if Abs(w - 1120) > 6 || Abs(h - 800) > 6
+    ; Sur les machines CI 1024x768, Windows limite la taille demandee
+    ; a l'espace du bureau. La fenetre doit toutefois etre bien plus
+    ; grande que le mode compact.
+    if w < 900 || h < 730
         throw Error("La taille etendue n'est pas respectee: " w "x" h)
     g.Destroy()
     FileDelete(CF.configFile)
