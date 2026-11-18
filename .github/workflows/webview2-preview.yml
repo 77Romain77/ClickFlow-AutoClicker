@@ -5,6 +5,8 @@ on:
     branches: [experimental/webview2]
     paths:
       - 'webview2-preview/**'
+      - 'tests/ahk-global-settings.ahk'
+      - 'tools/build_single_ahk.py'
       - '.github/workflows/webview2-preview.yml'
   workflow_dispatch:
 
