@@ -8,12 +8,14 @@ on:
       - "ClickFlow.ahk"
       - "ClickFlow-test-v0.2.1.ahk"
       - "ClickFlow-test-v0.2.2.ahk"
+      - "ClickFlow-test-v0.2.3.ahk"
       - ".github/workflows/validate-ahk.yml"
   pull_request:
     paths:
       - "ClickFlow.ahk"
       - "ClickFlow-test-v0.2.1.ahk"
       - "ClickFlow-test-v0.2.2.ahk"
+      - "ClickFlow-test-v0.2.3.ahk"
       - ".github/workflows/validate-ahk.yml"
   workflow_dispatch:
 
@@ -38,7 +40,7 @@ jobs:
           if (-not $exe) { throw "AutoHotkey64.exe not found in archive" }
           # AutoHotkey can print a parse error yet return a success exit code.
           # Capture and inspect every diagnostic, not just LASTEXITCODE.
-          foreach ($script in @("ClickFlow.ahk", "ClickFlow-test-v0.2.1.ahk", "ClickFlow-test-v0.2.2.ahk")) {
+          foreach ($script in @("ClickFlow.ahk", "ClickFlow-test-v0.2.1.ahk", "ClickFlow-test-v0.2.2.ahk", "ClickFlow-test-v0.2.3.ahk")) {
             $diagnostics = (& $exe /ErrorStdOut /Validate $script 2>&1 | Out-String).Trim()
             $exitCode = $LASTEXITCODE
             if ($diagnostics) { Write-Host $diagnostics }
@@ -51,7 +53,7 @@ jobs:
         shell: pwsh
         run: |
           $exe = Get-ChildItem ahk -Recurse -Filter AutoHotkey64.exe | Select-Object -First 1 -ExpandProperty FullName
-          $process = Start-Process -FilePath $exe -ArgumentList '/ErrorStdOut', 'ClickFlow-test-v0.2.2.ahk' -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
+          $process = Start-Process -FilePath $exe -ArgumentList '/ErrorStdOut', 'ClickFlow-test-v0.2.3.ahk' -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
           try {
             Start-Sleep -Seconds 3
             $process.Refresh()
