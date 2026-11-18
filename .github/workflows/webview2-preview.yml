@@ -7,6 +7,7 @@ on:
       - 'webview2-preview/**'
       - 'tests/ahk-global-settings.ahk'
       - 'tools/build_single_ahk.py'
+      - 'tools/make_icon.py'
       - '.github/workflows/webview2-preview.yml'
   workflow_dispatch:
 
@@ -40,6 +41,15 @@ jobs:
           New-Item -ItemType Directory -Force 'webview2-preview/lib/WebView2/64bit' | Out-Null
           Copy-Item $dll 'webview2-preview/lib/WebView2/64bit/WebView2Loader.dll'
           Write-Host "Copied official Microsoft loader: $dll"
+
+      - name: Generate branded ClickFlow icon (standard library only)
+        shell: pwsh
+        run: |
+          python tools/make_icon.py --output 'webview2-preview/assets/ClickFlow.ico'
+          $icon = 'webview2-preview/assets/ClickFlow.ico'
+          if (!(Test-Path $icon) -or (Get-Item $icon).Length -lt 5000) {
+            throw 'Generated ICO missing or invalid.'
+          }
 
       - name: Validate mouse hold regression fix
         shell: pwsh
@@ -128,15 +138,66 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root webview2-preview --output ClickFlow-v0.3.5.ahk
-          if (!(Test-Path 'ClickFlow-v0.3.5.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v0.3.5.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root webview2-preview --output ClickFlow-v0.3.6.ahk
+          if (!(Test-Path 'ClickFlow-v0.3.6.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v0.3.6.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+
+      - name: Verify one-file desktop and Start menu shortcuts
+        shell: pwsh
+        run: |
+          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'shortcut-probe'
+          $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $env:TEMP 'ClickFlowCI-Desktop'
+          $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $env:TEMP 'ClickFlowCI-StartMenu'
+          $bundle = (Resolve-Path 'ClickFlow-v0.3.6.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle, '--shortcuts' -PassThru -RedirectStandardError shortcuts.err -RedirectStandardOutput shortcuts.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Shortcut creation timed out.'
+          }
+          $err = if (Test-Path shortcuts.err) { Get-Content shortcuts.err -Raw } else { '' }
+          $out = if (Test-Path shortcuts.out) { Get-Content shortcuts.out -Raw } else { '' }
+          if ($p.ExitCode -ne 0 -or $err) {
+            throw "Shortcuts installer failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+          $icon = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ico'
+          $installed = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ahk'
+          if (!(Test-Path $icon) -or !(Test-Path $installed)) {
+            throw 'Persistent ClickFlow script and/or icon missing.'
+          }
+          $shell = New-Object -ComObject WScript.Shell
+          foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
+            $file = Join-Path $dir 'ClickFlow.lnk'
+            if (!(Test-Path $file)) { throw "Missing shortcut: $file" }
+            $shortcut = $shell.CreateShortcut($file)
+            if ($shortcut.TargetPath -ne $env:AHK_EXE) {
+              throw "Shortcut target is not AutoHotkey: $($shortcut.TargetPath)"
+            }
+            if ($shortcut.Arguments -notlike '*ClickFlow.ahk*') {
+              throw "Shortcut does not target the stable single-file script."
+            }
+            if ($shortcut.IconLocation -notlike '*ClickFlow.ico*') {
+              throw "Shortcut is not branded with ClickFlow.ico."
+            }
+          }
+          Write-Host 'Branded Desktop and Start menu shortcuts point to stable local ClickFlow.ahk.'
+          $p2 = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle, '--remove-shortcuts' -PassThru -RedirectStandardError remove.err -RedirectStandardOutput remove.out
+          if (-not $p2.WaitForExit(15000)) {
+            Stop-Process -Id $p2.Id -Force
+            throw 'Shortcut removal timed out.'
+          }
+          if (Test-Path (Join-Path $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP 'ClickFlow.lnk')) {
+            throw 'Desktop shortcut removal did not work.'
+          }
+          if (Test-Path (Join-Path $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU 'ClickFlow.lnk')) {
+            throw 'Start menu shortcut removal did not work.'
+          }
+          Write-Host 'Shortcut creation and removal both passed.'
 
       - name: Smoke-test self-extracting AHK script
         shell: pwsh
         run: |
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v0.3.5.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v0.3.6.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -147,7 +208,7 @@ jobs:
             $out = if (Test-Path one-file.out) { Get-Content one-file.out -Raw } else { '' }
             throw "Bundled launcher did not open WebView2 and connect to AutoHotkey. stderr=$errors stdout=$out"
           }
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-0.3.5'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-0.3.6'
           foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
             if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
           }
@@ -170,26 +231,26 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.5-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.6-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v0.3.5-win-x64
-          path: ClickFlow-WebView2-v0.3.5-win-x64.zip
+          name: ClickFlow-WebView2-v0.3.6-win-x64
+          path: ClickFlow-WebView2-v0.3.6-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v0.3.5-single-file
-          path: ClickFlow-v0.3.5.ahk
+          name: ClickFlow-v0.3.6-single-file
+          path: ClickFlow-v0.3.6.ahk
 
       - name: Publish preview release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = 'v0.3.5-webview2-beta'
+          $tag = 'v0.3.6-windows-shortcuts'
           if (gh release view $tag 2>$null) {
-            gh release upload $tag ClickFlow-WebView2-v0.3.5-win-x64.zip ClickFlow-v0.3.5.ahk --clobber
+            gh release upload $tag ClickFlow-WebView2-v0.3.6-win-x64.zip ClickFlow-v0.3.6.ahk --clobber
           } else {
-            gh release create $tag ClickFlow-WebView2-v0.3.5-win-x64.zip ClickFlow-v0.3.5.ahk --title 'ClickFlow v0.3.5 - Beta Windows WebView2' --notes 'Beta Windows: telecharger ClickFlow-v0.3.5.ahk et double-cliquer dessus (AutoHotkey v2 x64 requis). Fichier unique avec extraction locale automatique; ZIP traditionnel fourni en alternative. Arret urgence personnalisable (F12 initialement), mode compact etendu, profils conserves.' --target "$env:GITHUB_SHA" --prerelease
+            gh release create $tag ClickFlow-WebView2-v0.3.6-win-x64.zip ClickFlow-v0.3.6.ahk --title 'ClickFlow v0.3.6 - Raccourcis et icone Windows' --notes 'ClickFlow v0.3.6 : un seul script AHK. Icone ClickFlow, raccourcis Bureau et menu Demarrer sur demande au premier lancement, gestion depuis A propos. Le script installe localement une copie stable pour conserver les raccourcis lors des mises a jour. AutoHotkey v2 x64 requis; pas de nouvel EXE. Profils sauvegardes et fonctions existantes conservees.' --target "$env:GITHUB_SHA" --prerelease
           }
