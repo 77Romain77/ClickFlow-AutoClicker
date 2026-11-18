@@ -344,6 +344,7 @@ if(bridge) {
             model.capturing=false;
             setLiveAppearance();
             render();
+            window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
     });
     window.chrome.webview.postMessage('ready');
