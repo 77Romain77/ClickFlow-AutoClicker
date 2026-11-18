@@ -326,8 +326,7 @@ UpdateStats() {
     state := CF.armed ? (CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
         ? "ARME - attente du bouton souris" : "ACTIF") : "INACTIF"
     CF.controls["status"].Text := state
-    CF.controls["stats"].Text := "CPS reels : " CF.recent.Length
-        "     Clics envoyes : " CF.total "     Touche : " CF.cfg.activation
+    CF.controls["stats"].Text := "CPS reels : " CF.recent.Length "     Clics envoyes : " CF.total "     Touche : " CF.cfg.activation
 }
 
 StartCapture(*) {
