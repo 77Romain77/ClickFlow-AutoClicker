@@ -9,7 +9,7 @@ try {
     DirCreate(dataPath)
     CW.controller := WebView2.CreateControllerAsync(CW.gui.Hwnd, 0, dataPath, "", dll).await2()
     CW.web := CW.controller.CoreWebView2
-    CW.handler := CW.web.WebMessageReceived(WebMessage)
+    CW.handler := CW.web.WebMessageReceived((*) => 0)
     CW.controller.Fill()
     CW.web.NavigateToString(FileRead(path, "UTF-8"))
     if probe != ""
