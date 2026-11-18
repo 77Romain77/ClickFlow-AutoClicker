@@ -456,51 +456,305 @@ FinishCapture(key) {
     }
 }
 
+DefaultConfig() {
+    return {mode: 1, variation: 2, min: 8, max: 14,
+        clickButton: "Left", activation: "F6", hold: 1,
+        mouseGate: 0, gateButton: "RButton", focusStop: 1}
+}
+
+CopyConfig(cfg) {
+    return {mode: cfg.mode, variation: cfg.variation, min: cfg.min, max: cfg.max,
+        clickButton: cfg.clickButton, activation: cfg.activation, hold: cfg.hold,
+        mouseGate: cfg.mouseGate, gateButton: cfg.gateButton, focusStop: cfg.focusStop}
+}
+
+SelectedProfileIndex() {
+    global CF
+    for index, profile in CF.profiles {
+        if profile.id = CF.selectedId
+            return index
+    }
+    return 1
+}
+
+ReadConfig(file, section, base) {
+    cfg := CopyConfig(base)
+    if !FileExist(file)
+        return cfg
+    for field in ["mode", "variation", "min", "max", "hold", "mouseGate", "focusStop"] {
+        value := IniRead(file, section, field, cfg.%field%)
+        if RegExMatch(value, "^\d+$")
+            cfg.%field% := value + 0
+    }
+    for field in ["clickButton", "activation", "gateButton"]
+        cfg.%field% := IniRead(file, section, field, cfg.%field%)
+
+    cfg.mode := Max(1, Min(3, cfg.mode))
+    cfg.variation := Max(1, Min(3, cfg.variation))
+    cfg.min := Max(1, Min(100, cfg.min))
+    cfg.max := Max(cfg.min, Min(100, cfg.max))
+    cfg.hold := Max(1, Min(2, cfg.hold))
+    cfg.mouseGate := cfg.mouseGate ? 1 : 0
+    cfg.focusStop := cfg.focusStop ? 1 : 0
+    if !HasValue(["Left", "Right", "Middle"], cfg.clickButton)
+        cfg.clickButton := "Left"
+    if !HasValue(["LButton", "RButton", "MButton", "XButton1", "XButton2"], cfg.gateButton)
+        cfg.gateButton := "RButton"
+    if cfg.activation = "" || cfg.activation = "!" || cfg.activation = "F12" || cfg.activation = "vk7B"
+        cfg.activation := "F6"
+    return cfg
+}
+
 LoadSettings() {
     global CF
     file := CF.configFile
-    if !FileExist(file)
+    ; Conserve les reglages precedents dans le profil Principal.
+    savedIds := FileExist(file) ? IniRead(file, "Profiles", "Ids", "") : ""
+    if savedIds = "" {
+        first := ReadConfig(file, "ClickFlow", DefaultConfig())
+        CF.profiles := [{id: 1, name: "Principal", cfg: first}]
+        CF.cfg := first
+        CF.selectedId := 1
+        CF.nextId := 2
         return
+    }
 
-    for field in ["mode", "variation", "min", "max", "hold", "mouseGate", "focusStop"] {
-        try {
-            value := IniRead(file, "ClickFlow", field, CF.cfg.%field%)
-            if RegExMatch(value, "^\d+$")
-                CF.cfg.%field% := value + 0
+    CF.profiles := []
+    maxId := 0
+    for raw in StrSplit(savedIds, ",") {
+        raw := Trim(raw)
+        if !RegExMatch(raw, "^\d+$")
+            continue
+        id := raw + 0
+        if id < 1
+            continue
+        duplicate := false
+        for prior in CF.profiles {
+            if prior.id = id
+                duplicate := true
+        }
+        if duplicate
+            continue
+        section := "Profile_" id
+        name := Trim(IniRead(file, section, "Name", "Profil " id))
+        if name = ""
+            name := "Profil " id
+        cfg := ReadConfig(file, section, DefaultConfig())
+        CF.profiles.Push({id: id, name: name, cfg: cfg})
+        maxId := Max(maxId, id)
+    }
+    if CF.profiles.Length = 0 {
+        first := ReadConfig(file, "ClickFlow", DefaultConfig())
+        CF.profiles.Push({id: 1, name: "Principal", cfg: first})
+        maxId := 1
+    }
+
+    CF.selectedId := IniRead(file, "Profiles", "Selected", CF.profiles[1].id) + 0
+    CF.nextId := Max(maxId + 1, IniRead(file, "Profiles", "NextId", maxId + 1) + 0)
+    found := false
+    for p in CF.profiles {
+        if p.id = CF.selectedId {
+            CF.cfg := p.cfg
+            found := true
+            break
         }
     }
-    CF.cfg.mode := Max(1, Min(3, CF.cfg.mode))
-    CF.cfg.variation := Max(1, Min(3, CF.cfg.variation))
-    CF.cfg.min := Max(1, Min(100, CF.cfg.min))
-    CF.cfg.max := Max(CF.cfg.min, Min(100, CF.cfg.max))
-    CF.cfg.hold := Max(1, Min(2, CF.cfg.hold))
-    CF.cfg.mouseGate := CF.cfg.mouseGate ? 1 : 0
-    CF.cfg.focusStop := CF.cfg.focusStop ? 1 : 0
-
-    for field in ["clickButton", "activation", "gateButton"]
-        try CF.cfg.%field% := IniRead(file, "ClickFlow", field, CF.cfg.%field%)
-
-    if !HasValue(["Left", "Right", "Middle"], CF.cfg.clickButton)
-        CF.cfg.clickButton := "Left"
-    if !HasValue(["LButton", "RButton", "MButton", "XButton1", "XButton2"], CF.cfg.gateButton)
-        CF.cfg.gateButton := "RButton"
-    if CF.cfg.activation = "F12" || CF.cfg.activation = "" || CF.cfg.activation = "!"
-        CF.cfg.activation := "F6"
+    if !found {
+        CF.selectedId := CF.profiles[1].id
+        CF.cfg := CF.profiles[1].cfg
+    }
 }
 
-SaveSettings() {
+SaveSettings(*) {
     global CF
     if CF.loading
         return
     try {
         DirCreate(A_AppData "\ClickFlow")
-        for field in ["mode", "variation", "min", "max", "hold", "mouseGate",
-            "focusStop", "clickButton", "activation", "gateButton"] {
-            IniWrite(CF.cfg.%field%, CF.configFile, "ClickFlow", field)
+        ids := ""
+        for p in CF.profiles {
+            ids .= (ids = "" ? "" : ",") p.id
+            section := "Profile_" p.id
+            IniWrite(p.name, CF.configFile, section, "Name")
+            for field in ["mode", "variation", "min", "max", "hold", "mouseGate",
+                "focusStop", "clickButton", "activation", "gateButton"] {
+                IniWrite(p.cfg.%field%, CF.configFile, section, field)
+            }
         }
+        IniWrite(ids, CF.configFile, "Profiles", "Ids")
+        IniWrite(CF.selectedId, CF.configFile, "Profiles", "Selected")
+        IniWrite(CF.nextId, CF.configFile, "Profiles", "NextId")
     } catch as err {
-        SetNotice("Impossible de sauvegarder les reglages : " err.Message)
+        SetNotice("Sauvegarde impossible : " err.Message)
     }
+}
+
+UpdateProfileList() {
+    global CF
+    oldLoading := CF.loading
+    CF.loading := true
+    menu := CF.controls["profile"]
+    menu.Delete()
+    names := []
+    for p in CF.profiles
+        names.Push(p.name)
+    menu.Add(names)
+    menu.Choose(SelectedProfileIndex())
+    CF.loading := oldLoading
+}
+
+UpdateControlsForProfile() {
+    global CF
+    oldLoading := CF.loading
+    CF.loading := true
+    c := CF.controls
+    cfg := CF.cfg
+    c["mode"].Choose(cfg.mode)
+    c["variation"].Choose(cfg.variation)
+    c["minSlider"].Value := cfg.min
+    c["maxSlider"].Value := cfg.max
+    c["minEdit"].Text := cfg.min
+    c["maxEdit"].Text := cfg.max
+    c["button"].Choose(cfg.clickButton = "Left" ? 1 : cfg.clickButton = "Right" ? 2 : 3)
+    c["hold"].Choose(cfg.hold)
+    c["gate"].Value := cfg.mouseGate
+    index := 1
+    for i, key in ["LButton", "RButton", "MButton", "XButton1", "XButton2"] {
+        if cfg.gateButton = key
+            index := i
+    }
+    c["gateButton"].Choose(index)
+    c["focus"].Value := cfg.focusStop
+    c["capture"].Text := "Definir la touche : " DisplayKey(cfg.activation)
+    UpdateModeControls()
+    CF.loading := oldLoading
+}
+
+ProfileChanged(*) {
+    global CF
+    if CF.loading
+        return
+    index := CF.controls["profile"].Value
+    if index < 1 || index > CF.profiles.Length
+        return
+    if CF.profiles[index].id = CF.selectedId
+        return
+    SelectProfile(index)
+}
+
+SelectProfile(index) {
+    global CF
+    if index < 1 || index > CF.profiles.Length
+        return
+    StopAll("Changement de profil : clics arretes.")
+    UnregisterActivation()
+    oldCfg := CF.cfg
+    oldId := CF.selectedId
+    CF.selectedId := CF.profiles[index].id
+    CF.cfg := CF.profiles[index].cfg
+    CF.pressed := false
+    try {
+        RegisterActivation()
+    } catch as err {
+        CF.cfg.activation := "F6"
+        try {
+            RegisterActivation()
+        } catch {
+            CF.cfg := oldCfg
+            CF.selectedId := oldId
+            RegisterActivation()
+            UpdateProfileList()
+            SetNotice("Raccourci invalide : " err.Message)
+            return
+        }
+    }
+    UpdateProfileList()
+    UpdateControlsForProfile()
+    SaveSettings()
+    SetNotice("Profil actif : " CF.profiles[index].name ".")
+}
+
+PromptProfileName(title, suggested, ignoreId := 0) {
+    global CF
+    result := InputBox("Nom du profil (36 caracteres maximum) :", title, "w420 h145", suggested)
+    if result.Result != "OK"
+        return ""
+    name := Trim(StrReplace(StrReplace(result.Value, Chr(10), " "), Chr(13), " "))
+    if name = "" || StrLen(name) > 36 {
+        MsgBox("Le nom doit contenir entre 1 et 36 caracteres.", "ClickFlow", "Icon!")
+        return ""
+    }
+    for p in CF.profiles {
+        if p.id != ignoreId && StrLower(p.name) = StrLower(name) {
+            MsgBox("Un profil porte deja ce nom.", "ClickFlow", "Icon!")
+            return ""
+        }
+    }
+    return name
+}
+
+NewProfile(*) {
+    global CF
+    name := PromptProfileName("Creer un profil", "Profil " CF.nextId)
+    if name = ""
+        return
+    id := CF.nextId
+    CF.nextId += 1
+    CF.profiles.Push({id: id, name: name, cfg: DefaultConfig()})
+    SelectProfile(CF.profiles.Length)
+}
+
+DuplicateProfile(*) {
+    global CF
+    current := CF.profiles[SelectedProfileIndex()]
+    name := PromptProfileName("Dupliquer le profil", current.name " - copie")
+    if name = ""
+        return
+    id := CF.nextId
+    CF.nextId += 1
+    CF.profiles.Push({id: id, name: name, cfg: CopyConfig(CF.cfg)})
+    SelectProfile(CF.profiles.Length)
+}
+
+RenameProfile(*) {
+    global CF
+    current := CF.profiles[SelectedProfileIndex()]
+    name := PromptProfileName("Renommer le profil", current.name, current.id)
+    if name = ""
+        return
+    current.name := name
+    UpdateProfileList()
+    SaveSettings()
+    SetNotice("Profil renomme : " name ".")
+}
+
+DeleteProfile(*) {
+    global CF
+    if CF.profiles.Length < 2 {
+        SetNotice("Il faut conserver au moins un profil.")
+        return
+    }
+    index := SelectedProfileIndex()
+    profile := CF.profiles[index]
+    if MsgBox("Supprimer le profil '" profile.name "' ?", "ClickFlow", "YesNo Icon?") != "Yes"
+        return
+    StopAll("Profil supprime.")
+    UnregisterActivation()
+    CF.profiles.RemoveAt(index)
+    try IniDelete(CF.configFile, "Profile_" profile.id)
+    nextIndex := Min(index, CF.profiles.Length)
+    CF.selectedId := CF.profiles[nextIndex].id
+    CF.cfg := CF.profiles[nextIndex].cfg
+    CF.pressed := false
+    try RegisterActivation()
+    catch {
+        CF.cfg.activation := "F6"
+        RegisterActivation()
+    }
+    UpdateProfileList()
+    UpdateControlsForProfile()
+    SaveSettings()
+    SetNotice("Profil supprime : " profile.name ".")
 }
 
 HasValue(array, value) {
