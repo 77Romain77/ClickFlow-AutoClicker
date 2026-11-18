@@ -60,13 +60,8 @@ ToUiCfg(cfg) {
     intensity := ["low","medium","high"][cfg.variation]
     activation := cfg.hold = 1 ? "hold" : "toggle"
     mouse := cfg.clickButton = "Left" ? "left" : cfg.clickButton = "Right" ? "right" : "middle"
-    gate := cfg.gateButton = "LButton" ? "left" : cfg.gateButton = "RButton" ? "right"
-        : cfg.gateButton = "MButton" ? "middle" : cfg.gateButton = "XButton1" ? "mouse4" : "mouse5"
-    return '{"mode":' JsonQuote(mode) ',"min":' cfg.min ',"max":' cfg.max
-        ',"intensity":' JsonQuote(intensity) ',"activation":' JsonQuote(activation)
-        ',"mouse":' JsonQuote(mouse) ',"hotkey":' JsonQuote(DisplayKey(cfg.activation))
-        ',"gate":' (cfg.mouseGate ? "true" : "false") ',"gateButton":' JsonQuote(gate)
-        ',"focus":' (cfg.focusStop ? "true" : "false") '}'
+    gate := cfg.gateButton = "LButton" ? "left" : cfg.gateButton = "RButton" ? "right" : cfg.gateButton = "MButton" ? "middle" : cfg.gateButton = "XButton1" ? "mouse4" : "mouse5"
+    return '{"mode":' JsonQuote(mode) ',"min":' cfg.min ',"max":' cfg.max ',"intensity":' JsonQuote(intensity) ',"activation":' JsonQuote(activation) ',"mouse":' JsonQuote(mouse) ',"hotkey":' JsonQuote(DisplayKey(cfg.activation)) ',"gate":' (cfg.mouseGate ? "true" : "false") ',"gateButton":' JsonQuote(gate) ',"focus":' (cfg.focusStop ? "true" : "false") '}'
 }
 
 SendState() {
@@ -75,10 +70,8 @@ SendState() {
         return
     profiles := ""
     for p in CF.profiles
-        profiles .= (profiles = "" ? "" : ",") '{"id":' p.id ',"name":' JsonQuote(p.name)
-            ',"settings":' ToUiCfg(p.cfg) '}'
-    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId
-        ',"profiles":[' profiles ']}')
+        profiles .= (profiles = "" ? "" : ",") '{"id":' p.id ',"name":' JsonQuote(p.name) ',"settings":' ToUiCfg(p.cfg) '}'
+    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles ']}')
 }
 
 SendStats() {
@@ -86,12 +79,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":'
-        (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false")
-        ',"capturing":' (CF.capture ? "true" : "false")
-        ',"cps":' CF.recent.Length ',"total":' CF.total
-        ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation))
-        ',"notice":' JsonQuote(CF.notice) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
