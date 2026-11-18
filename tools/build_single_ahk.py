@@ -49,6 +49,7 @@ launchFile := runtimeDir "\ClickFlow-WebView2.ahk"
 readyFlag := runtimeDir "\.extracted-ok"
 stableScript := appDir "\ClickFlow.ahk"
 stableIcon := appDir "\ClickFlow.ico"
+shortcutsIni := appDir "\shortcuts.ini"
 
 if !FileExist(readyFlag) || !FileExist(launchFile) || !FileExist(runtimeDir "\assets\ClickFlow.ico") {
     try {
@@ -153,7 +154,6 @@ if A_Args.Length && A_Args[1] = "--remove-shortcuts" {
 
 ; Premier lancement : demander une seule fois si l'utilisateur souhaite
 ; les raccourcis. Aucun raccourci n'est imposé sans son accord.
-shortcutsIni := appDir "\shortcuts.ini"
 savedChoice := IniRead(shortcutsIni, "Shortcuts", "Enabled", "")
 testAction := EnvGet("CLICKFLOW_SHORTCUTS_TEST_ACTION")
 if testAction = "create" {
