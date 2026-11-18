@@ -37,18 +37,29 @@ main.Show(compactAtStart ? "w540 h700" : "w1120 h800")
 if probe != ""
     FileAppend(main.Hwnd, probe ".hwnd", "UTF-8")
 
-profileData := dataRoot "\ClickFlow\WebView2"
-DirCreate(profileData)
-controller := WebView2.CreateControllerAsync(main.Hwnd, 0, profileData, "", dllPath).await2()
-controller.Fill()
-web := controller.CoreWebView2
-
-; Conserver la référence à l'abonnement WebView2 pour que le lien reste actif.
-webEvent := web.WebMessageReceived(BackendMessage)
-BackendInit(main.Hwnd, web)
-web.NavigateToString(FileRead(htmlPath, "UTF-8"))
-if probe != ""
-    FileAppend("ready", probe, "UTF-8")
+try {
+    profileData := dataRoot "\ClickFlow\WebView2"
+    DirCreate(profileData)
+    controller := WebView2.CreateControllerAsync(main.Hwnd, 0, profileData, "", dllPath).await2()
+    controller.Fill()
+    web := controller.CoreWebView2
+    webEvent := web.WebMessageReceived(BackendMessage)
+    if probe != ""
+        FileAppend("before backend", probe ".controller", "UTF-8")
+    BackendInit(main.Hwnd, web)
+    if probe != ""
+        FileAppend("backend initialized", probe ".backend", "UTF-8")
+    web.NavigateToString(FileRead(htmlPath, "UTF-8"))
+    if probe != ""
+        FileAppend("ready", probe, "UTF-8")
+} catch as err {
+    details := err.Message " (" err.File ":" err.Line ")"
+    if probe != ""
+        FileAppend(details, probe ".error", "UTF-8")
+    else
+        MsgBox("Impossible de démarrer ClickFlow : " details, "ClickFlow", "Icon!")
+    ExitApp(1)
+}
 
 CloseClickFlow(*) {
     global controller, web, webEvent
