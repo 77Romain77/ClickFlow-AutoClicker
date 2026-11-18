@@ -25,6 +25,65 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
 .modal-backdrop{position:fixed;inset:0;background:#030711bb;display:grid;place-items:center;padding:18px;z-index:100}.modal{background:#172338;border:1px solid #385173;box-shadow:0 15px 65px #0009;border-radius:17px;padding:22px;max-width:390px;width:100%}.modal h3{margin:0 0 8px;font-size:18px}.modal p{margin:0 0 14px;color:var(--muted);font-size:12px}.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.toast{position:fixed;right:20px;bottom:20px;border:1px solid #345b86;background:#193356;border-radius:12px;color:#fff;padding:12px 16px;box-shadow:0 10px 35px #0006;font-size:12px;z-index:200;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:translateY(0)}
 @media(max-width:1020px){.app{grid-template-columns:190px 1fr}main{padding:20px}.dashboard{grid-template-columns:1fr}.side-footer{display:none}}
 @media(max-width:670px){.app{display:block}aside{position:static;height:auto;min-height:unset;padding:12px 15px}.nav-label,.side-spacer,.small-card,.side-footer{display:none}nav{flex-direction:row}.nav-item{padding:8px}.brand{padding:3px}main{padding:20px 15px}.hero{display:block}.hero .save{margin-top:12px}.row2,.key-row{grid-template-columns:1fr}.card{padding:15px}.profile-line{grid-template-columns:1fr}.profile-actions{display:grid;grid-template-columns:1fr 1fr}.dashboard{grid-template-columns:1fr}}
+
+/* Une vraie mise en page compacte, sans la barre latérale ni les réglages avancés. */
+.top-controls{display:flex;align-items:center;gap:10px}
+.view-button{border:1px solid #3a5682;background:#1b3052;color:#b9d5ff;border-radius:10px;min-height:34px;padding:7px 12px;font-weight:700;font-size:11px;white-space:nowrap}
+.view-button:hover{background:#285185;color:#fff}
+.emergency-row{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid #283951;margin-top:14px;padding-top:14px}
+.emergency-row .description{color:#8ea5c7;font-size:11px}
+.emergency-row .btn{white-space:nowrap;min-width:144px}
+body.compact .app{display:block;min-height:100vh}
+body.compact aside{display:none}
+body.compact main{max-width:none;margin:0;padding:13px 16px 20px}
+body.compact .topline{margin-bottom:8px}
+body.compact .breadcrumb{font-size:10px}
+body.compact .topline .badge{display:none}
+body.compact .hero{display:none}
+body.compact .dashboard{display:flex;flex-direction:column;gap:10px}
+body.compact .dashboard>.stack{display:contents}
+body.compact .dashboard>.stack:nth-child(2)>.card:first-child{order:1}
+body.compact .dashboard>.stack:nth-child(1)>.card:first-child{order:2}
+body.compact .dashboard>.stack:nth-child(1)>.card:nth-child(2){order:3}
+body.compact .dashboard>.stack:nth-child(2)>.status-box{order:4}
+body.compact .dashboard>.stack:nth-child(2)>.note{display:none}
+body.compact .card{padding:12px 14px;border-radius:13px}
+body.compact .card-head{margin-bottom:10px}
+body.compact .card-description,body.compact .card .number{display:none}
+body.compact .card-title{font-size:13px}
+body.compact .profile-actions,body.compact .card .mutedline{display:none}
+body.compact .profile-line{grid-template-columns:minmax(0,1fr) 40px}
+body.compact .profile-line .select{min-height:36px}
+body.compact .profile-line .btn{min-height:36px}
+body.compact .label{font-size:11px;margin-bottom:5px}
+body.compact .range-group{margin-top:10px}
+body.compact .range-top{margin-bottom:2px}
+body.compact .range-top b{font-size:11px}
+body.compact .range-top .subnote{display:none}
+body.compact .value-row{gap:10px;grid-template-columns:minmax(0,1fr) 68px}
+body.compact .input.number-input{min-height:30px;padding:5px}
+body.compact .range{height:5px}
+body.compact #intensityBlock{display:none}
+body.compact .seg button{padding:6px 5px;font-size:11px}
+body.compact .key-row{grid-template-columns:1fr 1fr;gap:9px}
+body.compact .key-row .select{min-height:35px;padding-top:7px;padding-bottom:7px}
+body.compact #captureButton{min-height:35px}
+body.compact .toggle-row,body.compact #gateChoose{display:none!important}
+body.compact .emergency-row{margin-top:10px;padding-top:10px}
+body.compact .emergency-row .description{display:none}
+body.compact .emergency-row .btn{min-width:130px}
+body.compact .status-box{padding:12px 14px;border-radius:13px}
+body.compact .status-icon,body.compact .status-sub,body.compact .safe{display:none}
+body.compact .status-title{font-size:15px;margin:0 0 10px}
+body.compact .stats{gap:8px}
+body.compact .stat{padding:7px 10px}
+body.compact .stat b{font-size:17px;margin-top:2px}
+body.compact .stat span{font-size:9px}
+body.compact #demoToggle{min-height:34px;margin-top:8px!important}
+body.compact #page-profiles,body.compact #page-about{display:none!important}
+body.compact #page-dashboard{display:block!important}
+@media(max-width:670px){.top-controls{gap:5px}.view-button{padding:5px 8px}.emergency-row{flex-wrap:wrap}body.compact main{padding:10px 12px 18px}}
+
 </style>
 </head>
 <body>
@@ -44,7 +103,7 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
  <div class="side-footer">ClickFlow v0.3.4 · AHK v2</div>
 </aside>
 <main>
- <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><span class="badge">INITIALISATION</span></div>
+ <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
  <section id="page-dashboard">
   <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Essai visuel sans clics automatiques</div></div>
   <div class="dashboard">
@@ -62,6 +121,7 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
      <div class="card-head"><div><div class="card-title">Activation</div><div class="card-description">Choisissez comment vous souhaitez lancer les clics.</div></div><span class="number">02 / INPUT</span></div>
      <div class="key-row"><div><label class="label" for="mouseButton">Bouton généré</label><select id="mouseButton" class="select"><option value="left">Clic gauche</option><option value="right">Clic droit</option><option value="middle">Clic central</option></select></div><div><span class="label">Activation</span><div class="seg" id="activationSeg"><button data-activation="hold">Maintenir</button><button data-activation="toggle" class="active">Basculer</button></div></div></div>
      <div style="margin-top:16px"><span class="label">Touche de raccourci</span><button id="captureButton" class="btn quiet full key">Définir la touche <span id="hotkeyView" class="kbd">F6</span></button></div>
+     <div class="emergency-row"><div><strong style="font-size:12px">Arrêt d'urgence</strong><div class="description">Touche globale, identique pour tous les profils.</div></div><button id="emergencyCapture" class="btn danger" title="Définir la touche d'arrêt d'urgence">Arrêt : <span id="emergencyView" class="kbd">F12</span></button></div>
      <div class="toggle-row"><div><strong>Conditionner à un bouton de souris</strong><br><span>Clics uniquement si le bouton choisi est maintenu.</span></div><button id="gateSwitch" class="switch" aria-label="Activer la condition souris" aria-pressed="false"></button></div>
      <div class="toggle-row" id="gateChoose" style="display:none"><label class="label" for="gateButton" style="margin:0">Bouton de maintien</label><select id="gateButton" class="select" style="max-width:175px"><option value="left">Clic gauche</option><option value="right">Clic droit</option><option value="middle">Clic central</option><option value="mouse4">Mouse 4</option><option value="mouse5">Mouse 5</option></select></div>
      <div class="toggle-row"><div><strong>Arrêt au changement de fenêtre</strong><br><span>Recommandé pour éviter les clics accidentels.</span></div><button id="focusSwitch" class="switch on" aria-label="Arrêt au changement de fenêtre" aria-pressed="true"></button></div>
@@ -80,7 +140,7 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
      <div class="status-sub" id="sessionSub">Connexion au moteur AutoHotkey en cours.</div>
      <div class="stats"><div class="stat"><span>CPS réels</span><b>0</b></div><div class="stat"><span>Clics envoyés</span><b>0</b></div></div>
      <button class="btn primary full" id="demoToggle" style="margin-top:14px">Simuler l'état actif</button>
-     <div class="safe"><span class="dot"></span><span>La touche F12 permet toujours l'arrêt d'urgence.</span></div>
+     <div class="safe"><span class="dot"></span><span>La touche d'arrêt d'urgence personnalisée fonctionne dans toutes les fenêtres.</span></div>
     </div>
     <div class="note"><span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Un nouveau design, sans perdre le moteur.</b><br>Une fois ce rendu validé, nous reconnecterons les fonctions AutoHotkey et la sauvegarde de vos profils existants.</span></div>
    </div>
@@ -105,7 +165,7 @@ main{padding:26px clamp(22px,4vw,50px) 35px;min-width:0;max-width:1390px;width:1
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
-const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false};
+const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
 const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
@@ -139,6 +199,10 @@ function updateRanges() {
 }
 function render() {
     const c=config();
+    document.body.classList.toggle('compact',!!model.compact);
+    $('viewToggle').textContent=model.compact?'Mode étendu':'Mode compact';
+    $('viewToggle').setAttribute('aria-pressed',String(!!model.compact));
+    $('emergencyView').textContent=model.emergencyKey;
     selectedButtons('modeSeg','mode',c.mode);
     selectedButtons('intensitySeg','intensity',c.intensity);
     selectedButtons('activationSeg','activation',c.activation);
@@ -272,15 +336,37 @@ $('gateSwitch').onclick=()=>{config().gate=!config().gate;render();send('set','g
 $('focusSwitch').onclick=()=>{config().focus=!config().focus;render();send('set','focus',config().focus?1:0);};
 $('captureButton').onclick=()=>{
     model.capturing=true;
+    model.captureTarget='activation';
     $('hotkeyView').textContent='Appuyez...';
     if(connected) send('capture');
     else toast('Appuyez sur une touche, ou Échap pour annuler.');
+};
+$('emergencyCapture').onclick=()=>{
+    model.capturing=true;
+    model.captureTarget='emergency';
+    $('emergencyView').textContent='Appuyez...';
+    if(connected) send('captureStop');
+    else toast("Appuyez sur la touche d'arrêt d'urgence, ou Échap pour annuler.");
+};
+$('viewToggle').onclick=()=>{
+    const next=!model.compact;
+    if(connected)send('view',next?'compact':'expanded');
+    else{model.compact=next;render();}
 };
 document.addEventListener('keydown',e=>{
     if(!model.capturing || connected) return;
     e.preventDefault();e.stopPropagation();
     model.capturing=false;
-    if(e.key!=='Escape')config().hotkey=e.key===' '?'Espace':e.key;
+    if(e.key!=='Escape') {
+        const picked=e.key===' '?'Espace':e.key;
+        if(model.captureTarget==='emergency') {
+            if(picked===config().hotkey){toast("Cette touche sert déjà à l'activation.");}
+            else model.emergencyKey=picked;
+        } else {
+            if(picked===model.emergencyKey){toast("Cette touche sert déjà à l'arrêt d'urgence.");}
+            else config().hotkey=picked;
+        }
+    }
     render();
 });
 function setLiveAppearance() {
@@ -290,17 +376,18 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v0.3.4 · AutoHotkey v2';
-    document.querySelector('.status-box .safe').textContent='F12 : arrêt d’urgence. Les clics se déclenchent avec votre raccourci dans la fenêtre cible.';
+    document.querySelector('.side-footer').textContent='ClickFlow v0.3.5 · AutoHotkey v2';
+    document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
-    $('demoToggle').textContent='Arrêter les clics (F12)';
+    $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
     $('demoToggle').classList.remove('primary');
     $('demoToggle').classList.add('danger');
 }
 function updateLiveStats(data) {
     if(!connected)return;
     model.capturing=!!data.capturing;
+    model.captureTarget=data.captureKind||'activation';
     const title=data.capturing?'Choix du raccourci':data.waiting?'En attente du bouton souris':data.armed?'Clics actifs':'Prêt à configurer';
     $('sessionTitle').textContent=title;
     $('sessionIcon').textContent=data.armed?'●':'◉';
@@ -308,7 +395,8 @@ function updateLiveStats(data) {
     $('sessionSub').textContent=data.notice||'Utilisez votre raccourci pour lancer les clics.';
     const counters=document.querySelectorAll('.status-box .stat b');
     if(counters.length>1){counters[0].textContent=String(data.cps||0);counters[1].textContent=String(data.total||0);}
-    $('hotkeyView').textContent=data.capturing?'Appuyez...':data.hotkey;
+    $('hotkeyView').textContent=data.capturing && model.captureTarget==='activation'?'Appuyez...':data.hotkey;
+    $('emergencyView').textContent=data.capturing && model.captureTarget==='emergency'?'Appuyez...':model.emergencyKey;
     $('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle. Les profils et les clics sont synchronisés.';
 }
 $('demoToggle').onclick=()=>{
@@ -340,10 +428,13 @@ if(bridge) {
             connected=true;
             model.profiles=msg.profiles;
             model.selected=msg.selected;
+            model.emergencyKey=msg.emergencyKey||'F12';
+            model.compact=!!msg.compact;
             model.nextId=Math.max(...model.profiles.map(p=>p.id))+1;
             model.capturing=false;
             setLiveAppearance();
             render();
+            $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
     });
