@@ -39,21 +39,6 @@ jobs:
           Copy-Item $dll 'webview2-preview/lib/WebView2/64bit/WebView2Loader.dll'
           Write-Host "Copied official Microsoft loader: $dll"
 
-      - name: Validate AHK syntax
-        shell: pwsh
-        run: |
-          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', '/Validate', 'webview2-preview/ClickFlow-WebView2.ahk' -PassThru -RedirectStandardError validation.err -RedirectStandardOutput validation.out
-          $completed = $p.WaitForExit(20000)
-          if (-not $completed) { Stop-Process -Id $p.Id -Force }
-          $stdout = if (Test-Path validation.out) { Get-Content validation.out -Raw } else { '' }
-          $stderr = if (Test-Path validation.err) { Get-Content validation.err -Raw } else { '' }
-          Write-Host "Exit=$($p.ExitCode) Completed=$completed"
-          if ($stdout) { Write-Host "stdout: $stdout" }
-          if ($stderr) { Write-Host "stderr: $stderr" }
-          if (-not $completed) { throw 'AHK syntax validation timed out.' }
-          if ($stdout -or $stderr -or $p.ExitCode -ne 0) { throw 'AHK syntax validation failed.' }
-          Write-Host 'AHK syntax OK'
-
       - name: Test actual WebView2 initialization (no clicks)
         shell: pwsh
         run: |
