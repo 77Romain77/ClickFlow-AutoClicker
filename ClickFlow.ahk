@@ -1,9 +1,9 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; ClickFlow - AutoClicker | AHK experimental v0.2.4
+; ClickFlow - AutoClicker | AHK experimental v0.2.5
 ; Un script local, sans compilation et sans injection dans les processus cibles.
-; F12 = arret d'urgence. Les touches physiques ne sont pas bloquees.
+; F12 = arrêt d'urgence. Les touches physiques ne sont pas bloquees.
 
 InstallKeybdHook()
 InstallMouseHook()
@@ -31,11 +31,37 @@ OnExit(Cleanup)
 CF.gui.Show("w700 h862")
 CF.loading := false
 SaveSettings()
-SetNotice("Pret. Passe sur ta fenetre cible, puis appuie sur " DisplayKey(CF.cfg.activation) ".")
+SetNotice("Prêt. Passe sur ta fenêtre cible, puis appuie sur " DisplayKey(CF.cfg.activation) ".")
+
+CFButton(gui, x, y, w, h, label, kind := "secondary") {
+    palette := Map(
+        "primary", ["3567E8", "FFFFFF"],
+        "secondary", ["293B59", "ECF3FF"],
+        "danger", ["753541", "FFF0F1"]
+    )
+    colors := palette.Get(kind, palette["secondary"])
+    gui.SetFont("s9 Bold c" colors[2], "Segoe UI")
+    button := gui.AddText(
+        "x" x " y" y " w" w " h" h " Center 0x200 Background" colors[1],
+        label
+    )
+    ; Un champ texte cliquable permet une couleur de fond et de texte libre.
+    ; Win32 arrondit ses coins sans DLL externe ni installeur.
+    region := DllCall("gdi32\CreateRoundRectRgn",
+        "Int", 0, "Int", 0, "Int", w, "Int", h,
+        "Int", 12, "Int", 12, "Ptr")
+    if region {
+        if !DllCall("user32\SetWindowRgn",
+            "Ptr", button.Hwnd, "Ptr", region, "Int", 1) {
+            DllCall("gdi32\DeleteObject", "Ptr", region)
+        }
+    }
+    return button
+}
 
 BuildGui() {
     global CF
-    g := Gui("-Resize -MaximizeBox", "ClickFlow - AutoClicker | AHK v0.2.4")
+    g := Gui("-Resize -MaximizeBox", "ClickFlow - AutoClicker | AHK v0.2.5")
     g.BackColor := "0B1220"
     CF.gui := g
 
@@ -43,13 +69,13 @@ BuildGui() {
     g.SetFont("s24 Bold cF4F7FF", "Segoe UI")
     g.AddText("x28 y17 w360 h42", "ClickFlow")
     g.SetFont("s10 Norm cA9BAD7", "Segoe UI")
-    g.AddText("x30 y60 w490 h22", "AutoClicker  /  AutoHotkey v2  /  Experimental 0.2.4")
+    g.AddText("x30 y60 w490 h22", "AutoClicker  /  AutoHotkey v2  /  Expérimental 0.2.5")
     g.SetFont("s9 Bold c78A6FF", "Segoe UI")
     g.AddText("x573 y27 w88 h22 Center", "AHK v2")
     g.SetFont("s9 Norm c8CA3BF", "Segoe UI")
     g.AddText("x495 y68 w166 h18 Right", "Sauvegarde automatique")
 
-    ; 01 - Profils. Tous les reglages restent independants par profil.
+    ; 01 - Profils. Tous les réglages restent independants par profil.
     g.AddText("x18 y96 w664 h92 Background162236", "")
     g.SetFont("s9 Bold c8CB3FF", "Segoe UI")
     g.AddText("x36 y107 w610 h18 Background162236", "01   PROFILS")
@@ -59,12 +85,11 @@ BuildGui() {
     for p in CF.profiles
         choices.Push(p.name)
     g.SetFont("s10 Norm cF4F7FF", "Segoe UI")
-    cProfile := g.AddDropDownList("x36 y153 w249 Choose" SelectedProfileIndex(), choices)
-    g.SetFont("s9 Norm c162236", "Segoe UI")
-    cNewProfile := g.AddButton("x297 y150 w83 h33", "Nouveau")
-    cRenameProfile := g.AddButton("x385 y150 w86 h33", "Renommer")
-    cDuplicateProfile := g.AddButton("x476 y150 w87 h33", "Dupliquer")
-    cDeleteProfile := g.AddButton("x568 y150 w94 h33", "Supprimer")
+    cProfile := g.AddDropDownList("x36 y153 w249 -Theme Background243653 cF4F7FF Choose" SelectedProfileIndex(), choices)
+    cNewProfile := CFButton(g, 297, 150, 83, 33, "Nouveau", "primary")
+    cRenameProfile := CFButton(g, 385, 150, 86, 33, "Renommer")
+    cDuplicateProfile := CFButton(g, 476, 150, 87, 33, "Dupliquer")
+    cDeleteProfile := CFButton(g, 568, 150, 94, 33, "Supprimer", "danger")
 
     ; 02 - Cadence et sliders synchronises en temps reel.
     g.AddText("x18 y201 w664 h268 Background162236", "")
@@ -73,58 +98,56 @@ BuildGui() {
     g.SetFont("s10 Norm cF4F7FF", "Segoe UI")
     g.AddText("x36 y242 w266 h20 Background162236", "Mode CPS")
     g.AddText("x352 y242 w285 h20 Background162236", "Variation naturelle")
-    cMode := g.AddDropDownList("x36 y265 w275 Choose" CF.cfg.mode, ["Fixed", "Random", "Natural"])
-    cVariation := g.AddDropDownList("x352 y265 w292 Choose" CF.cfg.variation, ["Low", "Medium", "High"])
+    cMode := g.AddDropDownList("x36 y265 w275 -Theme Background243653 cF4F7FF Choose" CF.cfg.mode, ["Fixed", "Random", "Natural"])
+    cVariation := g.AddDropDownList("x352 y265 w292 -Theme Background243653 cF4F7FF Choose" CF.cfg.variation, ["Low", "Medium", "High"])
 
     g.AddText("x36 y307 w285 h19 Background162236", "CPS minimum / fixe")
     cMinSlider := g.AddSlider("x36 y329 w474 h33 Range1-100 AltSubmit", CF.cfg.min)
-    cMinEdit := g.AddEdit("x539 y328 w105 h31 Number Center c162236", CF.cfg.min)
+    cMinEdit := g.AddEdit("x539 y328 w105 h31 Number Center -Theme -E0x200 Background243653 cF4F7FF", CF.cfg.min)
 
     g.AddText("x36 y376 w285 h19 Background162236", "CPS maximum")
     cMaxSlider := g.AddSlider("x36 y399 w474 h33 Range1-100 AltSubmit", CF.cfg.max)
-    cMaxEdit := g.AddEdit("x539 y398 w105 h31 Number Center c162236", CF.cfg.max)
+    cMaxEdit := g.AddEdit("x539 y398 w105 h31 Number Center -Theme -E0x200 Background243653 cF4F7FF", CF.cfg.max)
     g.SetFont("s9 Norm c97A7C3", "Segoe UI")
-    g.AddText("x36 y440 w610 h18 Background162236", "1 a 100 CPS - la cadence reelle depend de Windows.")
+    g.AddText("x36 y440 w610 h18 Background162236", "1 à 100 CPS - la cadence réelle dépend de Windows.")
 
-    ; 03 - Activation. Les boutons natifs Windows utilisent un texte fonce.
+    ; 03 - Activation. Boutons personnalisés pour un thème sombre cohérent.
     g.AddText("x18 y482 w664 h194 Background162236", "")
     g.SetFont("s9 Bold c8CB3FF", "Segoe UI")
     g.AddText("x36 y494 w610 h18 Background162236", "03   ACTIVATION")
     g.SetFont("s10 Norm cF4F7FF", "Segoe UI")
-    g.AddText("x36 y523 w166 h18 Background162236", "Bouton clique")
+    g.AddText("x36 y523 w166 h18 Background162236", "Bouton cliqué")
     g.AddText("x219 y523 w145 h18 Background162236", "Mode")
     g.AddText("x384 y523 w260 h18 Background162236", "Raccourci")
-    cButton := g.AddDropDownList("x36 y547 w165", ["Gauche", "Droit", "Central"])
+    cButton := g.AddDropDownList("x36 y547 w165 -Theme Background243653 cF4F7FF", ["Gauche", "Droit", "Central"])
     cButton.Choose(CF.cfg.clickButton = "Left" ? 1 : CF.cfg.clickButton = "Right" ? 2 : 3)
-    cHold := g.AddDropDownList("x219 y547 w145", ["Hold", "Toggle"])
+    cHold := g.AddDropDownList("x219 y547 w145 -Theme Background243653 cF4F7FF", ["Hold", "Toggle"])
     cHold.Choose(CF.cfg.hold)
-    g.SetFont("s10 Norm c162236", "Segoe UI")
-    cCapture := g.AddButton("x384 y545 w261 h35", "Definir la touche : " DisplayKey(CF.cfg.activation))
+    cCapture := CFButton(g, 384, 545, 261, 35, "Définir la touche : " DisplayKey(CF.cfg.activation), "primary")
 
     g.SetFont("s10 Norm cF4F7FF", "Segoe UI")
-    cGate := g.AddCheckBox("x36 y591 w301 h24 Background162236", "Exiger un bouton souris maintenu")
+    cGate := g.AddCheckBox("x36 y591 w301 h24 Background162236", "Exiger un bouton de souris maintenu")
     cGate.Value := CF.cfg.mouseGate
-    cGateButton := g.AddDropDownList("x352 y591 w193", ["Clic gauche", "Clic droit", "Clic central", "Mouse 4", "Mouse 5"])
+    cGateButton := g.AddDropDownList("x352 y591 w193 -Theme Background243653 cF4F7FF", ["Clic gauche", "Clic droit", "Clic central", "Mouse 4", "Mouse 5"])
     gateIndexes := Map("LButton", 1, "RButton", 2, "MButton", 3, "XButton1", 4, "XButton2", 5)
     cGateButton.Choose(gateIndexes.Get(CF.cfg.gateButton, 2))
-    cFocus := g.AddCheckBox("x36 y630 w610 h24 Background162236", "Arreter au changement de fenetre (recommande)")
+    cFocus := g.AddCheckBox("x36 y630 w610 h24 Background162236", "Arrêter au changement de fenêtre (recommandé)")
     cFocus.Value := CF.cfg.focusStop
 
     ; 04 - Etat en temps reel : statut colore et trois compteurs distincts.
     g.AddText("x18 y689 w664 h155 Background162236", "")
     g.SetFont("s9 Bold c8CB3FF", "Segoe UI")
-    g.AddText("x36 y701 w610 h18 Background162236", "04   ETAT EN TEMPS REEL")
+    g.AddText("x36 y701 w610 h18 Background162236", "04   ÉTAT EN TEMPS RÉEL")
     g.SetFont("s12 Bold cA5BDDF", "Segoe UI")
     cStatus := g.AddText("x36 y726 w421 h24 Background162236", "INACTIF")
-    g.SetFont("s10 Bold c162236", "Segoe UI")
-    cStop := g.AddButton("x499 y717 w147 h36", "Arreter (F12)")
+    cStop := CFButton(g, 499, 717, 147, 36, "Arrêter (F12)", "danger")
 
     g.AddText("x36 y761 w188 h51 Background0F1A2D", "")
     g.AddText("x232 y761 w188 h51 Background0F1A2D", "")
     g.AddText("x428 y761 w218 h51 Background0F1A2D", "")
     g.SetFont("s8 Norm c91A4C7", "Segoe UI")
-    g.AddText("x49 y768 w160 h16 Background0F1A2D", "CPS REELS")
-    g.AddText("x245 y768 w160 h16 Background0F1A2D", "CLICS ENVOYES")
+    g.AddText("x49 y768 w160 h16 Background0F1A2D", "CPS RÉELS")
+    g.AddText("x245 y768 w160 h16 Background0F1A2D", "CLICS ENVOYÉS")
     g.AddText("x441 y768 w182 h16 Background0F1A2D", "TOUCHE D'ACTIVATION")
     g.SetFont("s12 Bold cF4F7FF", "Segoe UI")
     cStatCps := g.AddText("x49 y786 w150 h22 Background0F1A2D", "0")
@@ -132,7 +155,7 @@ BuildGui() {
     cStatHotkey := g.AddText("x441 y786 w187 h22 Background0F1A2D", DisplayKey(CF.cfg.activation))
 
     g.SetFont("s9 Norm cA9BAD7", "Segoe UI")
-    cNotice := g.AddText("x36 y819 w610 h18 Background162236", "Pret.")
+    cNotice := g.AddText("x36 y819 w610 h18 Background162236", "Prêt.")
 
     CF.controls := Map(
         "profile", cProfile, "newProfile", cNewProfile, "renameProfile", cRenameProfile,
@@ -189,7 +212,7 @@ ConfigChanged(*) {
     global CF
     if CF.loading
         return
-    StopAll("Configuration modifiee. Reactive le raccourci.")
+    StopAll("Configuration modifiée. Réactive le raccourci.")
     c := CF.controls
     CF.cfg.mode := c["mode"].Value
     CF.cfg.variation := c["variation"].Value
@@ -230,7 +253,7 @@ SetCps(which, value, fromEdit := false) {
     global CF
     if value < 1 || value > 100
         return
-    StopAll("Cadence modifiee. Reactive le raccourci.")
+    StopAll("Cadence modifiée. Réactive le raccourci.")
     CF.loading := true
     CF.cfg.%which% := value
     if CF.cfg.min > CF.cfg.max {
@@ -268,13 +291,13 @@ ActivationDown(*) {
     CF.pressed := true
     if CF.armed {
         if CF.cfg.hold = 2
-            StopAll("Arret par raccourci.")
+            StopAll("Arrêt par raccourci.")
         return
     }
 
     current := WinExist("A")
     if !current || current = CF.gui.Hwnd {
-        SetNotice("Active d'abord la fenetre cible, puis utilise le raccourci.")
+        SetNotice("Active d'abord la fenêtre cible, puis utilise le raccourci.")
         return
     }
 
@@ -284,14 +307,14 @@ ActivationDown(*) {
     CF.naturalCps := (CF.cfg.min + CF.cfg.max) / 2
     CF.naturalTarget := CF.naturalCps
     CF.nextVariation := 0
-    SetNotice("Clics actifs dans la fenetre choisie. F12 pour arreter.")
+    SetNotice("Clics actifs dans la fenêtre choisie. F12 pour arrêter.")
 }
 
 ActivationUp(*) {
     global CF
     CF.pressed := false
     if CF.cfg.hold = 1 && CF.armed
-        StopAll("Touche relachee.")
+        StopAll("Touche relâchée.")
 }
 
 EmergencyStop(*) {
@@ -300,7 +323,7 @@ EmergencyStop(*) {
         FinishCapture("")
         return
     }
-    StopAll("Arret d'urgence (F12).")
+    StopAll("Arrêt d'urgence (F12).")
 }
 
 StopAll(message) {
@@ -325,15 +348,15 @@ EngineTick() {
 
     current := WinExist("A")
     if !current || current = CF.gui.Hwnd {
-        StopAll("Arret : la fenetre ClickFlow a repris le focus.")
+        StopAll("Arrêt : la fenêtre ClickFlow a repris le focus.")
         return
     }
     if CF.cfg.focusStop && current != CF.target {
-        StopAll("Arret : changement de fenetre detecte.")
+        StopAll("Arrêt : changement de fenêtre détecté.")
         return
     }
     if CF.cfg.hold = 1 && !GetKeyState(CF.cfg.activation, "P") {
-        StopAll("Arret : touche d'activation relachee.")
+        StopAll("Arrêt : touche d'activation relâchée.")
         return
     }
     if CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P") {
@@ -387,7 +410,7 @@ UpdateStats() {
         CF.recent.RemoveAt(1)
 
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    state := CF.capture ? "CHOIX DU RACCOURCI" : CF.armed ? (waiting ? "ARME - EN ATTENTE" : "ACTIF") : "INACTIF"
+    state := CF.capture ? "CHOIX DU RACCOURCI" : CF.armed ? (waiting ? "ARMÉ - EN ATTENTE" : "ACTIF") : "INACTIF"
     color := CF.capture ? "8CB3FF" : waiting ? "FFC56A" : CF.armed ? "66D9B1" : "A5BDDF"
 
     if CF.lastStatus != state {
@@ -403,7 +426,7 @@ UpdateStats() {
 
 StartCapture(*) {
     global CF
-    StopAll("Selection de la touche...")
+    StopAll("Sélection de la touche...")
     CF.capture := true
     CF.controls["capture"].Text := "Appuie sur une touche..."
     UnregisterActivation()
@@ -415,7 +438,7 @@ StartCapture(*) {
     for key in ["LButton", "RButton", "MButton", "XButton1", "XButton2"]
         Hotkey("~*" key, CapturedMouse.Bind(key), "On")
     ih.Start()
-    SetNotice("Appuie sur une touche clavier ou souris. Echap pour annuler.")
+    SetNotice("Appuie sur une touche clavier ou souris. Échap pour annuler.")
 }
 
 CapturedKey(ih, vk, sc) {
@@ -429,7 +452,7 @@ CapturedKey(ih, vk, sc) {
     }
     if name = "F12" {
         FinishCapture("")
-        SetNotice("F12 est reservee pour l'arret d'urgence.")
+        SetNotice("F12 est reservee pour l'arrêt d'urgence.")
         return
     }
     if name = "" || InStr("|Shift|LShift|RShift|Ctrl|LCtrl|RCtrl|Alt|LAlt|RAlt|LWin|RWin|", "|" name "|")
@@ -466,12 +489,12 @@ FinishCapture(key) {
         key := ""
     }
     CF.pressed := false
-    CF.controls["capture"].Text := "Definir la touche : " DisplayKey(CF.cfg.activation)
+    CF.controls["capture"].Text := "Définir la touche : " DisplayKey(CF.cfg.activation)
     if key != "" {
         SaveSettings()
-        SetNotice("Activation definie : " DisplayKey(CF.cfg.activation) ".")
+        SetNotice("Activation définie : " DisplayKey(CF.cfg.activation) ".")
     } else if old = CF.cfg.activation {
-        SetNotice("Capture annulee. Activation conservee : " DisplayKey(old) ".")
+        SetNotice("Capture annulée. Activation conservee : " DisplayKey(old) ".")
     }
 }
 
@@ -527,7 +550,7 @@ ReadConfig(file, section, base) {
 LoadSettings() {
     global CF
     file := CF.configFile
-    ; Conserve les reglages precedents dans le profil Principal.
+    ; Conserve les réglages précédents dans le profil Principal.
     savedIds := FileExist(file) ? IniRead(file, "Profiles", "Ids", "") : ""
     if savedIds = "" {
         first := ReadConfig(file, "ClickFlow", DefaultConfig())
@@ -644,7 +667,7 @@ UpdateControlsForProfile() {
     }
     c["gateButton"].Choose(index)
     c["focus"].Value := cfg.focusStop
-    c["capture"].Text := "Definir la touche : " DisplayKey(cfg.activation)
+    c["capture"].Text := "Définir la touche : " DisplayKey(cfg.activation)
     c["statHotkey"].Text := DisplayKey(cfg.activation)
     UpdateModeControls()
     CF.loading := oldLoading
@@ -666,7 +689,7 @@ SelectProfile(index) {
     global CF
     if index < 1 || index > CF.profiles.Length
         return
-    StopAll("Changement de profil : clics arretes.")
+    StopAll("Changement de profil : clics arrêtes.")
     UnregisterActivation()
     oldCfg := CF.cfg
     oldId := CF.selectedId
@@ -696,17 +719,17 @@ SelectProfile(index) {
 
 PromptProfileName(title, suggested, ignoreId := 0) {
     global CF
-    result := InputBox("Nom du profil (36 caracteres maximum) :", title, "w420 h145", suggested)
+    result := InputBox("Nom du profil (36 caractères maximum) :", title, "w420 h145", suggested)
     if result.Result != "OK"
         return ""
     name := Trim(StrReplace(StrReplace(result.Value, Chr(10), " "), Chr(13), " "))
     if name = "" || StrLen(name) > 36 {
-        MsgBox("Le nom doit contenir entre 1 et 36 caracteres.", "ClickFlow", "Icon!")
+        MsgBox("Le nom doit contenir entre 1 et 36 caractères.", "ClickFlow", "Icon!")
         return ""
     }
     for p in CF.profiles {
         if p.id != ignoreId && StrLower(p.name) = StrLower(name) {
-            MsgBox("Un profil porte deja ce nom.", "ClickFlow", "Icon!")
+            MsgBox("Un profil porte déjà ce nom.", "ClickFlow", "Icon!")
             return ""
         }
     }
@@ -715,7 +738,7 @@ PromptProfileName(title, suggested, ignoreId := 0) {
 
 NewProfile(*) {
     global CF
-    name := PromptProfileName("Creer un profil", "Profil " CF.nextId)
+    name := PromptProfileName("Créer un profil", "Profil " CF.nextId)
     if name = ""
         return
     id := CF.nextId
@@ -745,7 +768,7 @@ RenameProfile(*) {
     current.name := name
     UpdateProfileList()
     SaveSettings()
-    SetNotice("Profil renomme : " name ".")
+    SetNotice("Profil renommé : " name ".")
 }
 
 DeleteProfile(*) {
@@ -758,7 +781,7 @@ DeleteProfile(*) {
     profile := CF.profiles[index]
     if MsgBox("Supprimer le profil '" profile.name "' ?", "ClickFlow", "YesNo Icon?") != "Yes"
         return
-    StopAll("Profil supprime.")
+    StopAll("Profil supprimé.")
     UnregisterActivation()
     CF.profiles.RemoveAt(index)
     try IniDelete(CF.configFile, "Profile_" profile.id)
@@ -774,7 +797,7 @@ DeleteProfile(*) {
     UpdateProfileList()
     UpdateControlsForProfile()
     SaveSettings()
-    SetNotice("Profil supprime : " profile.name ".")
+    SetNotice("Profil supprimé : " profile.name ".")
 }
 
 HasValue(array, value) {
