@@ -1,21 +1,23 @@
-# ClickFlow - AutoClicker Windows v0.3.6
+# ClickFlow - AutoCliker Windows v0.3.7
 
 ClickFlow est une application à fenêtre Windows, avec interface WebView2 et moteur AutoHotkey v2. **Aucun exécutable ClickFlow n'est créé.** La branche `main` (C#) et les anciennes versions AutoHotkey ne sont pas modifiées.
 
 ## Lancer ClickFlow avec un seul fichier
 
 1. Vérifier qu'**AutoHotkey v2 64 bits** est installé : https://www.autohotkey.com/.
-2. Télécharger `ClickFlow-v0.3.6.ahk` depuis la release `v0.3.6-windows-shortcuts`.
+2. Télécharger `ClickFlow-v0.3.7.ahk` depuis la release `v0.3.7-app-rename`.
 3. Fermer les anciennes fenêtres ClickFlow puis double-cliquer sur le fichier téléchargé.
 4. Accepter ou refuser la proposition de création des raccourcis sur le **Bureau** et dans le **menu Démarrer**.
 
-Le fichier unique extrait ses composants sous `%LOCALAPPDATA%\ClickFlow\Runtime-0.3.6` puis ouvre la fenêtre Windows, sans navigateur externe. Il installe aussi une copie stable du fichier unique à l'adresse `%LOCALAPPDATA%\ClickFlow\ClickFlow.ahk` et une icône `ClickFlow.ico`. Les raccourcis (si acceptés) pointent vers cette copie stable et peuvent donc continuer à fonctionner après la suppression du fichier téléchargé.
+La v0.3.7 renomme la fenêtre et les raccourcis en **ClickFlow - AutoCliker**. Si des raccourcis `ClickFlow.lnk` de la version précédente existent et pointent vers notre copie locale, ils seront remplacés sans toucher aux profils.
 
-## Une icône ClickFlow
+Le fichier unique extrait ses composants sous `%LOCALAPPDATA%\ClickFlow\Runtime-0.3.7` puis ouvre la fenêtre Windows, sans navigateur externe. Il installe aussi une copie stable du fichier unique à l'adresse `%LOCALAPPDATA%\ClickFlow\ClickFlow.ahk` et une icône `ClickFlow.ico`. Les raccourcis (si acceptés) pointent vers cette copie stable et peuvent donc continuer à fonctionner après la suppression du fichier téléchargé.
+
+## Une icône ClickFlow et un nouveau nom
 
 - Une nouvelle icône est utilisée dans les raccourcis, la fenêtre et la zone de notification Windows.
-- Sur le bureau, le raccourci `ClickFlow.lnk` présente cette icône. Le fichier `.ahk` lui-même conserve l'icône de son association Windows.
-- Le menu Démarrer contient une entrée **ClickFlow** accessible via la recherche Windows.
+- Sur le bureau, le raccourci `ClickFlow - AutoCliker.lnk` présente cette icône. Le fichier `.ahk` lui-même conserve l'icône de son association Windows.
+- Le menu Démarrer contient une entrée **ClickFlow - AutoCliker** accessible via la recherche Windows.
 - Dans **À propos**, les boutons **Créer / actualiser les raccourcis** et **Supprimer les raccourcis** permettent de revenir sur le choix initial.
 
 Aucun programme exécutable ClickFlow n'est installé. Les raccourcis ouvrent le script à l'aide de l'interpréteur AutoHotkey déjà présent sur le PC.
@@ -39,7 +41,7 @@ Les profils et réglages continuent d'être enregistrés dans `%APPDATA%\ClickFl
 
 ## Alternative en ZIP
 
-`ClickFlow-WebView2-v0.3.6-win-x64.zip` reste disponible. Extraire le ZIP et lancer `ClickFlow-WebView2.ahk` pour utiliser le logiciel sans créer de raccourcis.
+`ClickFlow-WebView2-v0.3.7-win-x64.zip` reste disponible. Extraire le ZIP et lancer `ClickFlow-WebView2.ahk` pour utiliser le logiciel sans créer de raccourcis.
 
 ## Tests et limites
 
