@@ -17,6 +17,13 @@ global CF := {
 
 BackendInit(hwnd, web) {
     global CF
+    ; Ces hooks existaient dans la version classique 0.2.5.
+    ; Ils distinguent l'etat physique de la souris des clics generes par SendInput.
+    ; Sans hook, GetKeyState("LButton", "P") peut lire l'etat logique perturbe
+    ; par nos propres clics, et interrompre la condition de maintien.
+    InstallKeybdHook()
+    InstallMouseHook()
+    SendMode("Input")
     CF.hwnd := hwnd
     CF.web := web
     try {
