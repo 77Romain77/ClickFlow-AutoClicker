@@ -7,7 +7,8 @@ Cette branche est un essai d'interface moderne. Le projet AutoHotkey fonctionnel
 1. Télécharger **ClickFlow-WebView2-Preview-win-x64.zip** depuis la release de prévisualisation sur GitHub.
 2. Extraire **tout** le ZIP dans un dossier (ne pas lancer le script directement dans le ZIP).
 3. Vérifier qu'**AutoHotkey v2 64 bits** est installé.
-4. Ouvrir le dossier `webview2-preview` et double-cliquer sur `ClickFlow-WebView2.ahk`.
+4. Ouvrir le dossier `webview2-preview` et double-cliquer sur `Ouvrir-interface.ahk` pour tester tout de suite le nouveau design dans le navigateur.
+5. Pour essayer l'intégration dans une fenêtre Windows WebView2, lancer `ClickFlow-WebView2.ahk`. Cette intégration est encore expérimentale et son démarrage n'est pas validé automatiquement.
 
 Aucune installation de ClickFlow ou compilation n'est nécessaire. Le runtime WebView2 est normalement inclus dans Windows 11. L'archive inclut le composant **WebView2Loader.dll provenant du package officiel Microsoft**. Smart App Control peut toutefois bloquer une DLL ou un script inconnu : ne pas désactiver la protection pour ce test.
 
@@ -30,7 +31,8 @@ Aucune installation de ClickFlow ou compilation n'est nécessaire. Le runtime We
 
 ## Fichiers
 
-- `ClickFlow-WebView2.ahk` : lanceur Windows.
+- `ClickFlow-WebView2.ahk` : lanceur WebView2 expérimental.
+- `Ouvrir-interface.ahk` : lanceur simple du prototype visuel dans le navigateur par défaut.
 - `ui/index.html` : interface HTML, CSS et JavaScript sans ressources externes.
 - `lib/WebView2/WebView2.ahk` : bibliothèque de thqby sous licence MIT.
 - `lib/Promise.ahk`, `lib/ComVar.ahk` : dépendances de la même bibliothèque (MIT).
