@@ -8,6 +8,7 @@ global CF := {
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, total: 0, recent: [],
     lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
+    emergencyKey: "F12", compactMode: false, captureKind: "activation",
     profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
     cfg: {mode: 1, variation: 2, min: 8, max: 14,
@@ -30,10 +31,22 @@ BackendInit(hwnd, web) {
         if FileExist(CF.configFile) && !FileExist(CF.configFile ".backup-webview2")
             FileCopy(CF.configFile, CF.configFile ".backup-webview2")
     }
+    CF.emergencyKey := IniRead(CF.configFile, "General", "EmergencyKey", "F12")
+    CF.compactMode := IniRead(CF.configFile, "General", "CompactMode", "0") = "1"
+    if CF.emergencyKey = "" || CF.emergencyKey = "!" || CF.emergencyKey = "Escape"
+        CF.emergencyKey := "F12"
     LoadSettings()
+    ; Au démarrage un raccourci d'urgence ne doit jamais entrer en conflit
+    ; avec l'activation du profil actuel. On préfère une touche de secours.
+    for p in CF.profiles {
+        if SameKey(p.cfg.activation, CF.emergencyKey)
+            p.cfg.activation := "F6"
+    }
+    if SameKey(CF.cfg.activation, CF.emergencyKey)
+        CF.cfg.activation := "F6"
     CF.loading := false
+    RegisterEmergency()
     RegisterActivation()
-    Hotkey("~*F12", EmergencyStop, "On")
     SetTimer(EngineTick, 10)
     SetTimer(UpdateStats, 200)
     OnExit(BackendExit)
@@ -59,7 +72,7 @@ BackendExit(*) {
         CF.capture := false
     }
     try UnregisterActivation()
-    try Hotkey("~*F12", "Off")
+    try UnregisterEmergency()
 
     ; Sauvegarde AVANT la destruction de WebView2.
     CF.web := 0
@@ -92,7 +105,7 @@ SendState() {
     profiles := ""
     for p in CF.profiles
         profiles .= (profiles = "" ? "" : ",") '{"id":' p.id ',"name":' JsonQuote(p.name) ',"settings":' ToUiCfg(p.cfg) '}'
-    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles ']}')
+    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey)) ',"compact":' (CF.compactMode ? "true" : "false") '}')
 }
 
 SendStats() {
@@ -200,7 +213,22 @@ BackendMessage(sender, args) {
             return
         }
         if cmd = "capture" {
-            StartCapture()
+            StartCapture("activation")
+            return
+        }
+        if cmd = "captureStop" {
+            StartCapture("emergency")
+            return
+        }
+        if cmd = "view" && parts.Length >= 2 {
+            compact := parts[2] = "compact"
+            if compact != CF.compactMode {
+                CF.compactMode := compact
+                StopAll("Mode d'affichage changé.")
+                ApplyWindowMode()
+                SaveSettings()
+            }
+            SendState()
             return
         }
         if cmd = "select" && parts.Length >= 2 {
@@ -257,6 +285,30 @@ BackendMessage(sender, args) {
     }
 }
 
+SameKey(a, b) {
+    if a = b
+        return true
+    try return GetKeyVK(a) = GetKeyVK(b)
+    return false
+}
+
+RegisterEmergency() {
+    global CF
+    Hotkey("~*" CF.emergencyKey, EmergencyStop, "On")
+}
+
+UnregisterEmergency() {
+    global CF
+    try Hotkey("~*" CF.emergencyKey, "Off")
+}
+
+ApplyWindowMode() {
+    global CF
+    if !CF.hwnd
+        return
+    WinMove(, , CF.compactMode ? 540 : 1120, CF.compactMode ? 700 : 800, "ahk_id " CF.hwnd)
+}
+
 RegisterActivation() {
     global CF
     name := CF.cfg.activation
@@ -293,7 +345,7 @@ ActivationDown(*) {
     CF.naturalCps := (CF.cfg.min + CF.cfg.max) / 2
     CF.naturalTarget := CF.naturalCps
     CF.nextVariation := 0
-    SetNotice("Clics actifs dans la fenêtre choisie. F12 pour arrêter.")
+    SetNotice("Clics actifs dans la fenêtre choisie. " DisplayKey(CF.emergencyKey) " pour arrêter.")
 }
 
 ActivationUp(*) {
@@ -307,7 +359,7 @@ EmergencyStop(*) {
     global CF
     if CF.capture
         FinishCapture("")
-    StopAll("Arrêt d'urgence (F12).")
+    StopAll("Arrêt d'urgence (" DisplayKey(CF.emergencyKey) ").")
 }
 
 StopAll(message) {
@@ -395,21 +447,27 @@ UpdateStats() {
     SendStats()
 }
 
-StartCapture(*) {
+StartCapture(kind := "activation") {
     global CF
     StopAll("Sélection de la touche...")
+    if CF.capture
+        FinishCapture("")
     CF.capture := true
-    SendStats()
+    CF.captureKind := kind
+    ; Suspendre les deux raccourcis pendant la capture, puis les restaurer.
     UnregisterActivation()
-    ; Interception pour ecouter uniquement : ne bloque pas les touches.
+    UnregisterEmergency()
+    SendStats()
     ih := InputHook("V")
     ih.KeyOpt("{All}", "N")
     ih.OnKeyDown := CapturedKey
     CF.inputHook := ih
-    for key in ["LButton", "RButton", "MButton", "XButton1", "XButton2"]
-        Hotkey("~*" key, CapturedMouse.Bind(key), "On")
+    for mouseKey in ["LButton", "RButton", "MButton", "XButton1", "XButton2"]
+        Hotkey("~*" mouseKey, CapturedMouse.Bind(mouseKey), "On")
     ih.Start()
-    SetNotice("Appuie sur une touche clavier ou souris. Échap pour annuler.")
+    SetNotice(kind = "emergency"
+        ? "Appuie sur la nouvelle touche d'arrêt d'urgence (Échap annule)."
+        : "Appuie sur la touche d'activation (Échap annule).")
 }
 
 CapturedKey(ih, vk, sc) {
@@ -419,11 +477,6 @@ CapturedKey(ih, vk, sc) {
     name := GetKeyName(Format("vk{:02X}sc{:03X}", vk, sc))
     if name = "Esc" || name = "Escape" {
         FinishCapture("")
-        return
-    }
-    if name = "F12" {
-        FinishCapture("")
-        SetNotice("F12 est réservée à l'arrêt d'urgence.")
         return
     }
     if name = "" || InStr("|Shift|LShift|RShift|Ctrl|LCtrl|RCtrl|Alt|LAlt|RAlt|LWin|RWin|", "|" name "|")
@@ -442,31 +495,59 @@ FinishCapture(key) {
     if !CF.capture
         return
     CF.capture := false
-    if IsObject(CF.inputHook)
-        CF.inputHook.Stop()
+    kind := CF.captureKind
+    try CF.inputHook.Stop()
     CF.inputHook := 0
     for mouseKey in ["LButton", "RButton", "MButton", "XButton1", "XButton2"]
         try Hotkey("~*" mouseKey, "Off")
 
-    old := CF.cfg.activation
-    if key != ""
-        CF.cfg.activation := key
+    rejected := false
+    if key != "" {
+        if kind = "emergency" {
+            for p in CF.profiles {
+                if SameKey(key, p.cfg.activation) {
+                    rejected := true
+                    break
+                }
+            }
+        } else if SameKey(key, CF.emergencyKey) {
+            rejected := true
+        }
+    }
+    previous := kind = "emergency" ? CF.emergencyKey : CF.cfg.activation
+    if rejected
+        key := ""
+    if key != "" {
+        if kind = "emergency"
+            CF.emergencyKey := key
+        else
+            CF.cfg.activation := key
+    }
     try {
+        RegisterEmergency()
         RegisterActivation()
     } catch as err {
-        CF.cfg.activation := old
-        RegisterActivation()
+        try UnregisterActivation()
+        try UnregisterEmergency()
+        if kind = "emergency"
+            CF.emergencyKey := previous
+        else
+            CF.cfg.activation := previous
+        try RegisterEmergency()
+        try RegisterActivation()
         SetNotice("Touche non prise en charge : " err.Message)
         key := ""
     }
     CF.pressed := false
     SendState()
-    if key != "" {
-        SaveSettings()
-        SetNotice("Activation définie : " DisplayKey(CF.cfg.activation) ".")
-    } else if old = CF.cfg.activation {
-        SetNotice("Capture annulée. Activation conservée : " DisplayKey(old) ".")
-    }
+    SaveSettings()
+    if rejected
+        SetNotice("Cette touche est déjà utilisée par l'activation. Choisis-en une autre.")
+    else if key != ""
+        SetNotice((kind = "emergency" ? "Arrêt d'urgence : " : "Activation : ")
+            DisplayKey(key) ".")
+    else
+        SetNotice("Capture annulée. Touche conservée : " DisplayKey(previous) ".")
 }
 
 DefaultConfig() {
@@ -513,7 +594,7 @@ ReadConfig(file, section, base) {
         cfg.clickButton := "Left"
     if !HasValue(["LButton", "RButton", "MButton", "XButton1", "XButton2"], cfg.gateButton)
         cfg.gateButton := "RButton"
-    if cfg.activation = "" || cfg.activation = "!" || cfg.activation = "F12" || cfg.activation = "vk7B"
+    if cfg.activation = "" || cfg.activation = "!" || SameKey(cfg.activation, CF.emergencyKey)
         cfg.activation := "F6"
     return cfg
 }
@@ -597,6 +678,8 @@ SaveSettings(*) {
         IniWrite(ids, CF.configFile, "Profiles", "Ids")
         IniWrite(CF.selectedId, CF.configFile, "Profiles", "Selected")
         IniWrite(CF.nextId, CF.configFile, "Profiles", "NextId")
+        IniWrite(CF.emergencyKey, CF.configFile, "General", "EmergencyKey")
+        IniWrite(CF.compactMode ? 1 : 0, CF.configFile, "General", "CompactMode")
     } catch as err {
         SetNotice("Sauvegarde impossible : " err.Message)
     }
