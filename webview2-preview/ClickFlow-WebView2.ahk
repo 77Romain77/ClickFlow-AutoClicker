@@ -4,12 +4,16 @@
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v0.3.5 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v0.3.6 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
 ; Utiliser F12 pour arrêter immédiatement les clics.
 
 htmlPath := A_ScriptDir "\ui\index.html"
 dllPath := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
+iconPath := A_ScriptDir "\assets\ClickFlow.ico"
+if FileExist(iconPath) {
+    try TraySetIcon(iconPath)
+}
 probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
 if !FileExist(htmlPath) || !FileExist(dllPath) {
     MsgBox("Il manque un fichier ClickFlow. Extrais tout le contenu de l'archive ZIP.", "ClickFlow", "Icon!")
@@ -27,13 +31,25 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoClicker v0.3.5")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoClicker v0.3.6")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)
 main.OnEvent("Size", ResizeClickFlow)
 compactAtStart := IniRead(A_AppData "\ClickFlow\settings.ini", "General", "CompactMode", "0") = "1"
 main.Show(compactAtStart ? "w540 h700" : "w1120 h800")
+if FileExist(iconPath) {
+    ; WM_SETICON : la fenetre et la barre des taches utilisent notre icone,
+    ; independamment de celle de l'interpreteur AutoHotkey.
+    try {
+        hSmall := LoadPicture(iconPath, "Icon1 w32 h32", &iconType)
+        hBig := LoadPicture(iconPath, "Icon1 w48 h48", &iconType)
+        if hSmall
+            SendMessage(0x80, 0, hSmall, , main.Hwnd)
+        if hBig
+            SendMessage(0x80, 1, hBig, , main.Hwnd)
+    }
+}
 if probe != ""
     FileAppend(main.Hwnd, probe ".hwnd", "UTF-8")
 
