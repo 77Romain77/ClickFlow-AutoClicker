@@ -7,6 +7,9 @@
 ; Les profils et settings.ini ne sont pas modifiés par ce prototype.
 
 global CW := {gui: 0, controller: 0, web: 0, handler: 0}
+diagnostic := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+if diagnostic != ""
+    FileAppend("global scope reached", diagnostic ".first", "UTF-8")
 StartWebView()
 
 StartWebView() {
