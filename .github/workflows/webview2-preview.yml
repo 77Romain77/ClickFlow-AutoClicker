@@ -107,24 +107,71 @@ jobs:
             if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
           }
 
+      - name: Create single-file AutoHotkey launcher
+        shell: pwsh
+        run: |
+          python tools/build_single_ahk.py --root webview2-preview --output ClickFlow-v0.3.5.ahk
+          if (!(Test-Path 'ClickFlow-v0.3.5.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v0.3.5.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+
+      - name: Smoke-test self-extracting AHK script
+        shell: pwsh
+        run: |
+          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
+          $bundle = (Resolve-Path 'ClickFlow-v0.3.5.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
+          $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
+          for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
+            Start-Sleep -Milliseconds 500
+          }
+          if (!(Test-Path $bridge)) {
+            $errors = if (Test-Path one-file.err) { Get-Content one-file.err -Raw } else { '' }
+            $out = if (Test-Path one-file.out) { Get-Content one-file.out -Raw } else { '' }
+            throw "Bundled launcher did not open WebView2 and connect to AutoHotkey. stderr=$errors stdout=$out"
+          }
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-0.3.5'
+          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
+            if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
+          }
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ClickFlowStandaloneWin32 {
+              [DllImport("user32.dll")]
+              public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wp, IntPtr lp);
+          }
+          '@
+          $hwndFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.hwnd'
+          $hwnd = [IntPtr]::new([long](Get-Content $hwndFile -Raw).Trim())
+          if (-not [ClickFlowStandaloneWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
+            throw "Standalone GUI did not receive WM_CLOSE"
+          }
+          Start-Sleep -Seconds 1
+          Write-Host 'Single .ahk unpacked locally, started real WebView2 and responded to WM_CLOSE.'
+
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.4-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.5-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v0.3.4-win-x64
-          path: ClickFlow-WebView2-v0.3.4-win-x64.zip
+          name: ClickFlow-WebView2-v0.3.5-win-x64
+          path: ClickFlow-WebView2-v0.3.5-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClickFlow-v0.3.5-single-file
+          path: ClickFlow-v0.3.5.ahk
 
       - name: Publish preview release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = 'v0.3.4-webview2-beta'
+          $tag = 'v0.3.5-webview2-beta'
           if (gh release view $tag 2>$null) {
-            gh release upload $tag ClickFlow-WebView2-v0.3.4-win-x64.zip --clobber
+            gh release upload $tag ClickFlow-WebView2-v0.3.5-win-x64.zip ClickFlow-v0.3.5.ahk --clobber
           } else {
-            gh release create $tag ClickFlow-WebView2-v0.3.4-win-x64.zip --title 'ClickFlow v0.3.4 - Beta Windows WebView2' --notes 'Version beta : interface Windows WebView2, moteur de clics AutoHotkey et profils enregistres. Extraire tout le ZIP, lancer ClickFlow-WebView2.ahk avec AutoHotkey v2 64 bits. Premier test recommande : 5 CPS et F12 pour stop.' --target "$env:GITHUB_SHA" --prerelease
+            gh release create $tag ClickFlow-WebView2-v0.3.5-win-x64.zip ClickFlow-v0.3.5.ahk --title 'ClickFlow v0.3.5 - Beta Windows WebView2' --notes 'Beta Windows: telecharger ClickFlow-v0.3.5.ahk et double-cliquer dessus (AutoHotkey v2 x64 requis). Fichier unique avec extraction locale automatique; ZIP traditionnel fourni en alternative. Arret urgence personnalisable (F12 initialement), mode compact etendu, profils conserves.' --target "$env:GITHUB_SHA" --prerelease
           }
