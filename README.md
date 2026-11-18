@@ -46,7 +46,7 @@ Un workflow GitHub Actions compile le projet sur Windows et fournit un artefact 
 
 ## Publier une version
 
-La publication est automatisée à chaque tag `vMAJOR.MINOR.PATCH` (par exemple `v0.1.0`) :
+La publication est automatisée à chaque tag `vMAJOR.MINOR.PATCH` (par exemple `v0.1.0`). Elle peut aussi être lancée dans GitHub > Actions > Release ClickFlow > Run workflow, en saisissant `0.1.0`.
 
 1. Compiler l'application autonome pour Windows x64.
 2. Fabriquer le ZIP portable.
