@@ -150,74 +150,36 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.1.ahk
-          if (!(Test-Path 'ClickFlow-v1.0.1.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v1.0.1.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.2.ahk
+          if (!(Test-Path 'ClickFlow-v1.0.2.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.0.2.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
-      - name: Verify one-file desktop and Start menu shortcuts
+      - name: Verify independent shortcut management and manual deletion
         shell: pwsh
         run: |
-          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'shortcut-probe'
           $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $env:TEMP 'ClickFlowCI-Desktop'
           $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $env:TEMP 'ClickFlowCI-StartMenu'
-          $bundle = (Resolve-Path 'ClickFlow-v1.0.1.ahk').Path
-          # Simuler des raccourcis hérités pour valider la migration.
-          $shell = New-Object -ComObject WScript.Shell
-          foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
-            $old = $shell.CreateShortcut((Join-Path $dir 'ClickFlow.lnk'))
-            $old.TargetPath = $env:AHK_EXE
-            $old.Arguments = '"' + (Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ahk') + '"'
-            $old.Save()
-          }
-          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle, '--shortcuts' -PassThru -RedirectStandardError shortcuts.err -RedirectStandardOutput shortcuts.out
-          if (-not $p.WaitForExit(20000)) {
+          $script = (Resolve-Path 'tests/ahk-shortcuts.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError shortcuts.err -RedirectStandardOutput shortcuts.out
+          if (-not $p.WaitForExit(15000)) {
             Stop-Process -Id $p.Id -Force
-            throw 'Shortcut creation timed out.'
+            throw 'Independent shortcut regression test timed out.'
           }
           $err = if (Test-Path shortcuts.err) { Get-Content shortcuts.err -Raw } else { '' }
           $out = if (Test-Path shortcuts.out) { Get-Content shortcuts.out -Raw } else { '' }
-          if ($p.ExitCode -ne 0 -or $err) {
-            $problem = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.shortcut-error'
-            $reason = if (Test-Path $problem) { Get-Content $problem -Raw } else { '<no scripted error>' }
-            throw "Shortcuts installer failed: exit=$($p.ExitCode) stderr=$err stdout=$out reason=$reason"
+          Write-Host "Shortcut regression: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Independent shortcut test failed exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
-          $icon = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ico'
-          $installed = Join-Path $env:LOCALAPPDATA 'ClickFlow/ClickFlow.ahk'
-          if (!(Test-Path $icon) -or !(Test-Path $installed)) {
-            throw 'Persistent ClickFlow script and/or icon missing.'
+          $source = Get-Content 'tools/build_single_ahk.py' -Raw
+          if ($source -match 'InstallClickFlowShortcuts\(\)' -or $source -match 'savedChoice\s*=') {
+            throw 'Bootstrap still contains automatic shortcut reinstallation.'
           }
-          $shell = New-Object -ComObject WScript.Shell
-          foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
-            $file = Join-Path $dir 'ClickFlow - AutoCliker.lnk'
-            if (!(Test-Path $file)) { throw "Missing shortcut: $file" }
-            if (Test-Path (Join-Path $dir 'ClickFlow.lnk')) {
-              throw 'The previous ClickFlow shortcut was not migrated.'
-            }
-            $shortcut = $shell.CreateShortcut($file)
-            if ($shortcut.TargetPath -ne $env:AHK_EXE) {
-              throw "Shortcut target is not AutoHotkey: $($shortcut.TargetPath)"
-            }
-            if ($shortcut.Arguments -notlike '*ClickFlow.ahk*') {
-              throw "Shortcut does not target the stable single-file script."
-            }
-            if ($shortcut.IconLocation -notlike '*ClickFlow.ico*') {
-              throw "Shortcut is not branded with ClickFlow.ico."
-            }
+          $html = Get-Content 'ui/index.html' -Raw
+          if ($html -notmatch 'desktopShortcutButton' -or $html -notmatch 'startShortcutButton') {
+            throw 'Independent shortcut controls missing from UI.'
           }
-          Write-Host 'ClickFlow - AutoCliker shortcuts migrated and point to stable local ClickFlow.ahk.'
-          $p2 = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle, '--remove-shortcuts' -PassThru -RedirectStandardError remove.err -RedirectStandardOutput remove.out
-          if (-not $p2.WaitForExit(15000)) {
-            Stop-Process -Id $p2.Id -Force
-            throw 'Shortcut removal timed out.'
-          }
-          if (Test-Path (Join-Path $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP 'ClickFlow - AutoCliker.lnk')) {
-            throw 'Desktop shortcut removal did not work.'
-          }
-          if (Test-Path (Join-Path $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU 'ClickFlow - AutoCliker.lnk')) {
-            throw 'Start menu shortcut removal did not work.'
-          }
-          Write-Host 'Shortcut creation and removal both passed.'
+          Write-Host 'Desktop and Start menu shortcuts are separately controllable.'
 
       - name: Smoke-test self-extracting AHK script
         shell: pwsh
@@ -235,8 +197,24 @@ jobs:
           $dataSentinel = Join-Path $appRoot 'WebView2Preview/keep-ci.txt'
           New-Item -ItemType Directory -Path (Split-Path $dataSentinel) -Force | Out-Null
           Set-Content -Path $dataSentinel -Value 'do not delete'
+          # Simulate deleting Desktop while keeping Start and a legacy Enabled=1 INI.
+          $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $env:TEMP 'ClickFlowCI-Desktop'
+          $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $env:TEMP 'ClickFlowCI-StartMenu'
+          $desktopLink = Join-Path $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP 'ClickFlow - AutoCliker.lnk'
+          $startLink = Join-Path $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU 'ClickFlow - AutoCliker.lnk'
+          $appDir = Join-Path $env:LOCALAPPDATA 'ClickFlow'
+          New-Item -ItemType Directory -Force $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP | Out-Null
+          New-Item -ItemType Directory -Force $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU | Out-Null
+          $shell = New-Object -ComObject WScript.Shell
+          $shortcut = $shell.CreateShortcut($startLink)
+          $shortcut.TargetPath = $env:AHK_EXE
+          $shortcut.Arguments = '"' + (Join-Path $appDir 'ClickFlow.ahk') + '"'
+          $shortcut.Save()
+          if (Test-Path $desktopLink) { Remove-Item $desktopLink -Force }
+          $legacyIni = Join-Path $appDir 'shortcuts.ini'
+          Set-Content -Path $legacyIni -Value ('[Shortcuts]' + [Environment]::NewLine + 'Enabled=1') -Encoding ascii
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v1.0.1.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.2.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -247,7 +225,10 @@ jobs:
             $out = if (Test-Path one-file.out) { Get-Content one-file.out -Raw } else { '' }
             throw "Bundled launcher did not open WebView2 and connect to AutoHotkey. stderr=$errors stdout=$out"
           }
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.1'
+          if (Test-Path $desktopLink) { throw 'Desktop shortcut recreated despite user deletion.' }
+          if (!(Test-Path $startLink)) { throw 'Start menu shortcut vanished unexpectedly.' }
+          Write-Host 'Legacy Enabled=1 did not recreate a manually deleted Desktop shortcut.'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.2'
           # Le nettoyage a lieu après la connexion, via un timer AHK.
           for ($i = 0; $i -lt 40; $i++) {
             $remaining = @($legacyDirs | Where-Object { Test-Path (Join-Path $appRoot $_) })
@@ -295,6 +276,8 @@ jobs:
           if (!(Get-Process -Id $enginePid -ErrorAction SilentlyContinue)) {
             throw 'Initial ClickFlow process exited during second launch.'
           }
+          if (Test-Path $desktopLink) { throw 'Second launch recreated manually deleted Desktop shortcut.' }
+          if (!(Test-Path $startLink)) { throw 'Second launch removed Start menu shortcut.' }
           Write-Host 'Double launch kept the first ClickFlow window and process alive.'
           if (-not [ClickFlowStandaloneWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
             throw "Standalone GUI did not receive WM_CLOSE"
@@ -305,17 +288,17 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.1-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.2-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v1.0.1-win-x64
-          path: ClickFlow-WebView2-v1.0.1-win-x64.zip
+          name: ClickFlow-WebView2-v1.0.2-win-x64
+          path: ClickFlow-WebView2-v1.0.2-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v1.0.1-single-file
-          path: ClickFlow-v1.0.1.ahk
+          name: ClickFlow-v1.0.2-single-file
+          path: ClickFlow-v1.0.2.ahk
 
       - name: Publish stable release
         if: >-
