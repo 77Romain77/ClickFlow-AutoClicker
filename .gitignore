@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+publish/
+Releases/
+*.user
+*.suo
+settings.json
+settings.json.tmp
+settings.json.invalid-*
