@@ -2,6 +2,7 @@ name: Release ClickFlow
 
 on:
   push:
+    branches: [main]
     tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
@@ -15,6 +16,7 @@ permissions:
 
 jobs:
   release:
+    if: ${{ github.event_name != 'push' || startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.head_commit.message, 'release: v') }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +30,91 @@ jobs:
           $tag = '${{ github.ref_name }}'
           if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
             $version = '${{ inputs.version }}'
-            if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Expected MAJOR.MINOR.PATCH version" }
+            if ($version -notmatch '^\d+\.\d+\.\d+
+            if ($tag -notmatch '^v(\d+)\.(\d+)\.(\d+)$') { throw "Expected vMAJOR.MINOR.PATCH tag" }
+            $version = $tag.Substring(1)
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+      - name: Publish Windows x64
+        shell: pwsh
+        run: |
+          dotnet publish ClickFlow/ClickFlow.csproj -c Release -r win-x64 --self-contained true `
+            -p:Version=${{ steps.version.outputs.version }} -o publish
+      - name: Create portable archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force portable | Out-Null
+          Copy-Item publish/* portable/ -Recurse
+          New-Item -ItemType File portable/portable.flag | Out-Null
+          Compress-Archive -Path portable/* -DestinationPath ClickFlow-Portable.zip -CompressionLevel Optimal
+      - name: Install Velopack CLI
+        shell: pwsh
+        run: dotnet tool install --global vpk --version 1.2.161
+      - name: Build Windows installer and update feed
+        shell: pwsh
+        run: |
+          vpk pack --packId ClickFlow --packVersion '${{ steps.version.outputs.version }}' `
+            --packDir publish --mainExe ClickFlow.exe --outputDir Releases
+      - name: Publish Velopack release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          vpk upload github --repoUrl 'https://github.com/77Romain77/ClickFlow-AutoClicker' `
+            --token $env:GITHUB_TOKEN --outputDir Releases `
+            --tag '${{ steps.version.outputs.tag }}' --targetCommitish '${{ github.sha }}' --releaseName 'ClickFlow v${{ steps.version.outputs.version }}' --publish --merge
+      - name: Attach portable archive
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload '${{ steps.version.outputs.tag }}' ClickFlow-Portable.zip --clobber
+) { throw "Expected MAJOR.MINOR.PATCH version" }
+            $tag = "v$version"
+          }
+          elseif ('${{ github.ref }}' -eq 'refs/heads/main') {
+            $message = '${{ github.event.head_commit.message }}'
+            if ($message -notmatch '^release: v(\d+\.\d+\.\d+)
+            if ($tag -notmatch '^v(\d+)\.(\d+)\.(\d+)$') { throw "Expected vMAJOR.MINOR.PATCH tag" }
+            $version = $tag.Substring(1)
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+      - name: Publish Windows x64
+        shell: pwsh
+        run: |
+          dotnet publish ClickFlow/ClickFlow.csproj -c Release -r win-x64 --self-contained true `
+            -p:Version=${{ steps.version.outputs.version }} -o publish
+      - name: Create portable archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force portable | Out-Null
+          Copy-Item publish/* portable/ -Recurse
+          New-Item -ItemType File portable/portable.flag | Out-Null
+          Compress-Archive -Path portable/* -DestinationPath ClickFlow-Portable.zip -CompressionLevel Optimal
+      - name: Install Velopack CLI
+        shell: pwsh
+        run: dotnet tool install --global vpk --version 1.2.161
+      - name: Build Windows installer and update feed
+        shell: pwsh
+        run: |
+          vpk pack --packId ClickFlow --packVersion '${{ steps.version.outputs.version }}' `
+            --packDir publish --mainExe ClickFlow.exe --outputDir Releases
+      - name: Publish Velopack release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          vpk upload github --repoUrl 'https://github.com/77Romain77/ClickFlow-AutoClicker' `
+            --token $env:GITHUB_TOKEN --outputDir Releases `
+            --tag '${{ steps.version.outputs.tag }}' --publish --merge
+      - name: Attach portable archive
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload '${{ steps.version.outputs.tag }}' ClickFlow-Portable.zip --clobber
+) { throw "Expected release: vMAJOR.MINOR.PATCH commit message" }
+            $version = $Matches[1]
             $tag = "v$version"
           }
           else {
