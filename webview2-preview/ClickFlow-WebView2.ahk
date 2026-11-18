@@ -3,72 +3,60 @@
 #ErrorStdOut "UTF-8"
 #Include lib\WebView2\WebView2.ahk
 
-; ClickFlow WebView2: lancement indépendant sans clics automatiques.
-; Les profils et settings.ini ne sont pas modifiés par ce prototype.
+; Démarrage du prototype graphique ClickFlow.
+; Cette version ne génère pas encore de clics et ne touche pas aux profils.
 
-global CW := {gui: 0, controller: 0, web: 0, handler: 0}
-diagnostic := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
-if diagnostic != ""
-    FileAppend("global scope reached", diagnostic ".first", "UTF-8")
-StartWebView()
+global CW := {gui: 0, controller: 0, web: 0, event: 0}
+diag := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+if diag != ""
+    FileAppend("started", diag ".first", "UTF-8")
 
-StartWebView() {
-    global CW
-    probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
-    if probe != ""
-        FileAppend("script entered", probe ".start", "UTF-8")
-
-    try {
-    path := A_ScriptDir "\ui\index.html"
-    dll := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
-    if A_PtrSize != 8
-        throw Error("AutoHotkey 64 bits est nécessaire.")
-    if !FileExist(path)
-        throw Error("Fichier d'interface manquant : " path)
-    if !FileExist(dll)
-        throw Error("WebView2Loader.dll manque dans le dossier lib.")
-
-    CW.gui := Gui("+Resize +MinSize900x640", "ClickFlow - WebView2")
-    CW.gui.MarginX := 0
-    CW.gui.MarginY := 0
-    CW.gui.OnEvent("Size", WebResize)
-    CW.gui.OnEvent("Close", WebExit)
-    CW.gui.Show("w1120 h800")
-    if probe != ""
-        FileAppend("gui shown", probe ".gui", "UTF-8")
-
-    dataPath := A_LocalAppData "\ClickFlow\WebView2Preview"
-    DirCreate(dataPath)
-    CW.controller := WebView2.CreateControllerAsync(CW.gui.Hwnd, 0, dataPath, "", dll).await2()
-    CW.web := CW.controller.CoreWebView2
-    CW.handler := CW.web.WebMessageReceived(WebMessage)
-    CW.controller.Fill()
-    CW.web.NavigateToString(FileRead(path, "UTF-8"))
-    if probe != ""
-        FileAppend("ready", probe, "UTF-8")
-} catch as err {
-    if probe != ""
-        FileAppend(err.Message, probe ".error", "UTF-8")
-    else
-        MsgBox("Impossible d'ouvrir la fenêtre WebView2 : " err.Message, "ClickFlow", "Icon!")
-    ExitApp(1)
-    }
+pagePath := A_ScriptDir "\ui\index.html"
+dllPath := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
+if !FileExist(pagePath) {
+    MsgBox("Interface HTML introuvable.", "ClickFlow", "Icon!")
+    ExitApp()
+}
+if !FileExist(dllPath) {
+    MsgBox("WebView2Loader.dll manquant. Extrais bien tout le ZIP.", "ClickFlow", "Icon!")
+    ExitApp()
 }
 
-WebResize(gui, state, width, height) {
+CW.gui := Gui("+Resize +MinSize900x640", "ClickFlow - WebView2")
+CW.gui.MarginX := 0
+CW.gui.MarginY := 0
+CW.gui.OnEvent("Size", ResizeBrowser)
+CW.gui.OnEvent("Close", CloseBrowser)
+CW.gui.Show("w1120 h800")
+
+if diag != ""
+    FileAppend("script opened", diag ".start", "UTF-8")
+
+dataDir := A_LocalAppData "\ClickFlow\WebView2Preview"
+DirCreate(dataDir)
+CW.controller := WebView2.CreateControllerAsync(CW.gui.Hwnd, 0, dataDir, "", dllPath).await2()
+CW.web := CW.controller.CoreWebView2
+CW.event := CW.web.WebMessageReceived(ReceiveBrowserMessage)
+CW.controller.Fill()
+CW.web.NavigateToString(FileRead(pagePath, "UTF-8"))
+
+if diag != ""
+    FileAppend("ready", diag, "UTF-8")
+
+ResizeBrowser(gui, state, width, height) {
     global CW
     if state != -1 && CW.controller
-        try CW.controller.Fill()
+        CW.controller.Fill()
 }
 
-WebMessage(sender, args) {
+ReceiveBrowserMessage(sender, args) {
     if args.TryGetWebMessageAsString() = "ping"
         sender.PostWebMessageAsString("pong")
 }
 
-WebExit(*) {
+CloseBrowser(*) {
     global CW
-    CW.handler := 0
+    CW.event := 0
     CW.web := 0
     CW.controller := 0
     ExitApp()
