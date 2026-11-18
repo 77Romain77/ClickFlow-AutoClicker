@@ -39,6 +39,17 @@ jobs:
           Copy-Item $dll 'webview2-preview/lib/WebView2/64bit/WebView2Loader.dll'
           Write-Host "Copied official Microsoft loader: $dll"
 
+      - name: Validate mouse hold regression fix
+        shell: pwsh
+        run: |
+          $backend = Get-Content 'webview2-preview/ClickFlow-Backend.ahk' -Raw
+          $init = [regex]::Match($backend, '(?s)BackendInit\(hwnd, web\)\s*\{(.*?)\n\}')
+          if (-not $init.Success) { throw 'BackendInit missing' }
+          if ($init.Groups[1].Value -notmatch 'InstallMouseHook\(\)') { throw 'Mouse hook missing from initialization' }
+          if ($init.Groups[1].Value -notmatch 'InstallKeybdHook\(\)') { throw 'Keyboard hook missing from initialization' }
+          if ($backend -notmatch 'GetKeyState\(CF.cfg.gateButton, "P"\)') { throw 'Physical mouse state check missing' }
+          Write-Host 'Mouse gate hook wiring verified (hardware behavior requires local test).'
+
       - name: Probe WebView2 initialization (experimental)
         shell: pwsh
         run: |
@@ -74,21 +85,21 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.2-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-v0.3.3-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v0.3.2-win-x64
-          path: ClickFlow-WebView2-v0.3.2-win-x64.zip
+          name: ClickFlow-WebView2-v0.3.3-win-x64
+          path: ClickFlow-WebView2-v0.3.3-win-x64.zip
 
       - name: Publish preview release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = 'v0.3.2-webview2-beta'
+          $tag = 'v0.3.3-webview2-beta'
           if (gh release view $tag 2>$null) {
-            gh release upload $tag ClickFlow-WebView2-v0.3.2-win-x64.zip --clobber
+            gh release upload $tag ClickFlow-WebView2-v0.3.3-win-x64.zip --clobber
           } else {
-            gh release create $tag ClickFlow-WebView2-v0.3.2-win-x64.zip --title 'ClickFlow v0.3.2 - Beta Windows WebView2' --notes 'Version beta : interface Windows WebView2, moteur de clics AutoHotkey et profils enregistres. Extraire tout le ZIP, lancer ClickFlow-WebView2.ahk avec AutoHotkey v2 64 bits. Premier test recommande : 5 CPS et F12 pour stop.' --target "$env:GITHUB_SHA" --prerelease
+            gh release create $tag ClickFlow-WebView2-v0.3.3-win-x64.zip --title 'ClickFlow v0.3.3 - Beta Windows WebView2' --notes 'Version beta : interface Windows WebView2, moteur de clics AutoHotkey et profils enregistres. Extraire tout le ZIP, lancer ClickFlow-WebView2.ahk avec AutoHotkey v2 64 bits. Premier test recommande : 5 CPS et F12 pour stop.' --target "$env:GITHUB_SHA" --prerelease
           }
