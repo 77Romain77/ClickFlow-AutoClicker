@@ -1,13 +1,13 @@
-# ClickFlow AutoHotkey v2 - version experimentale 0.2
+# ClickFlow AutoHotkey v2 - version experimentale 0.2.2
 
 **Cette branche est independante de `main`.** La version C# et sa release v0.1.0 restent inchangees.
 
 ## Installation et mise a jour
 
 1. Installer AutoHotkey v2 depuis https://www.autohotkey.com/ (une seule fois).
-2. Ouvrir [ClickFlow.ahk](ClickFlow.ahk), cliquer sur **Raw**, puis enregistrer le fichier `ClickFlow.ahk`.
-3. Fermer l'ancienne fenetre ClickFlow si elle est encore ouverte, puis double-cliquer sur le nouveau `ClickFlow.ahk`.
-4. Chaque nouvelle version du script remplace simplement l'ancien fichier. Les reglages sont sauvegardes dans `%APPDATA%\ClickFlow\settings.ini`.
+2. Ouvrir [ClickFlow-test-v0.2.2.ahk](ClickFlow-test-v0.2.2.ahk), cliquer sur **Raw**, puis enregistrer le fichier avec son extension `.ahk`.
+3. Fermer l'ancienne fenetre ClickFlow si elle est encore ouverte, puis double-cliquer sur `ClickFlow-test-v0.2.2.ahk`.
+4. Pour les prochaines mises a jour, recuperer le nouveau script puis fermer l'ancien. Les reglages sont sauvegardes dans `%APPDATA%\ClickFlow\settings.ini`.
 
 Aucune compilation et aucun installateur ClickFlow ne sont necessaires. Ne pas desactiver Smart App Control.
 
@@ -16,7 +16,8 @@ Aucune compilation et aucun installateur ClickFlow ne sont necessaires. Ne pas d
 - **Fixed** : cadence fixe reglee avec la valeur minimum.
 - **Random** : nouvelle cadence entre minimum et maximum.
 - **Natural** : variations progressives, niveaux Low / Medium / High.
-- Sliders et champs de saisie numerique entre 1 et 100 CPS.
+- Sliders avec retour de valeur **en direct pendant le glissement** et champs de saisie numerique entre 1 et 100 CPS.
+- Interface sombre reorganisee en trois sections, boutons de capture et d'arret lisibles, avec un statut plus visible.
 - Clic gauche, droit ou central, au curseur.
 - Bouton **Touche** : capturer une touche clavier ou souris (LButton, RButton, MButton, Mouse 4 et Mouse 5).
 - **Hold** : clics tant que la touche est maintenue.
@@ -56,4 +57,6 @@ Si une erreur s'affiche au lancement, envoyer une capture du message et son nume
 
 ## Verification automatique
 
-La workflow [Validate AutoHotkey v2](.github/workflows/validate-ahk.yml) telecharge l'interpreteur officiel et lance `/Validate` sur le script a chaque modification.
+Le workflow [Validate AutoHotkey v2](.github/workflows/validate-ahk.yml) telecharge l'interpreteur officiel, verifie la syntaxe des scripts et tente un lancement de l'interface sans produire de clics.
+
+Le nom `ClickFlow-test-v0.2.2.ahk` permet de distinguer ce fichier de l'ancienne version en cache ou deja telechargee.
