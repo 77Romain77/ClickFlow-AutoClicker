@@ -125,7 +125,12 @@ if A_Args.Length && A_Args[1] = "--shortcuts" {
             MsgBox("Raccourcis ClickFlow créés sur le Bureau et dans le menu Démarrer.",
                 "ClickFlow", "Iconi")
     } catch as err {
-        MsgBox("Impossible de créer les raccourcis : " err.Message, "ClickFlow", "Icon!")
+        probeFile := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+        if probeFile != ""
+            FileAppend(err.Message, probeFile ".shortcut-error", "UTF-8")
+        else
+            MsgBox("Impossible de créer les raccourcis : " err.Message, "ClickFlow", "Icon!")
+        ExitApp(1)
     }
     ExitApp()
 }
@@ -136,7 +141,12 @@ if A_Args.Length && A_Args[1] = "--remove-shortcuts" {
         if EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE") = ""
             MsgBox("Raccourcis ClickFlow supprimés.", "ClickFlow", "Iconi")
     } catch as err {
-        MsgBox("Erreur : " err.Message, "ClickFlow", "Icon!")
+        probeFile := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+        if probeFile != ""
+            FileAppend(err.Message, probeFile ".shortcut-error", "UTF-8")
+        else
+            MsgBox("Erreur : " err.Message, "ClickFlow", "Icon!")
+        ExitApp(1)
     }
     ExitApp()
 }
