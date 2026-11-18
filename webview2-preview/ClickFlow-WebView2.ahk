@@ -1,79 +1,66 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
-#ErrorStdOut UTF-8
+#ErrorStdOut "UTF-8"
 #Include lib\WebView2\WebView2.ahk
 
-; ClickFlow - prototype graphique WebView2 v0.3.0.
-; Aucun clic n'est genere. Ce script ne modifie pas settings.ini.
-; Les profils de cette maquette sont temporaires.
+; ClickFlow WebView2: lancement indépendant sans clics automatiques.
+; Les profils et settings.ini ne sont pas modifiés par ce prototype.
 
-global CW := {gui: 0, controller: 0, web: 0, event: 0}
-
-htmlPath := A_ScriptDir "\ui\index.html"
-loaderPath := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
-probePath := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
-if probePath != ""
-    try FileAppend("AHK script entered", probePath ".start", "UTF-8")
+global CW := {gui: 0, controller: 0, web: 0, handler: 0}
+probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+if probe != ""
+    FileAppend("script entered", probe ".start", "UTF-8")
 
 try {
+    path := A_ScriptDir "\ui\index.html"
+    dll := A_ScriptDir "\lib\WebView2\64bit\WebView2Loader.dll"
     if A_PtrSize != 8
-        throw Error("Cette version nécessite AutoHotkey v2 en 64 bits.")
-    if !FileExist(htmlPath)
-        throw Error("Fichier d'interface manquant : " htmlPath)
-    if !FileExist(loaderPath)
-        throw Error("Composant WebView2Loader.dll manquant. Téléchargez l'archive ZIP complète.")
+        throw Error("AutoHotkey 64 bits est nécessaire.")
+    if !FileExist(path)
+        throw Error("Fichier d'interface manquant : " path)
+    if !FileExist(dll)
+        throw Error("WebView2Loader.dll manque dans le dossier lib.")
 
-    g := Gui("+Resize +MinSize900x640", "ClickFlow - Prototype WebView2")
-    g.MarginX := 0
-    g.MarginY := 0
-    g.BackColor := "090E1A"
-    g.OnEvent("Size", ResizeWebView)
-    g.OnEvent("Close", ClosePreview)
-    g.OnEvent("Escape", ClosePreview)
-    CW.gui := g
-    g.Show("w1120 h800")
+    CW.gui := Gui("+Resize +MinSize900x640", "ClickFlow - WebView2")
+    CW.gui.MarginX := 0
+    CW.gui.MarginY := 0
+    CW.gui.OnEvent("Size", WebResize)
+    CW.gui.OnEvent("Close", WebExit)
+    CW.gui.Show("w1120 h800")
+    if probe != ""
+        FileAppend("gui shown", probe ".gui", "UTF-8")
 
-    userData := A_LocalAppData "\ClickFlow\WebView2Preview"
-    DirCreate(userData)
-    CW.controller := WebView2.CreateControllerAsync(g.Hwnd, 0, userData, "", loaderPath).await2()
+    dataPath := A_LocalAppData "\ClickFlow\WebView2Preview"
+    DirCreate(dataPath)
+    CW.controller := WebView2.CreateControllerAsync(CW.gui.Hwnd, 0, dataPath, "", dll).await2()
     CW.web := CW.controller.CoreWebView2
-    CW.event := CW.web.WebMessageReceived(HandleBridgeMessage)
+    CW.handler := CW.web.WebMessageReceived(WebMessage)
     CW.controller.Fill()
-    CW.web.NavigateToString(FileRead(htmlPath, "UTF-8"))
-
-    ; Un marqueur de test permet au CI de vérifier la creation réelle du controle.
-    if probePath != ""
-        FileAppend("WebView2 initialized", probePath, "UTF-8")
+    CW.web.NavigateToString(FileRead(path, "UTF-8"))
+    if probe != ""
+        FileAppend("ready", probe, "UTF-8")
 } catch as err {
-    if probePath != ""
-        try FileAppend(err.Message, probePath ".error", "UTF-8")
-    details := "Impossible de lancer le prototype WebView2." Chr(10) Chr(10) err.Message
-    details .= Chr(10) Chr(10) "La version AutoHotkey classique de ClickFlow reste disponible."
-    MsgBox(details, "ClickFlow - WebView2", "Icon!")
+    if probe != ""
+        FileAppend(err.Message, probe ".error", "UTF-8")
+    else
+        MsgBox("Impossible d'ouvrir la fenêtre WebView2 : " err.Message, "ClickFlow", "Icon!")
     ExitApp(1)
 }
 
-ResizeWebView(gui, minMax, width, height) {
+WebResize(gui, state, width, height) {
     global CW
-    if minMax = -1
-        return
-    if CW.controller {
+    if state != -1 && CW.controller
         try CW.controller.Fill()
-    }
 }
 
-HandleBridgeMessage(sender, args) {
-    ; Un ping simple prouve que l'interface HTML parle à AutoHotkey.
-    ; Aucun message de cette maquette ne déclenche de clics.
-    try {
-        if args.TryGetWebMessageAsString() = "ping"
-            sender.PostWebMessageAsString("pong")
-    }
+WebMessage(sender, args) {
+    if args.TryGetWebMessageAsString() = "ping"
+        sender.PostWebMessageAsString("pong")
 }
 
-ClosePreview(*) {
+WebExit(*) {
     global CW
-    CW.event := 0
+    CW.handler := 0
     CW.web := 0
     CW.controller := 0
     ExitApp()
