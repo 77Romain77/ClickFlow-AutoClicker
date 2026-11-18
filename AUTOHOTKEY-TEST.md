@@ -1,12 +1,12 @@
-# ClickFlow AutoHotkey v2 - version experimentale 0.2.3
+# ClickFlow AutoHotkey v2 - version experimentale 0.2.4
 
 **Cette branche est independante de `main`.** La version C# et sa release v0.1.0 restent inchangees.
 
 ## Installation et mise a jour
 
 1. Installer AutoHotkey v2 depuis https://www.autohotkey.com/ (une seule fois).
-2. Ouvrir [ClickFlow-test-v0.2.3.ahk](ClickFlow-test-v0.2.3.ahk), cliquer sur **Raw**, puis enregistrer le fichier avec son extension `.ahk`.
-3. Fermer l'ancienne fenetre ClickFlow si elle est encore ouverte, puis double-cliquer sur `ClickFlow-test-v0.2.3.ahk`.
+2. Ouvrir [ClickFlow-test-v0.2.4.ahk](ClickFlow-test-v0.2.4.ahk), cliquer sur **Raw**, puis enregistrer le fichier avec son extension `.ahk`.
+3. Fermer l'ancienne fenetre ClickFlow si elle est encore ouverte, puis double-cliquer sur `ClickFlow-test-v0.2.4.ahk`.
 4. Pour les prochaines mises a jour, recuperer le nouveau script puis fermer l'ancien. Les reglages sont sauvegardes dans `%APPDATA%\ClickFlow\settings.ini`.
 
 Aucune compilation et aucun installateur ClickFlow ne sont necessaires. Ne pas desactiver Smart App Control.
@@ -20,7 +20,10 @@ Aucune compilation et aucun installateur ClickFlow ne sont necessaires. Ne pas d
 - **Profils nommes** : nouveau, renommer, dupliquer, supprimer (en conservant au moins un profil).
 - **Sauvegarde par profil** : valeurs CPS, modes, raccourcis et boutons restent enregistres au prochain lancement.
 - Le profil actif est restaure automatiquement ; les anciens reglages 0.2.x sont importes dans le profil **Principal**.
-- Interface sombre reorganisee en trois sections, boutons de capture et d'arret lisibles, avec un statut plus visible.
+- Interface sombre reorganisee en quatre sections : Profils, Cadence, Activation et Etat.
+- Trois zones statistiques separees : CPS reels, clics envoyes, touche d'activation.
+- Statut colore : vert quand actif, orange en attente du bouton souris, gris quand inactif.
+- Bandeau de sauvegarde automatique et meilleurs alignements des boutons.
 - Clic gauche, droit ou central, au curseur.
 - Bouton **Touche** : capturer une touche clavier ou souris (LButton, RButton, MButton, Mouse 4 et Mouse 5).
 - **Hold** : clics tant que la touche est maintenue.
@@ -62,7 +65,7 @@ Si une erreur s'affiche au lancement, envoyer une capture du message et son nume
 
 Le workflow [Validate AutoHotkey v2](.github/workflows/validate-ahk.yml) telecharge l'interpreteur officiel, verifie la syntaxe des scripts et tente un lancement de l'interface sans produire de clics.
 
-Le nom `ClickFlow-test-v0.2.3.ahk` permet de distinguer ce fichier de l'ancienne version en cache ou deja telechargee.
+Le nom `ClickFlow-test-v0.2.4.ahk` permet de distinguer ce fichier de l'ancienne version en cache ou deja telechargee.
 
 ## Tester la persistance
 
