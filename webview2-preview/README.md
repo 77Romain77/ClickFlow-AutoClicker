@@ -1,14 +1,16 @@
-# ClickFlow - Prototype WebView2 v0.3.0
+# ClickFlow - Prototype WebView2 v0.3.1
 
 Cette branche est un essai d'interface moderne. Le projet AutoHotkey fonctionnel reste intact dans `experimental/autohotkey`. La branche `main` (C#) n'est pas modifiée.
 
 ## Pour tester
 
-1. Télécharger **ClickFlow-WebView2-Preview-win-x64.zip** depuis la release de prévisualisation sur GitHub.
+1. Télécharger **ClickFlow-WebView2-Preview-v0.3.1-win-x64.zip** depuis la release de prévisualisation sur GitHub.
 2. Extraire **tout** le ZIP dans un dossier (ne pas lancer le script directement dans le ZIP).
 3. Vérifier qu'**AutoHotkey v2 64 bits** est installé.
-4. Ouvrir le dossier `webview2-preview` et double-cliquer sur `Ouvrir-interface.ahk` pour tester tout de suite le nouveau design dans le navigateur.
-5. Pour essayer l'intégration dans une fenêtre Windows WebView2, lancer `ClickFlow-WebView2.ahk`. Cette intégration est encore expérimentale et son démarrage n'est pas validé automatiquement.
+4. Ouvrir le dossier `webview2-preview` et double-cliquer sur **`ClickFlow-WebView2.ahk`** pour afficher le nouveau design dans une fenêtre Windows indépendante.
+5. Si WebView2 est bloqué sur ton PC, double-cliquer sur `Ouvrir-interface.ahk` pour tester le même design dans le navigateur.
+
+**Correctif v0.3.1 :** remplacement de `A_LocalAppData` (non reconnu par AutoHotkey v2) par `EnvGet("LOCALAPPDATA")` dans le lanceur WebView2. Le test de démarrage a réussi sur GitHub Actions.
 
 Aucune installation de ClickFlow ou compilation n'est nécessaire. Le runtime WebView2 est normalement inclus dans Windows 11. L'archive inclut le composant **WebView2Loader.dll provenant du package officiel Microsoft**. Smart App Control peut toutefois bloquer une DLL ou un script inconnu : ne pas désactiver la protection pour ce test.
 
