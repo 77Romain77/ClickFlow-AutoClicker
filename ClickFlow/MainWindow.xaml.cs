@@ -1,3 +1,4 @@
+using System.IO;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
@@ -419,8 +420,8 @@ public partial class MainWindow : System.Windows.Window
         var on = _engine.IsRunning;
         var waiting = !on && (_armed || _heldArmed);
         StatusBadge.Text = on ? "ACTIF" : waiting ? "ARMÉ" : "INACTIF";
-        StatusDot.Fill = new SolidColorBrush(on ? Color.FromRgb(75, 214, 147) :
-            waiting ? Color.FromRgb(255, 195, 86) : Color.FromRgb(141, 161, 191));
+        StatusDot.Fill = new SolidColorBrush(on ? System.Windows.Media.Color.FromRgb(75, 214, 147) :
+            waiting ? System.Windows.Media.Color.FromRgb(255, 195, 86) : System.Windows.Media.Color.FromRgb(141, 161, 191));
     }
 
     private void StopAll(string message)
