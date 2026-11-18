@@ -3,6 +3,12 @@ name: Release ClickFlow
 on:
   push:
     tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version a publier (exemple: 0.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -20,8 +26,17 @@ jobs:
         shell: pwsh
         run: |
           $tag = '${{ github.ref_name }}'
-          if ($tag -notmatch '^v(\d+)\.(\d+)\.(\d+)$') { throw "Expected vMAJOR.MINOR.PATCH tag" }
-          "version=$($tag.Substring(1))" >> $env:GITHUB_OUTPUT
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $version = '${{ inputs.version }}'
+            if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Expected MAJOR.MINOR.PATCH version" }
+            $tag = "v$version"
+          }
+          else {
+            if ($tag -notmatch '^v(\d+)\.(\d+)\.(\d+)$') { throw "Expected vMAJOR.MINOR.PATCH tag" }
+            $version = $tag.Substring(1)
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
       - name: Publish Windows x64
         shell: pwsh
         run: |
@@ -49,9 +64,9 @@ jobs:
         run: |
           vpk upload github --repoUrl 'https://github.com/77Romain77/ClickFlow-AutoClicker' `
             --token $env:GITHUB_TOKEN --outputDir Releases `
-            --tag '${{ github.ref_name }}' --publish
+            --tag '${{ steps.version.outputs.tag }}' --publish --merge
       - name: Attach portable archive
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload '${{ github.ref_name }}' ClickFlow-Portable.zip --clobber
+        run: gh release upload '${{ steps.version.outputs.tag }}' ClickFlow-Portable.zip --clobber
