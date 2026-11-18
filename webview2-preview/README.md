@@ -1,11 +1,11 @@
-# ClickFlow - AutoClicker Windows v0.3.2 beta
+# ClickFlow - AutoClicker Windows v0.3.3 beta
 
 Version expérimentale avec interface WebView2 et moteur AutoHotkey v2 fonctionnel. La branche `experimental/autohotkey` conserve la version classique 0.2.5. La branche `main` (C#) n'est pas modifiée.
 
 ## Lancement
 
 1. Installer AutoHotkey v2 **64 bits** depuis https://www.autohotkey.com/ si ce n'est pas déjà fait.
-2. Télécharger `ClickFlow-WebView2-v0.3.2-win-x64.zip` depuis la release GitHub.
+2. Télécharger `ClickFlow-WebView2-v0.3.3-win-x64.zip` depuis la release GitHub.
 3. Extraire tout le ZIP dans un nouveau dossier, distinct des anciennes versions.
 4. Fermer les anciennes fenêtres ClickFlow.
 5. Double-cliquer sur **`ClickFlow-WebView2.ahk`**.
@@ -37,6 +37,12 @@ Les clics manuels restent possibles et s'ajoutent aux clics générés.
 - Profils créables, renommables, duplicables, supprimables et sauvegardés.
 
 Les réglages sont conservés dans **`%APPDATA%\ClickFlow\settings.ini`**, au même format que ClickFlow AutoHotkey 0.2.x. Au premier lancement, si un ancien fichier existe, une copie **`settings.ini.backup-webview2`** est créée, sauf si cette sauvegarde existe déjà.
+
+## Correction v0.3.3 - maintien d'un bouton de souris
+
+La version WebView2 précédente ne réinstallait pas les hooks clavier/souris de l'ancienne interface. Les clics simulés pouvaient modifier l'état logique d'un bouton maintenu, et donner l'impression que l'autoclicker ne faisait que 1 ou 2 clics. Cette version restaure `InstallKeybdHook()`, `InstallMouseHook()` et `SendMode("Input")` avant l'activation du moteur.
+
+**Test conseillé :** sélectionner clic gauche généré, condition `Clic gauche`, mode Basculer et raccourci F6. Activer F6 dans une fenêtre de test, maintenir physiquement le clic gauche pendant 3 secondes, puis le relâcher. Les clics doivent se produire pendant toute la durée du maintien, s'interrompre au relâchement, et reprendre au maintien suivant sans réactiver F6. F12 arrête l'ensemble.
 
 ## Limitations de la version beta
 
