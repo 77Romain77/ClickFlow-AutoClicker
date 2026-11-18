@@ -7,7 +7,7 @@ global CF := {
     capture: false, inputHook: 0, pressed: false, armed: false,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, total: 0, recent: [],
-    lastStatus: "", notice: "Prêt.", loading: true,
+    lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
     profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
     cfg: {mode: 1, variation: 2, min: 8, max: 14,
@@ -43,12 +43,26 @@ BackendInit(hwnd, web) {
 
 BackendExit(*) {
     global CF
+    if CF.shuttingDown
+        return
+    CF.shuttingDown := true
+
+    ; Aucun nouveau clic, timer ou message WebView2 pendant la fermeture.
     CF.armed := false
-    SetTimer(EngineTick, 0)
-    SetTimer(UpdateStats, 0)
+    CF.pressed := false
+    try SetTimer(EngineTick, 0)
+    try SetTimer(UpdateStats, 0)
+    try SetTimer(SaveSettings, 0)
+    try SetTimer(SendState, 0)
     if CF.capture {
         try CF.inputHook.Stop()
+        CF.capture := false
     }
+    try UnregisterActivation()
+    try Hotkey("~*F12", "Off")
+
+    ; Sauvegarde AVANT la destruction de WebView2.
+    CF.web := 0
     SaveSettings()
 }
 
