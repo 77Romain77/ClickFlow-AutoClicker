@@ -85,7 +85,12 @@ jobs:
           $script = (Resolve-Path 'webview2-preview/ClickFlow-WebView2.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', "`"$script`"" -PassThru -RedirectStandardError startup.err -RedirectStandardOutput startup.out
           try {
-            Start-Sleep -Seconds 8
+            # WebView2 initializes asynchronously. Allow slower hosted runners
+            # up to 20 seconds to finish the HTML/AHK handshake.
+            $bridgeFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
+            for ($attempt=0; $attempt -lt 40 -and !(Test-Path $bridgeFile); $attempt++) {
+              Start-Sleep -Milliseconds 500
+            }
             $p.Refresh()
             if (Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.error')) {
               throw ("WebView2 AHK startup failed: " + (Get-Content ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.error') -Raw))
