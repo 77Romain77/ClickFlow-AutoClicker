@@ -25,7 +25,7 @@ jobs:
         shell: pwsh
         run: |
           $exe = (Resolve-Path 'ahk/AutoHotkey64.exe').Path
-          foreach ($kind in @('basic','promise','comvar','includes','header','fullparse')) {
+          foreach ($kind in @('basic','promise','comvar','includes','header','fullparse','try','functions')) {
             $env:CLICKFLOW_DIAG_FILE = Join-Path (Get-Location) "$kind.marker"
             $script = (Resolve-Path "webview2-preview/diag-$kind.ahk").Path
             $p = Start-Process -FilePath $exe -ArgumentList '/ErrorStdOut', "`"$script`"" -PassThru -RedirectStandardError "$kind.err" -RedirectStandardOutput "$kind.out"
