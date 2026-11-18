@@ -40,7 +40,6 @@ jobs:
           Write-Host "Copied official Microsoft loader: $dll"
 
       - name: Probe WebView2 initialization (experimental)
-        continue-on-error: true
         shell: pwsh
         run: |
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'webview2-ready.txt'
@@ -72,21 +71,21 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-Preview-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'webview2-preview/*' -DestinationPath 'ClickFlow-WebView2-Preview-v0.3.1-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-Preview-win-x64
-          path: ClickFlow-WebView2-Preview-win-x64.zip
+          name: ClickFlow-WebView2-Preview-v0.3.1-win-x64
+          path: ClickFlow-WebView2-Preview-v0.3.1-win-x64.zip
 
       - name: Publish preview release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = 'v0.3.0-webview2-preview'
+          $tag = 'v0.3.1-webview2-preview'
           if (gh release view $tag 2>$null) {
-            gh release upload $tag ClickFlow-WebView2-Preview-win-x64.zip --clobber
+            gh release upload $tag ClickFlow-WebView2-Preview-v0.3.1-win-x64.zip --clobber
           } else {
-            gh release create $tag ClickFlow-WebView2-Preview-win-x64.zip --title 'ClickFlow - Prototype graphique WebView2' --notes 'Prototype de design sans clics automatiques. Extraire le ZIP, ouvrir webview2-preview et lancer Ouvrir-interface.ahk pour tester le design dans le navigateur. Le lanceur ClickFlow-WebView2.ahk est expérimental. Les profils existants ne sont pas modifiés.' --target "$env:GITHUB_SHA" --prerelease
+            gh release create $tag ClickFlow-WebView2-Preview-v0.3.1-win-x64.zip --title 'ClickFlow - Prototype graphique WebView2' --notes 'Prototype de design sans clics automatiques. Extraire le ZIP, ouvrir webview2-preview et lancer Ouvrir-interface.ahk pour tester le design dans le navigateur. Le lanceur ClickFlow-WebView2.ahk est expérimental. Les profils existants ne sont pas modifiés.' --target "$env:GITHUB_SHA" --prerelease
           }
