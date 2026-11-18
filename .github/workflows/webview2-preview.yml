@@ -50,6 +50,22 @@ jobs:
           if ($backend -notmatch 'GetKeyState\(CF.cfg.gateButton, "P"\)') { throw 'Physical mouse state check missing' }
           Write-Host 'Mouse gate hook wiring verified (hardware behavior requires local test).'
 
+      - name: Verify emergency key persistence and window sizes
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-global-settings.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError settings-test.err -RedirectStandardOutput settings-test.out
+          if (-not $p.WaitForExit(15000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Global settings test timed out'
+          }
+          $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
+          $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
+          Write-Host "AHK global settings test: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Global settings test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
       - name: Probe WebView2 initialization (experimental)
         shell: pwsh
         run: |
