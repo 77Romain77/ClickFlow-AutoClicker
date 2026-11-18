@@ -150,9 +150,9 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.0.ahk
-          if (!(Test-Path 'ClickFlow-v1.0.0.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v1.0.0.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.1.ahk
+          if (!(Test-Path 'ClickFlow-v1.0.1.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.0.1.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
       - name: Verify one-file desktop and Start menu shortcuts
         shell: pwsh
@@ -160,8 +160,8 @@ jobs:
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'shortcut-probe'
           $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $env:TEMP 'ClickFlowCI-Desktop'
           $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $env:TEMP 'ClickFlowCI-StartMenu'
-          $bundle = (Resolve-Path 'ClickFlow-v1.0.0.ahk').Path
-          # Simuler des raccourcis de v1.0.0 afin de valider la migration.
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.1.ahk').Path
+          # Simuler des raccourcis hérités pour valider la migration.
           $shell = New-Object -ComObject WScript.Shell
           foreach ($dir in @($env:CLICKFLOW_SHORTCUT_TEST_DESKTOP,$env:CLICKFLOW_SHORTCUT_TEST_STARTMENU)) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -222,8 +222,21 @@ jobs:
       - name: Smoke-test self-extracting AHK script
         shell: pwsh
         run: |
+          # Les caches des versions précédentes doivent disparaître uniquement
+          # après le lancement réussi du nouveau moteur, pas avant.
+          $appRoot = Join-Path $env:LOCALAPPDATA 'ClickFlow'
+          $legacyDirs = @('Runtime-0.3.5','Runtime-1.0.0')
+          foreach ($legacy in $legacyDirs) {
+            $folder = Join-Path $appRoot $legacy
+            New-Item -ItemType Directory -Path $folder -Force | Out-Null
+            Set-Content -Path (Join-Path $folder '.extracted-ok') -Value $legacy
+            Set-Content -Path (Join-Path $folder 'old-runtime-marker.txt') -Value 'delete me'
+          }
+          $dataSentinel = Join-Path $appRoot 'WebView2Preview/keep-ci.txt'
+          New-Item -ItemType Directory -Path (Split-Path $dataSentinel) -Force | Out-Null
+          Set-Content -Path $dataSentinel -Value 'do not delete'
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v1.0.0.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.1.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -234,7 +247,17 @@ jobs:
             $out = if (Test-Path one-file.out) { Get-Content one-file.out -Raw } else { '' }
             throw "Bundled launcher did not open WebView2 and connect to AutoHotkey. stderr=$errors stdout=$out"
           }
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.0'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.1'
+          # Le nettoyage a lieu après la connexion, via un timer AHK.
+          for ($i = 0; $i -lt 40; $i++) {
+            $remaining = @($legacyDirs | Where-Object { Test-Path (Join-Path $appRoot $_) })
+            if ($remaining.Count -eq 0) { break }
+            Start-Sleep -Milliseconds 250
+          }
+          foreach ($legacy in $legacyDirs) {
+            if (Test-Path (Join-Path $appRoot $legacy)) { throw "Old runtime not deleted: $legacy" }
+          }
+          if (!(Test-Path $dataSentinel)) { throw 'Unrelated WebView2 user data was deleted!' }
           foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
             if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
           }
@@ -244,10 +267,35 @@ jobs:
           public static class ClickFlowStandaloneWin32 {
               [DllImport("user32.dll")]
               public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wp, IntPtr lp);
+              [DllImport("user32.dll")]
+              public static extern bool IsWindow(IntPtr hwnd);
+              [DllImport("user32.dll")]
+              public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
           }
           '@
           $hwndFile = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.hwnd'
           $hwnd = [IntPtr]::new([long](Get-Content $hwndFile -Raw).Trim())
+          [uint32]$enginePid = 0
+          [void][ClickFlowStandaloneWin32]::GetWindowThreadProcessId($hwnd, [ref]$enginePid)
+          if ($enginePid -eq 0) { throw 'Initial ClickFlow engine PID missing.' }
+          # Deuxième lancement : aucune fermeture forcée, aucune deuxième GUI.
+          $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'second-launch-probe'
+          $second = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError second-launch.err -RedirectStandardOutput second-launch.out
+          if (-not $second.WaitForExit(10000)) {
+            Stop-Process -Id $second.Id -Force
+            throw 'Second launcher did not exit.'
+          }
+          Start-Sleep -Seconds 2
+          if (Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.hwnd')) {
+            throw 'Second launch created an extra ClickFlow window.'
+          }
+          if (-not [ClickFlowStandaloneWin32]::IsWindow($hwnd)) {
+            throw 'Initial GUI was closed or crashed by the second launch.'
+          }
+          if (!(Get-Process -Id $enginePid -ErrorAction SilentlyContinue)) {
+            throw 'Initial ClickFlow process exited during second launch.'
+          }
+          Write-Host 'Double launch kept the first ClickFlow window and process alive.'
           if (-not [ClickFlowStandaloneWin32]::PostMessage($hwnd, 0x10, [IntPtr]::Zero, [IntPtr]::Zero)) {
             throw "Standalone GUI did not receive WM_CLOSE"
           }
@@ -257,17 +305,17 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.0-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.1-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v1.0.0-win-x64
-          path: ClickFlow-WebView2-v1.0.0-win-x64.zip
+          name: ClickFlow-WebView2-v1.0.1-win-x64
+          path: ClickFlow-WebView2-v1.0.1-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v1.0.0-single-file
-          path: ClickFlow-v1.0.0.ahk
+          name: ClickFlow-v1.0.1-single-file
+          path: ClickFlow-v1.0.1.ahk
 
       - name: Publish stable release
         if: >-
