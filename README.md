@@ -13,7 +13,7 @@ Télécharger le fichier unique **[ClickFlow-v1.1.0.ahk](https://github.com/77Ro
 1. Installer AutoHotkey v2 si nécessaire.
 2. Télécharger `ClickFlow-v1.1.0.ahk`.
 3. Double-cliquer sur ce fichier.
-4. Accepter, si souhaité, la création des raccourcis Bureau et menu Démarrer.
+4. Dans l'onglet **À propos**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
 Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.1.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
