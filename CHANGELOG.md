@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.8.0 - 2026-11-19
+
+- Remplacement de l'ancienne mini-fenêtre par un overlay AutoHotkey léger, sans courbe, fenêtre de titre ni boutons, affichant le statut et les CPS moyens des 5 dernières secondes.
+- Overlay transparent aux clics (Windows), visible pendant l'activité et masqué environ 2 secondes après l'arrêt, avec option d'affichage permanent.
+- Six positions prédéfinies : haut gauche/milieu/droite et bas gauche/milieu/droite. Choix de l'écran, marge réglable, déplacement libre à la souris en mode placement temporaire et mémorisation de la position.
+- Transparence entièrement personnalisable de 0 à 100 %, au pourcentage près, avec prévisualisation du placement et possibilité de revenir aux positions proposées.
+- Démarrage de la fenêtre principale centré et limité à la surface visible de l'écran choisi, même après changement de résolution ou retrait d'un moniteur.
+- Migration de la préférence d'activation de l'ancienne mini-fenêtre, sans modification des profils ou des raccourcis. Suppression de l'ancien dessin GDI de la courbe flottante.
+- Tests Windows de la transparence, des positions, du déplacement, de la sauvegarde, des CPS moyens et du centrage.
+
 ## 1.7.3 - 2026-11-19
 
 - Corrige le crash au lancement "Object has no property named floatChart" : les messages Windows WM_PAINT peuvent arriver avant la création de la mini-fenêtre. Les callbacks ignorent les contrôles non initialisés.
