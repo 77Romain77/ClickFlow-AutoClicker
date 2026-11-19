@@ -118,8 +118,7 @@ body.compact #page-dashboard{display:block!important}
 .cps-chart-wrap{margin-top:19px;border:1px solid #2e415e;background:#0e1a2b;border-radius:13px;padding:14px 14px 8px}
 .cps-chart-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px}.cps-chart-title span{color:#8ca5c6;font-size:10px}
 #cpsChart{display:block;width:100%;height:250px;margin-top:9px}
-.cps-history-wrap{border-top:1px solid #2d405a;margin-top:20px;padding-top:15px;font-size:12px}.cps-history-empty{color:#94abc8;font-size:11px;margin-top:9px}
-.cps-history-list{display:grid;gap:7px;margin-top:10px}.cps-history-entry{border:1px solid #263d5a;background:#0f2033;border-radius:9px;padding:9px 11px;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:#abc2df}.cps-history-entry b{color:#eff7ff}
+.cps-last-wrap{border-top:1px solid #2d405a;margin-top:20px;padding-top:15px;font-size:12px}.cps-last-wrap strong{color:#ecf5ff}.cps-last-value{color:#a7bedb;margin-top:9px;font-size:12px}
 body.compact #page-cps{display:none!important}
 @media(max-width:900px){.cps-main{grid-template-columns:1fr}.cps-hit-area{min-height:240px}}
 @media(max-width:560px){.cps-duration-row{align-items:flex-start}.cps-hit-area{min-height:205px}.cps-metric{padding:11px;min-height:74px}.cps-metric strong{font-size:22px}#cpsChart{height:220px}}
@@ -210,14 +209,14 @@ body.compact #page-cps{display:none!important}
      <div class="cps-metric"><small>CPS moyens</small><strong id="cpsAverage">0.0</strong></div>
      <div class="cps-metric"><small>Pic sur 1 s</small><strong id="cpsPeak">0</strong></div>
      <div class="cps-metric"><small>Nombre de clics</small><strong id="cpsClicks">0</strong></div>
-     <div class="cps-metric cps-metric-wide"><small>Record personnel - <span id="cpsRecordDuration">5 s</span></small><strong id="cpsRecord">0.0 CPS</strong></div>
+     
     </div>
    </div>
    <div class="cps-progress-top"><span>Progression</span><strong id="cpsRemaining">5.0 s restantes</strong></div>
    <div class="cps-progress"><div id="cpsProgressFill"></div></div>
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
-   <div class="cps-history-wrap"><strong>Derniers essais de cette session</strong><div id="cpsHistory" class="cps-history-empty">Termine un test pour afficher tes résultats.</div></div>
-   <p class="subnote" style="margin-top:13px">Le test se limite aux clics manuels dans cette zone. L'autoclicker ClickFlow est arrêté à l'ouverture de cet onglet. Les meilleurs résultats sont enregistrés localement.</p>
+   <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div></div>
+   <p class="subnote" style="margin-top:13px">Le test se limite aux clics manuels dans cette zone. L'autoclicker ClickFlow est arrêté à l'ouverture de cet onglet. Aucun résultat n'est enregistré sur le disque.</p>
   </div>
  </section>
  <section id="page-about" class="hidden">
@@ -548,7 +547,7 @@ $('uninstallAll').onclick=()=>{
 // Test CPS : clics manuels uniquement, chronométrage monotone et relevé sur 1 s.
 const cpsTest = {
     seconds:5, phase:'ready', startedAt:0, clicks:[], samples:[], peak:0,
-    timer:0, history:[], best:{2:0,5:0,10:0,30:0,60:0}
+    timer:0, last:null
 };
 const cpsDurations = [2,5,10,30,60];
 const cpsNow = () => performance.now();
@@ -587,14 +586,8 @@ function cpsFinish(now) {
     cpsStopTimer();
     const clicks=cpsTest.clicks.length;
     const seconds=cpsTest.seconds;
-    cpsTest.best[seconds]=Math.max(cpsTest.best[seconds]||0,clicks);
-    cpsTest.history.unshift({
-        seconds,clicks,average:clicks/seconds,peak:cpsTest.peak,
-        at:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
-    });
-    cpsTest.history.length=Math.min(6,cpsTest.history.length);
-    if(connected)send('cpsTest','result',seconds,clicks);
-    cpsHistoryRender();
+    cpsTest.last={seconds,clicks,average:clicks/seconds,peak:cpsTest.peak};
+    cpsLastRender();
     cpsRender(end);
 }
 function cpsStart(now) {
@@ -630,19 +623,11 @@ $('cpsClickArea').addEventListener('pointerdown',event=>{
     cpsSample(now,true);
     cpsRender(now);
 });
-function cpsHistoryRender() {
-    const root=$('cpsHistory');
-    root.replaceChildren();
-    if(!cpsTest.history.length){root.textContent='Termine un test pour afficher tes résultats.';return;}
-    const list=document.createElement('div');list.className='cps-history-list';
-    for(const result of cpsTest.history) {
-        const row=document.createElement('div');row.className='cps-history-entry';
-        const left=document.createElement('span');left.textContent=result.seconds+' s · '+result.at;
-        const right=document.createElement('b');
-        right.textContent=result.clicks+' clics · '+result.average.toFixed(1)+' CPS moyens · pic '+result.peak;
-        row.append(left,right);list.appendChild(row);
-    }
-    root.appendChild(list);
+function cpsLastRender() {
+    const last=cpsTest.last;
+    $('cpsLast').textContent=last
+        ? last.seconds+' s · '+last.clicks+' clics · '+last.average.toFixed(1)+' CPS moyens · pic '+last.peak+' CPS'
+        : 'Aucun résultat pour le moment.';
 }
 function cpsDrawChart() {
     const canvas=$('cpsChart');
@@ -711,8 +696,6 @@ function cpsRender(now) {
         cpsTest.phase==='running'?'Continue à cliquer !':'Test terminé';
     $('cpsHitHelp').textContent=cpsTest.phase==='done'?
         'Recommencer pour un nouvel essai.':'Clic gauche uniquement. Le premier clic compte.';
-    $('cpsRecordDuration').textContent=cpsTest.seconds+' s';
-    $('cpsRecord').textContent=((cpsTest.best[cpsTest.seconds]||0)/cpsTest.seconds).toFixed(1)+' CPS';
     $('cpsClickArea').disabled=cpsTest.phase==='done';
     document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
         const selected=Number(btn.dataset.cpsDuration)===cpsTest.seconds;
@@ -731,7 +714,7 @@ document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
 });
 $('cpsReset').onclick=cpsResetTest;
 window.addEventListener('resize',()=>{if(!$('page-cps').classList.contains('hidden'))cpsDrawChart();});
-cpsHistoryRender();
+cpsLastRender();
 cpsRender(cpsNow());
 
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
@@ -768,13 +751,6 @@ if(bridge) {
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
-        else if(msg.type==='cpsRecords' && msg.best){
-            for(const duration of cpsDurations){
-                const saved=Number(msg.best[String(duration)]);
-                if(Number.isFinite(saved)&&saved>=0)cpsTest.best[duration]=Math.max(cpsTest.best[duration]||0,saved);
-            }
-            if(!$('page-cps').classList.contains('hidden'))cpsRender(cpsNow());
-        }
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
