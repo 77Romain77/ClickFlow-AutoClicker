@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.7.3 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.8.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.7.3.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.7.3)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.8.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.8.0)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.7.3.ahk`.
+2. Télécharger `ClickFlow-v1.8.0.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.7.3`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.8.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -31,8 +31,8 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - **Interface compacte ou étendue**, choix mémorisé.
 - **Tableau de bord : mini-moniteur CPS** des 30 dernières secondes, état et CPS actuels, sans aucun historique disque.
 - **Test CPS : réglages rapides** du profil sélectionné (mode, CPS min/max, intensité), avec brouillon modifiable, vérification puis Appliquer / Annuler.
-- **Mini-fenêtre flottante Windows** toujours visible en option : profil, état, CPS, total, boutons Ouvrir et STOP.
-- **Menu de l'icône de notification Windows** : ouvrir/restaurer, arrêter les clics, sélectionner un profil, afficher la mini-fenêtre et quitter.
+- **Overlay de statut léger** en option : état ACTIF/EN ATTENTE/ARRÊTÉ et CPS moyens sur 5 secondes, transparent aux clics et positionnable sur plusieurs écrans.
+- **Menu de l'icône de notification Windows** : ouvrir/restaurer, arrêter les clics, sélectionner un profil, afficher l'overlay et quitter.
 - **Profils sous forme de cartes** avec favoris, ordre personnalisable, actions Activer / Tester / Exporter. Favoris et ordre sont conservés dans les fichiers des profils.
 - **Onglet Paramètres dédié** pour les préférences, la gestion des raccourcis Windows, les dossiers et la désinstallation.
 - Profils locaux : création, duplication, renommage et suppression. Chaque profil est enregistré dans un fichier indépendant.
@@ -44,55 +44,22 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
-## Correctif de démarrage et optimisation du moniteur (v1.7.3)
+## Overlay de statut (v1.8.0)
 
-Windows envoie parfois WM_PAINT avant que la mini-fenêtre soit créée. ClickFlow vérifie désormais l'existence du contrôle graphique avant tout dessin, ce qui corrige le blocage au démarrage de la v1.7.2.
+L'ancienne mini-fenêtre flottante et sa courbe GDI sont supprimées. À la place, ClickFlow propose un **overlay discret** sans barre de titre, visible au-dessus des fenêtres classiques et des jeux en mode fenêtré ou sans bordure (le plein écran exclusif n'est pas garanti). Il affiche uniquement le statut **ACTIF / EN ATTENTE / ARRÊTÉ** et les **CPS moyens sur les 5 dernières secondes**, calculés à partir des clics réellement envoyés par ClickFlow. Aucun score ni historique n'est conservé sur le disque.
 
-Le moniteur CPS du tableau de bord, en mode compact comme étendu, **ne collecte aucun échantillon et ne redessine rien lorsque les CPS sont à zéro**. Il indique "En veille", puis se réactive automatiquement lors des clics réellement envoyés. Les compteurs restent visibles, sans sauvegarde d'historique CPS.
+L'overlay est **transparent aux clics** : il ne bloque pas la souris. Par défaut, il s'affiche pendant la période d'activation et disparaît environ 2 secondes après l'arrêt. Dans **Paramètres**, on peut activer l'affichage permanent.
 
-## Fenêtres et courbe CPS (v1.7.3)
+Dans **Paramètres > Overlay**, tu peux :
+- choisir l'une des **6 positions** : haut gauche, haut milieu, haut droite, bas gauche, bas milieu ou bas droite ;
+- choisir le **moniteur**, lorsque plusieurs écrans sont connectés ;
+- ajuster la **marge de 0 à 100 pixels** ;
+- saisir **n'importe quelle transparence entière de 0 à 100 %** (0 % rend l'overlay invisible) ;
+- cliquer sur **Déplacer librement l'overlay**, puis le glisser avec la souris à l'endroit exact souhaité et cliquer sur **Terminer le placement**. Cette opération réactive immédiatement la transparence aux clics. La position personnalisée est mémorisée.
 
-La taille de la fenêtre principale est maintenant **mémorisée séparément** pour le mode compact et pour le mode étendu. Alterner les modes restaure les dimensions propres à chacun, y compris après redémarrage.
+L'icône de notification Windows permet toujours d'activer/désactiver l'overlay, changer de profil, arrêter les clics et ouvrir l'interface principale. Les profils existants sont conservés.
 
-La mini-fenêtre conserve sa taille extérieure et sa position après chaque fermeture et réouverture, sans agrandissement cumulatif. Si une ancienne version a mémorisé une taille intérieure, ClickFlow la convertit une seule fois.
-
-Le bouton **Courbe** active la possibilité d'afficher les CPS, mais **le graphique reste masqué tant que le moteur n'a pas envoyé de clic récent**. Dès que le moteur commence à cliquer, la courbe se construit dans toute la largeur disponible et se rafraîchit en direct. Elle se masque lorsque les clics s'arrêtent. Elle ne comptabilise pas les clics manuels : seuls les clics réellement envoyés par ClickFlow sont suivis. La courbe n'enregistre aucune donnée sur le disque.
-
-Les boutons Courbe et STOP sont cliquables en haut à droite de la mini-fenêtre, même au format minimal. STOP arrête immédiatement les clics ; un double-clic sur le nom du profil rouvre la fenêtre principale.
-
-Passe la souris au-dessus de **Fixe**, **Aléatoire** ou **Naturel**, en mode étendu ou compact, pour voir une brève description de chaque cadence. L'aide est aussi disponible au clavier par Tab.
-
-## Ajustements ergonomiques (v1.7.3)
-
-La mini-fenêtre est plus compacte (310 x 150 au premier lancement sans taille déjà enregistrée), sans les deux gros boutons en bas. En haut, deux petits contrôles assortis au thème permettent de **basculer la courbe CPS** (CPS/OFF) ou **STOP**. Un double-clic sur le nom du profil restaure la fenêtre complète; le menu de notification propose toujours "Ouvrir l'interface". La courbe repose désormais sur un véritable contrôle bitmap Windows, ce qui corrige son absence d'affichage en v1.7.0. Elle est activée par défaut lorsqu'aucune préférence antérieure n'existe, et peut être désactivée. Les dimensions et positions déjà enregistrées sont respectées.
-
-Le mode compact est maintenant un panneau spécifique, en petites cartes et police réduite, avec : sélection du profil, statistiques CPS/clics, arrêt, choix Fixe/Aléatoire/Naturel, valeurs CPS min/max, intensité Naturel, commandes de capture des raccourcis et courbe optionnelle. Le mode étendu et les paramètres historiques restent disponibles.
-
-Dans les cartes de profils, l'intensité du mode Naturel apparaît sur la même ligne que le mode et la plage CPS. La touche d'activation reste seule sur la ligne suivante.
-
-La barre de titre de l'application principale et de la mini-fenêtre utilise les options DWM de Windows pour adopter un fond sombre, lorsque prises en charge par la version de Windows. Les boutons natifs Réduire, Agrandir et Fermer restent gérés par Windows; leur forme ne peut pas être librement personnalisée sans une barre de titre entièrement dessinée par l'application.
-
-## Ergonomie de la mini-fenêtre et du mode compact (v1.7.3)
-
-La **mini-fenêtre** peut être redimensionnée en tirant ses bords ou ses coins (minimum 280 x 180 pixels). Sa largeur, sa hauteur et sa position sont conservées dans les paramètres généraux de ClickFlow. Si l'écran change et que sa position n'est plus accessible, elle est recentrée automatiquement. Le nom du profil a maintenant une zone prévue pour deux lignes.
-
-Le bouton **Interface** restaure la fenêtre principale de ClickFlow. Le bouton **STOP** arrête les clics. En haut à droite, le bouton **Courbe** active ou désactive une représentation graphique des CPS réels des 30 dernières secondes, calculée dans le processus AutoHotkey existant. Quand la fenêtre est trop petite, un message indique de l'agrandir. Aucun graphique ni score n'est conservé sur le disque.
-
-Dans **Paramètres**, tu peux aussi activer la courbe de la mini-fenêtre, régler son opacité (70, 80, 90 ou 100 %) et décider si elle reste au premier plan. La fermeture vers la zone de notification reste désactivée par défaut.
-
-Le **mode compact** n'est plus un tableau de bord simplement raccourci : c'est un panneau de commande qui donne directement accès au profil, à l'état du moteur, aux CPS en direct, aux CPS min/max, aux trois modes, à l'intensité du mode Naturel, au raccourci d'activation, à la touche d'arrêt d'urgence et au bouton STOP. La courbe compacte peut être masquée séparément dans Paramètres. Les options avancées, les imports, les exports et les profils détaillés restent dans le mode étendu.
-
-Les cartes de profils présentent désormais la réorganisation dans une zone dédiée avec deux flèches de taille stable. Le menu Windows utilise exclusivement les noms de profils enregistrés, sans préfixe numérique interne.
-
-## Espace de travail et zone de notification (v1.7.3)
-
-Le tableau de bord peut montrer une courbe des CPS envoyés sur les **30 dernières secondes**. Cette courbe est locale à la session et ne sauvegarde ni score ni historique. L'affichage est désactivable dans **Paramètres**. La fenêtre flottante, accessible depuis le tableau de bord, Paramètres ou le menu de notification, affiche le profil courant, son état et le nombre de clics. Elle possède un bouton STOP et un bouton pour ouvrir l'interface principale.
-
-ClickFlow propose un menu dans la zone de notification Windows, à côté de l'horloge. Il permet de restaurer la fenêtre, de stopper les clics, de choisir un profil et de **quitter** complètement. Dans Paramètres, tu peux activer séparément **Réduire dans la zone de notification** et **Fermer vers la zone de notification**. Ces deux options sont désactivées par défaut : sans les activer, le bouton X quitte ClickFlow comme avant. Si tu actives la fermeture vers la zone de notification, le bouton X ne quitte plus l'application : utilise **Quitter ClickFlow** dans le menu de l'icône.
-
-Le nouvel écran Profils comporte des cartes avec le mode CPS, le raccourci, un favori et des boutons **Activer**, **Tester**, **Exporter** et **Monter / Descendre**. L'ordre et les favoris sont enregistrés dans chaque fichier `profile-<id>.ini`, et les anciens profils sont importés sans perte de leurs réglages.
-
-Dans le Test CPS, sélectionne un profil puis modifie les paramètres dans le panneau de réglages rapides. Ils restent **en brouillon** jusqu'au clic sur **Appliquer au profil**. Le bouton **Annuler** restaure les valeurs existantes. Le test du profil reste bloqué tant que le brouillon contient des modifications non appliquées. Les changements n'affectent que le profil choisi et conservent son raccourci et ses options de sécurité. Le test lui-même n'injecte aucun clic Windows.
+La fenêtre principale de ClickFlow **s'ouvre centrée** sur un moniteur disponible. Sa taille est limitée à la zone visible pour éviter une fenêtre à moitié hors écran après un changement de résolution ou de moniteur. Chaque mode compact/étendu conserve sa taille propre.
 
 ## Lancer ClickFlow plusieurs fois et nettoyer les caches
 
@@ -127,7 +94,7 @@ Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow
 
 ## Profils et mises à jour
 
-Depuis v1.7.3, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
+Depuis v1.8.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
 
 **Migration automatique :** les profils de la v1.1.0 et des anciennes versions sont lus une seule fois depuis `settings.ini`, puis enregistrés dans des fichiers indépendants. Les anciennes sections et les sauvegardes restent disponibles par précaution. Les fichiers exportés se réimportent individuellement, sans écraser les profils déjà présents. Si un nom existe déjà, ClickFlow ajoute un suffixe numérique.
 
