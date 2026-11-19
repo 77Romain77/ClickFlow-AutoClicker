@@ -1,5 +1,12 @@
 # Historique des versions
 
+## 1.8.1 - 2026-11-19
+
+- Correction du texte coupé dans l'overlay sur certains écrans Windows et DPI élevés : statut et CPS moyens tiennent maintenant sur une seule ligne.
+- Format volontairement très compact, 216 x 34 pixels physiques, avec une police réduite adaptée à la mise à l'échelle Windows (100, 125, 150 ou 200 %).
+- Coins de l'overlay légèrement arrondis (rayon visuel de 6 pixels), en conservant la transparence réglable et les clics traversants.
+- Tests Windows supplémentaires de placement réel des champs texte, taille constante avec le DPI et arrondi de la fenêtre.
+
 ## 1.8.0 - 2026-11-19
 
 - Remplacement de l'ancienne mini-fenêtre par un overlay AutoHotkey léger, sans courbe, fenêtre de titre ni boutons, affichant le statut et les CPS moyens des 5 dernières secondes.

@@ -56,6 +56,50 @@ try {
     hwnd := CF.overlayGui.Hwnd
     if !(WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("L'overlay n'est pas transparent aux clics.")
+
+    ; Régression 1.8.0 : sous DPI élevé, les contrôles débordaient.
+    ; Nouvelle exigence : overlay minuscule, une SEULE ligne et coins doux.
+    m := CFOverlayMetrics()
+    WinGetClientPos(, , &clientW, &clientH, "ahk_id " hwnd)
+    if clientW != m.w || clientH != m.h
+        throw Error("La taille réelle diffère du layout compact : "
+            clientW "x" clientH " vs " m.w "x" m.h)
+    if m.w > 225 || m.h > 36
+        throw Error("L'overlay est trop grand pour un affichage discret.")
+    CF.overlayStatusText.GetPos(&sx, &sy, &sw, &sh)
+    CF.overlayCpsText.GetPos(&cx, &cy, &cw, &ch)
+    if sx < 0 || cx <= sx + sw || cx + cw >= clientW
+        || sy != cy || sy + sh > clientH || cy + ch > clientH
+        throw Error("Les informations ne tiennent pas sur une seule ligne.")
+    if !InStr(CF.overlayStatusText.Text, "ARR")
+        || !InStr(CF.overlayCpsText.Text, "CPS")
+        throw Error("Le statut ou les CPS ne s'affichent pas.")
+    for dpi in [96, 120, 144, 192] {
+        dims := CFOverlayMetrics(dpi)
+        if dims.w != m.w || dims.h != m.h
+            throw Error("Le DPI a agrandi l'overlay à " dpi ".")
+        if dims.font < 4 || dims.font > 8
+            throw Error("Police non adaptée au DPI " dpi ".")
+        if dims.left + dims.statusW >= dims.cpsX
+            || dims.cpsX + dims.cpsW >= dims.w
+            || dims.top + dims.statusH >= dims.h
+            || dims.top != dims.cpsTop
+            throw Error("Chevauchement des deux textes à " dpi " DPI.")
+    }
+    ; Les coins doivent être légèrement arrondis, sans découper les textes.
+    region := DllCall("gdi32\CreateRectRgn",
+        "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
+    statusRegion := DllCall("User32\GetWindowRgn",
+        "Ptr", hwnd, "Ptr", region, "Int")
+    if statusRegion = 0 || statusRegion = -1
+        throw Error("La forme arrondie de l'overlay n'est pas appliquée.")
+    if DllCall("gdi32\PtInRegion", "Ptr", region,
+        "Int", 0, "Int", 0, "Int")
+        throw Error("Le coin supérieur gauche n'est pas arrondi.")
+    if !DllCall("gdi32\PtInRegion", "Ptr", region,
+        "Int", 15, "Int", 15, "Int")
+        throw Error("La forme arrondie masque le texte.")
+    DllCall("gdi32\DeleteObject", "Ptr", region)
     if !CFDesktopStyleTitlebar(g.Hwnd)
         FileAppend("DWM titlebar unavailable; ", "*", "UTF-8")
 
@@ -66,8 +110,8 @@ try {
         WinGetPos(&actualX, &actualY, &w, &h, "ahk_id " hwnd)
         if Abs(actualX - expected.x) > 3 || Abs(actualY - expected.y) > 3
             throw Error("Mauvaise position " position)
-        if Abs(w - 226) > 3 || Abs(h - 48) > 3
-            throw Error("L'overlay ne doit pas grandir : " w "x" h)
+        if Abs(w - m.w) > 3 || Abs(h - m.h) > 3
+            throw Error("L'overlay ne doit pas changer de taille : " w "x" h)
     }
 
     ; Transparence libre : les valeurs intermédiaires ne sont pas des presets.
@@ -98,7 +142,7 @@ try {
     if !CF.overlayEditing || (WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("Le déplacement libre n'active pas les clics souris.")
     CFDesktopMonitorArea(CF.overlayMonitor, &left, &top, &right, &bottom)
-    WinMove(left + 65, top + 65, 226, 48, "ahk_id " hwnd)
+    WinMove(left + 65, top + 65, m.w, m.h, "ahk_id " hwnd)
     CFOverlaySetEdit(false)
     if CF.overlayEditing || !(WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("L'overlay reste interactif après placement.")
@@ -117,6 +161,9 @@ try {
     CFDesktopUpdate()
     if !CF.overlayVisible
         throw Error("Overlay absent pendant les clics.")
+    if !InStr(CF.overlayStatusText.Text, "ACTIF")
+        || !InStr(CF.overlayCpsText.Text, "0,8 CPS moy.")
+        throw Error("Les statistiques réelles ne s'affichent pas dans l'overlay.")
     CF.armed := false
     CF.overlayAlwaysVisible := false
     CF.overlayUntil := 0

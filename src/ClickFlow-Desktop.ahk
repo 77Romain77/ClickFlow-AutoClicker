@@ -194,9 +194,25 @@ CFDesktopFloatPositionValid(x, y, width, height) {
     return false
 }
 
+CFOverlayMetrics(dpi := 0) {
+    ; Mini-overlay : UNE LIGNE, 216x34 pixels physiques, même à 200% DPI.
+    ; La police est réduite en points à haut DPI pour conserver cette taille.
+    if !dpi
+        dpi := A_ScreenDPI
+    font := Max(4, Round(8 * 96 / dpi))
+    return {
+        w: 216, h: 34,
+        left: 9, top: 5,
+        statusW: 88, statusH: 24,
+        cpsX: 102, cpsTop: 5, cpsW: 105, cpsH: 24,
+        font: font, radius: 12
+    }
+}
+
 CFOverlayPositionCoords() {
     global CF
-    width := 226, height := 48
+    size := CFOverlayMetrics()
+    width := size.w, height := size.h
     if CF.overlayPosition = "custom"
         && CFDesktopFloatPositionValid(CF.overlayX, CF.overlayY, width, height)
         return {x: CF.overlayX, y: CF.overlayY}
@@ -215,20 +231,35 @@ CFOverlayCreate() {
     global CF
     if IsObject(CF.overlayGui)
         return
-    overlay := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20",
+    ; Pixel-for-pixel, sans mise à l'échelle automatique des contrôles.
+    ; Le status et les CPS moyens restent sur UNE ligne très compacte.
+    m := CFOverlayMetrics()
+    overlay := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20 -DPIScale",
         "ClickFlow - Overlay")
     overlay.MarginX := 0
     overlay.MarginY := 0
     overlay.BackColor := "121F32"
-    overlay.SetFont("s9 bold c9AE4D4", "Segoe UI")
+    overlay.SetFont("s" m.font " bold c9AE4D4", "Segoe UI")
     CF.overlayStatusText := overlay.Add("Text",
-        "x12 y11 w98 h25 +0x100 0x200", "ARRÊTÉ")
-    overlay.SetFont("s11 bold cEDF6FF", "Segoe UI")
+        "x" m.left " y" m.top " w" m.statusW " h" m.statusH
+        " +0x100 0x200", "ARRÊTÉ")
+    overlay.SetFont("s" m.font " bold cEDF6FF", "Segoe UI")
     CF.overlayCpsText := overlay.Add("Text",
-        "x111 y7 w105 h31 Right 0x200 +0x100", "0,0 CPS")
+        "x" m.cpsX " y" m.cpsTop " w" m.cpsW " h" m.cpsH
+        " +0x100 0x200 Right", "0,0 CPS moy.")
     CF.overlayGui := overlay
-    overlay.Show("NA Hide w226 h48")
+    overlay.Show("NA Hide w" m.w " h" m.h)
     CFOverlayApplyTransparency()
+}
+
+CFOverlayApplyCorners() {
+    global CF
+    if !IsObject(CF.overlayGui)
+        return
+    ; Coins très légèrement arrondis : rayon apparent de 6 px.
+    m := CFOverlayMetrics()
+    try WinSetRegion("0-0 w" m.w " h" m.h " r" m.radius "-"
+        m.radius, "ahk_id " CF.overlayGui.Hwnd)
 }
 
 CFOverlayApplyTransparency() {
@@ -248,9 +279,11 @@ CFOverlayPlace() {
     if !IsObject(CF.overlayGui)
         return
     pt := CFOverlayPositionCoords()
+    m := CFOverlayMetrics()
+    ; Largeur/hauteur en pixels comme les contrôles (-DPIScale).
     ; Une fenêtre overlay peut être encore masquée lors de son placement.
     DetectHiddenWindows(true)
-    try WinMove(pt.x, pt.y, 226, 48, "ahk_id " CF.overlayGui.Hwnd)
+    try WinMove(pt.x, pt.y, m.w, m.h, "ahk_id " CF.overlayGui.Hwnd)
     finally DetectHiddenWindows(false)
 }
 
@@ -264,6 +297,7 @@ CFOverlayShow(visible) {
     if visible {
         CFOverlayPlace()
         CF.overlayGui.Show("NA")
+        CFOverlayApplyCorners()
         CFOverlayApplyTransparency()
     } else if IsObject(CF.overlayGui)
         CF.overlayGui.Hide()
@@ -306,7 +340,7 @@ CFDesktopUpdate() {
         : status = "EN ATTENTE" ? "cF2D097"
         : status = "PLACEMENT" ? "c87BAFF" : "cABB9CE")
     CF.overlayCpsText.Text := StrReplace(
-        Format("{:.1f}", CFOverlayAverage(now)), ".", ",") " CPS"
+        Format("{:.1f}", CFOverlayAverage(now)), ".", ",") " CPS moy."
 }
 
 CFOverlaySaveLocation() {
@@ -414,7 +448,8 @@ CFDesktopSetPreference(field, value) {
             if !HasValue(["tl", "tm", "tr", "bl", "bm", "br", "custom"], value)
                 return
             if value = "custom" && !CFDesktopFloatPositionValid(
-                CF.overlayX, CF.overlayY, 226, 48)
+                CF.overlayX, CF.overlayY, CFOverlayMetrics().w,
+                CFOverlayMetrics().h)
                 return
             CF.overlayPosition := value
             CFOverlayPlace()
