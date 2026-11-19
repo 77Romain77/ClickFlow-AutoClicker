@@ -102,7 +102,7 @@ CFDesktopCreateFloat() {
     mini.Add("Button", "xm y+8 w105 h30", "Ouvrir").OnEvent("Click", CFDesktopOpen)
     mini.Add("Button", "x+8 yp w105 h30", "STOP").OnEvent("Click", CFDesktopStop)
     mini.OnEvent("Close", CFDesktopCloseFloat)
-    CF.floatGui := gui
+    CF.floatGui := mini
 }
 
 CFDesktopCloseFloat(*) {
