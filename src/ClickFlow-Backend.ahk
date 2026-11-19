@@ -2,6 +2,7 @@
 ; Conserve le format de settings.ini des versions AutoHotkey 0.2.x.
 ; Les clics sont envoyés uniquement lorsque l'utilisateur active un raccourci.
 #Include ClickFlow-Maintenance.ahk
+#Include ClickFlow-ProfileStore.ahk
 
 global CF := {
     hwnd: 0, web: 0, event: 0,
@@ -12,6 +13,7 @@ global CF := {
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
     profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
+    profilesDir: A_AppData "\ClickFlow\profiles",
     cfg: {mode: 1, variation: 2, min: 8, max: 14,
         clickButton: "Left", activation: "F6", hold: 1,
         mouseGate: 0, gateButton: "RButton", focusStop: 1}
@@ -372,6 +374,21 @@ BackendMessage(sender, args) {
             StartCapture("emergency")
             return
         }
+        if cmd = "export" && parts.Length >= 2 {
+            try {
+                if RegExMatch(parts[2], "^\d{1,9}$")
+                    CFExportProfile(parts[2] + 0)
+            } catch as err {
+                CFProfileMessage("Export impossible : " err.Message, true)
+            }
+            return
+        }
+        if cmd = "import" {
+            try CFImportProfile()
+            catch as err
+                CFProfileMessage("Import impossible : " err.Message, true)
+            return
+        }
         if cmd = "storage" && parts.Length >= 2 {
             CFOpenStorageFolder(parts[2])
             return
@@ -452,6 +469,7 @@ BackendMessage(sender, args) {
                 }
             }
             try IniDelete(CF.configFile, "Profile_" id)
+            try FileDelete(CFProfileFile(id))
             SelectProfileById(CF.profiles[1].id)
             return
         }
@@ -780,6 +798,9 @@ ReadConfig(file, section, base) {
 
 LoadSettings() {
     global CF
+    if CFLoadSeparatedProfiles()
+        return
+    ; Migration des profils v1.1 (la sauvegarde normale produit les fichiers).
     file := CF.configFile
     ; Conserve les réglages précédents dans le profil Principal.
     savedIds := FileExist(file) ? IniRead(file, "Profiles", "Ids", "") : ""
@@ -843,18 +864,15 @@ SaveSettings(*) {
     if CF.loading
         return
     try {
-        DirCreate(A_AppData "\ClickFlow")
+        DirCreate(RegExReplace(CF.configFile, "\\[^\\]+$"))
+        DirCreate(CF.profilesDir)
         ids := ""
         for p in CF.profiles {
+            CFWriteProfile(p)
             ids .= (ids = "" ? "" : ",") p.id
-            section := "Profile_" p.id
-            IniWrite(p.name, CF.configFile, section, "Name")
-            for field in ["mode", "variation", "min", "max", "hold", "mouseGate",
-                "focusStop", "clickButton", "activation", "gateButton"] {
-                IniWrite(p.cfg.%field%, CF.configFile, section, field)
-            }
         }
         IniWrite(ids, CF.configFile, "Profiles", "Ids")
+        IniWrite("2", CF.configFile, "Profiles", "StorageVersion")
         IniWrite(CF.selectedId, CF.configFile, "Profiles", "Selected")
         IniWrite(CF.nextId, CF.configFile, "Profiles", "NextId")
         IniWrite(CF.emergencyKey, CF.configFile, "General", "EmergencyKey")

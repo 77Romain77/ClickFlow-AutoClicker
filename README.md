@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.1.0 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.2.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.1.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.1.0)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.2.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.2.0)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.1.0.ahk`.
+2. Télécharger `ClickFlow-v1.2.0.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **À propos**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.1.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.2.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -28,7 +28,8 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Option **Conditionner à un bouton de souris** : déclencher les clics uniquement pendant le maintien physique d'un bouton.
 - Arrêt au changement de fenêtre et arrêt d'urgence personnalisable, **F12 par défaut**.
 - **Interface compacte ou étendue**, choix mémorisé.
-- Profils locaux : création, duplication, renommage, suppression et sauvegarde.
+- Profils locaux : création, duplication, renommage et suppression. Chaque profil est enregistré dans un fichier indépendant.
+- Importer ou exporter un profil individuellement au format `.ini` (menu **Profils** ou profil actif).
 - Statistiques de CPS et de clics générés.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
@@ -54,7 +55,7 @@ Les anciennes préférences `shortcuts.ini` (`Enabled=1`) n'imposent plus la cr�
 Dans l'onglet **À propos** (mode étendu), les boutons **Ouvrir les fichiers du programme** et **Ouvrir les profils et paramètres** ouvrent directement l'Explorateur Windows dans :
 
 - `%LOCALAPPDATA%\\ClickFlow` pour le lanceur local, l'icône, les runtimes et les caches WebView2 ;
-- `%APPDATA%\\ClickFlow` pour les profils et paramètres (dont `settings.ini` et ses sauvegardes).
+- `%APPDATA%\\ClickFlow` pour les profils (`profiles\profile-*.ini`) et paramètres (`settings.ini` et ses sauvegardes).
 
 La désinstallation propose deux opérations distinctes, avec confirmation **dans ClickFlow** :
 
@@ -65,7 +66,9 @@ Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow
 
 ## Profils et mises à jour
 
-Les réglages se trouvent dans `%APPDATA%\ClickFlow\settings.ini`, séparément du programme. Une sauvegarde de sécurité `settings.ini.backup-webview2` est créée lors de la première utilisation WebView2 si nécessaire.
+Depuis v1.2.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
+
+**Migration automatique :** les profils de la v1.1.0 et des anciennes versions sont lus une seule fois depuis `settings.ini`, puis enregistrés dans des fichiers indépendants. Les anciennes sections et les sauvegardes restent disponibles par précaution. Les fichiers exportés se réimportent individuellement, sans écraser les profils déjà présents. Si un nom existe déjà, ClickFlow ajoute un suffixe numérique.
 
 Chaque version publiée possède un numéro et son cache de composants. Télécharger et lancer un nouveau fichier `.ahk` met à jour la copie locale utilisée par les raccourcis, sans supprimer les profils.
 
@@ -75,6 +78,7 @@ Chaque version publiée possède un numéro et son cache de composants. Téléch
 | --- | --- |
 | `src/ClickFlow-WebView2.ahk` | Lanceur de fenêtre Windows |
 | `src/ClickFlow-Backend.ahk` | Moteur CPS, raccourcis, profils, sauvegarde |
+| `src/ClickFlow-ProfileStore.ahk` | Fichiers individuels, migration et import/export des profils |
 | `src/lib/` | Dépendances WebView2/AutoHotkey et licence de thqby |
 | `ui/index.html` | Interface HTML/CSS/JavaScript |
 | `tools/build_single_ahk.py` | Création du fichier `.ahk` unique |

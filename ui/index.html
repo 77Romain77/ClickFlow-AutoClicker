@@ -141,7 +141,7 @@ body.compact #page-dashboard{display:block!important}
     <div class="card">
      <div class="card-head"><div><div class="card-title">Profil actif</div><div class="card-description">Un profil par utilisation.</div></div><span class="number">03 / PROFIL</span></div>
      <label class="label" for="profileSelect">Votre configuration</label><div class="profile-line"><select id="profileSelect" class="select"></select><button class="btn primary" id="newProfile" title="Créer un profil">+</button></div>
-     <div class="profile-actions"><button class="btn sm" id="renameProfile">Renommer</button><button class="btn sm" id="duplicateProfile">Dupliquer</button><button class="btn sm danger" id="deleteProfile">Supprimer</button></div>
+     <div class="profile-actions"><button class="btn sm" id="renameProfile">Renommer</button><button class="btn sm" id="duplicateProfile">Dupliquer</button><button class="btn sm danger" id="deleteProfile">Supprimer</button><button class="btn sm quiet" id="exportProfile">Exporter</button><button class="btn sm quiet" id="importProfile">Importer</button></div>
      <div class="mutedline">Les profils chargés seront synchronisés avec AutoHotkey.</div>
     </div>
     <div class="status-box">
@@ -158,7 +158,7 @@ body.compact #page-dashboard{display:block!important}
  </section>
  <section id="page-profiles" class="hidden">
   <div class="hero"><div><h2>Vos profils de clics.</h2><p>Créez, dupliquez et gérez vos profils enregistrés.</p></div></div>
-  <div class="card"><div class="card-head"><div class="card-title">Profils enregistrés</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Les profils synchronisés seront conservés au prochain lancement.</div></div>
+  <div class="card"><div class="card-head"><div class="card-title">Profils enregistrés</div><div class="profile-actions" style="margin-top:0"><button class="btn quiet" id="importProfilePage">Importer un profil</button><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div></div><div id="profileList"></div><div class="mutedline">Chaque profil est enregistré dans son propre fichier .ini. Tu peux exporter un profil, puis l'importer sur un autre PC.</div></div>
  </section>
  <section id="page-about" class="hidden">
   <div class="hero"><div><h2>À propos de ClickFlow.</h2><p>Gère les raccourcis, le stockage et la désinstallation de l'application.</p></div></div>
@@ -270,7 +270,12 @@ function renderProfiles() {
         btn.className='btn sm '+(model.selected===p.id?'primary':'quiet');
         btn.textContent=model.selected===p.id?'Sélectionné':'Sélectionner';
         btn.onclick=()=>chooseProfile(p.id);
-        row.append(box,btn);
+        const exportBtn=document.createElement('button');
+        exportBtn.className='btn sm quiet';
+        exportBtn.textContent='Exporter';
+        exportBtn.title='Sauvegarder ce profil dans un fichier .ini';
+        exportBtn.onclick=()=>exportProfile(p.id);
+        row.append(box,btn,exportBtn);
         list.append(row);
     });
 }
@@ -334,6 +339,17 @@ $('deleteProfile').onclick=()=>{
         render();toast('Profil supprimé');
     });
 };
+function exportProfile(id) {
+    if(!connected){toast('L\'export nécessite ClickFlow pour Windows.');return;}
+    send('export',id);
+}
+function importProfile() {
+    if(!connected){toast('L\'import nécessite ClickFlow pour Windows.');return;}
+    send('import');
+}
+$('exportProfile').onclick=()=>exportProfile(model.selected);
+$('importProfile').onclick=importProfile;
+$('importProfilePage').onclick=importProfile;
 $('profileSelect').onchange=e=>chooseProfile(Number(e.target.value));
 function changeCps(which,input) {
     const c=config();
@@ -496,6 +512,7 @@ if(bridge) {
             $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
+        else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;

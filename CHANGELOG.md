@@ -1,6 +1,14 @@
 # Historique des versions
 
-## 1.1.0 - 2026-11-19
+## 1.2.0 - 2026-11-19
+
+- Un fichier INI indépendant par profil enregistré dans `%APPDATA%\ClickFlow\profiles`.
+- Import et export d'un profil individuel, y compris depuis la liste des profils.
+- Migration automatique des profils existants depuis `settings.ini`, sans perte des réglages globaux et des copies de sécurité.
+- Gestion des noms déjà utilisés lors de l'import et validation du format des fichiers.
+- Tests Windows de la migration, de l'import, de la sauvegarde isolée et du rechargement.
+
+## 1.2.0 - 2026-11-19
 
 - Boutons dans "À propos" pour ouvrir les dossiers locaux de ClickFlow et des profils personnels.
 - Deux modes de désinstallation : supprimer le programme en conservant les profils, ou effacer aussi les profils et leurs sauvegardes.
