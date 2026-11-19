@@ -396,7 +396,7 @@ body.compact #page-dashboard{display:block!important}
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
-const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true}};
+const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,floatGraph:false,floatTopMost:true,floatOpacity:100}};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
 const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
@@ -433,6 +433,7 @@ function render() {
     document.body.classList.toggle('compact',!!model.compact);
     $('viewToggle').textContent=model.compact?'Mode étendu':'Mode compact';
     $('viewToggle').setAttribute('aria-pressed',String(!!model.compact));
+    document.body.classList.toggle('compact-chart',!!model.preferences.compactChart);
     $('emergencyView').textContent=model.emergencyKey;
     selectedButtons('modeSeg','mode',c.mode);
     selectedButtons('intensitySeg','intensity',c.intensity);
@@ -490,9 +491,22 @@ function renderProfiles() {
             ()=>chooseProfile(p.id),p.id===model.selected);
         action('Tester','quiet',()=>testSelectedProfile(p.id));
         action('Exporter','quiet',()=>exportProfile(p.id));
-        action('↑','quiet',()=>moveProfile(p.id,'up'),index===0);
-        action('↓','quiet',()=>moveProfile(p.id,'down'),index===model.profiles.length-1);
-        card.append(head,mode,shortcut,actions);list.append(card);
+        const order=document.createElement('div');order.className='profile-order-row';
+        const orderLabel=document.createElement('span');orderLabel.textContent='Réorganiser';
+        const moveButtons=document.createElement('div');moveButtons.className='profile-order-buttons';
+        for(const [direction,symbol,disabled,title] of [
+            ['up','↑',index===0,'Monter le profil'],
+            ['down','↓',index===model.profiles.length-1,'Descendre le profil']
+        ]) {
+            const button=document.createElement('button');button.type='button';
+            button.className='profile-move-btn';button.textContent=symbol;
+            button.disabled=disabled;button.title=title+' : '+p.name;
+            button.setAttribute('aria-label',title+' : '+p.name);
+            button.onclick=()=>moveProfile(p.id,direction);
+            moveButtons.append(button);
+        }
+        order.append(orderLabel,moveButtons);
+        card.append(head,mode,shortcut,actions,order);list.append(card);
     });
 }
 function toggleFavorite(id) {
@@ -668,7 +682,8 @@ function setLiveAppearance() {
 }
 const liveMonitor={samples:[],lastStamp:0};
 function drawLiveMonitor() {
-    if(!model.preferences.liveMonitor||$('page-dashboard').classList.contains('hidden'))return;
+    if(!(model.compact?model.preferences.compactChart:model.preferences.liveMonitor)
+        ||$('page-dashboard').classList.contains('hidden'))return;
     const canvas=$('liveCpsChart');
     const bounds=canvas.getBoundingClientRect();
     if(!bounds.width)return;
@@ -701,6 +716,10 @@ function updateLiveMonitor(data) {
         data.armed?'Clics en cours':'Prêt';
     $('liveMonitorStatus').textContent=status;
     $('liveMonitorValue').textContent=cps+' CPS';
+    const compact=$('compactStatus');
+    compact.textContent=data.waiting?'EN ATTENTE':data.armed?'ACTIF':'PRÊT';
+    compact.classList.toggle('is-active',!!data.armed&&!data.waiting);
+    compact.classList.toggle('is-waiting',!!data.waiting);
     if(!liveMonitor.lastStamp||now-liveMonitor.lastStamp>=160) {
         liveMonitor.lastStamp=now;
         liveMonitor.samples.push({t:now,cps});
@@ -743,8 +762,11 @@ function renderSettings() {
         btn.classList.toggle('on',!!model.preferences[field]);
         btn.setAttribute('aria-pressed',String(!!model.preferences[field]));
     });
-    $('liveMonitorCard').classList.toggle('hidden',!model.preferences.liveMonitor);
+    $('liveMonitorCard').classList.toggle('hidden',
+        !(model.compact?model.preferences.compactChart:model.preferences.liveMonitor));
+    document.body.classList.toggle('compact-chart',!!model.preferences.compactChart);
     $('floatQuick').textContent=model.preferences.floatShown?'Masquer la mini-fenêtre':'Mini-fenêtre';
+    $('floatOpacitySelect').value=String(model.preferences.floatOpacity||100);
 }
 document.querySelectorAll('[data-preference]').forEach(btn=>{
     btn.onclick=()=>{
@@ -758,6 +780,15 @@ document.querySelectorAll('[data-preference]').forEach(btn=>{
         }
     };
 });
+$('floatOpacitySelect').onchange=()=>{
+    const value=Number($('floatOpacitySelect').value);
+    if(![70,80,90,100].includes(value))return;
+    if(connected)send('preference','floatOpacity',value);
+    else {
+        model.preferences.floatOpacity=value;
+        toast('Aperçu : préférence Windows non sauvegardée.');
+    }
+};
 $('floatQuick').onclick=()=>{
     if(connected)send('desktop','float');
     else toast('Mini-fenêtre disponible dans ClickFlow pour Windows.');
