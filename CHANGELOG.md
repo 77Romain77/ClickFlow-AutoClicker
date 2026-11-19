@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.3.0 - 2026-11-19
+
+- Nouvel onglet Test CPS manuel : durées 2, 5, 10, 30 et 60 secondes.
+- CPS actuels, moyens, pic sur une seconde, total de clics et barre de progression.
+- Courbe CPS en direct et animation discrète au point de clic.
+- Affichage du dernier résultat terminé uniquement, sans historique ni sauvegarde des scores.
+- Tests automatisés JavaScript du chronométrage, des clics et du dernier résultat.
+
 ## 1.2.0 - 2026-11-19
 
 - Un fichier INI indépendant par profil enregistré dans `%APPDATA%\ClickFlow\profiles`.
@@ -8,7 +16,7 @@
 - Gestion des noms déjà utilisés lors de l'import et validation du format des fichiers.
 - Tests Windows de la migration, de l'import, de la sauvegarde isolée et du rechargement.
 
-## 1.2.0 - 2026-11-19
+## 1.1.0 - 2026-11-19
 
 - Boutons dans "À propos" pour ouvrir les dossiers locaux de ClickFlow et des profils personnels.
 - Deux modes de désinstallation : supprimer le programme en conservant les profils, ou effacer aussi les profils et leurs sauvegardes.

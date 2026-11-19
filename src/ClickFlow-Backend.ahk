@@ -191,6 +191,7 @@ CFSendShortcutStatus(errorMessage := "") {
         ',"start":' m ',"error":' JsonQuote(errorMessage) '}')
 }
 
+
 SendStats() {
     global CF
     if !CF.web
@@ -387,6 +388,11 @@ BackendMessage(sender, args) {
             try CFImportProfile()
             catch as err
                 CFProfileMessage("Import impossible : " err.Message, true)
+            return
+        }
+        if cmd = "cpsTest" && parts.Length >= 2 {
+            if parts[2] = "open"
+                StopAll("Test CPS : clics automatiques arrêtés.")
             return
         }
         if cmd = "storage" && parts.Length >= 2 {

@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.2.0 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.3.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.2.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.2.0)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.3.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.3.0)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.2.0.ahk`.
+2. Télécharger `ClickFlow-v1.3.0.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **À propos**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.2.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.3.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -31,6 +31,9 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Profils locaux : création, duplication, renommage et suppression. Chaque profil est enregistré dans un fichier indépendant.
 - Importer ou exporter un profil individuellement au format `.ini` (menu **Profils** ou profil actif).
 - Statistiques de CPS et de clics générés.
+- **Onglet Test CPS manuel** : 2, 5, 10, 30 ou 60 secondes, chronométrage au premier clic, CPS glissants sur une seconde, CPS moyens, pic, total, progression et courbe en temps réel.
+- Animation lumineuse discrète sur chaque clic gauche dans la zone de test, sans effet sonore.
+- Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
 ## Lancer ClickFlow plusieurs fois et nettoyer les caches
@@ -66,11 +69,23 @@ Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow
 
 ## Profils et mises à jour
 
-Depuis v1.2.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
+Depuis v1.3.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
 
 **Migration automatique :** les profils de la v1.1.0 et des anciennes versions sont lus une seule fois depuis `settings.ini`, puis enregistrés dans des fichiers indépendants. Les anciennes sections et les sauvegardes restent disponibles par précaution. Les fichiers exportés se réimportent individuellement, sans écraser les profils déjà présents. Si un nom existe déjà, ClickFlow ajoute un suffixe numérique.
 
 Chaque version publiée possède un numéro et son cache de composants. Télécharger et lancer un nouveau fichier `.ahk` met à jour la copie locale utilisée par les raccourcis, sans supprimer les profils.
+
+## Utiliser le test CPS
+
+Dans l'interface étendue, ouvre **Test CPS**, choisis 2, 5, 10, 30 ou 60 secondes, puis clique avec le bouton gauche dans la grande zone bleue. Le premier clic lance le test et compte pour le résultat. Les clics à l'extérieur de la zone, les clics droits et les appuis clavier ne comptent pas.
+
+- **CPS actuels** : nombre de clics pendant la dernière seconde (fenêtre glissante).
+- **CPS moyens** : clics totaux divisés par la durée écoulée, puis par la durée exacte au terme du test.
+- **Pic sur 1 s** : maximum relevé sur une fenêtre glissante.
+- **Courbe** : évolution en temps réel, échantillonnée régulièrement pendant l'essai.
+- **Dernier test terminé** : durée choisie, nombre de clics, moyenne et pic du dernier essai, en mémoire jusqu'à fermeture de ClickFlow.
+
+Le bouton **Recommencer** remet le compteur à zéro tout en laissant visible le dernier résultat terminé. Quitter l'onglet pendant le test annule l'essai. L'autoclicker est arrêté quand tu entres dans cet onglet, pour éviter de mélanger les deux fonctionnalités. Aucun score n'est envoyé sur internet.
 
 ## Code source
 
