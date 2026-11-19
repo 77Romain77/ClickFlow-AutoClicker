@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.0.2 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.1.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.0.2.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.0.2)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.1.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.1.0)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.0.2.ahk`.
+2. Télécharger `ClickFlow-v1.1.0.ahk`.
 3. Double-cliquer sur ce fichier.
-4. Accepter, si souhaité, la création des raccourcis Bureau et menu Démarrer.
+4. Dans l'onglet **À propos**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.0.2`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.1.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -48,6 +48,20 @@ Dans l'onglet **À propos**, tu peux désormais installer ou supprimer séparém
 L'interface lit directement la présence de chaque raccourci Windows. Elle actualise les états à chaque ouverture de cet onglet. Si tu supprimes manuellement un raccourci depuis l'Explorateur, il reste supprimé : ClickFlow ne restaure plus automatiquement les raccourcis lors d'un lancement ou d'une mise à jour. Il suffit de revenir dans **À propos** pour le réinstaller.
 
 Les anciennes préférences `shortcuts.ini` (`Enabled=1`) n'imposent plus la création de deux raccourcis. Les raccourcis historiques sont reconnus et peuvent être gérés indépendamment, sans toucher aux autres raccourcis présents sur l'ordinateur.
+
+## Dossiers et désinstallation
+
+Dans l'onglet **À propos** (mode étendu), les boutons **Ouvrir les fichiers du programme** et **Ouvrir les profils et paramètres** ouvrent directement l'Explorateur Windows dans :
+
+- `%LOCALAPPDATA%\\ClickFlow` pour le lanceur local, l'icône, les runtimes et les caches WebView2 ;
+- `%APPDATA%\\ClickFlow` pour les profils et paramètres (dont `settings.ini` et ses sauvegardes).
+
+La désinstallation propose deux opérations distinctes, avec confirmation **dans ClickFlow** :
+
+1. **Désinstaller - conserver les données** : supprime le programme local, les anciens runtimes et caches et les raccourcis ClickFlow, mais conserve l'ensemble des profils et paramètres dans `%APPDATA%\\ClickFlow`.
+2. **Tout désinstaller et effacer** : effectue les mêmes suppressions puis supprime aussi le dossier personnel `%APPDATA%\\ClickFlow`. Cette option demande de saisir `SUPPRIMER` pour éviter une suppression accidentelle.
+
+Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow avant de commencer la désinstallation. Aucun nouveau `.exe` n'est généré. **Les fichiers `.ahk` téléchargés hors du dossier de ClickFlow, par exemple dans Téléchargements, ne sont pas supprimés**. Les autres fichiers éventuellement placés dans le dossier local sont conservés par précaution. AutoHotkey v2, installé indépendamment, n'est pas désinstallé.
 
 ## Profils et mises à jour
 

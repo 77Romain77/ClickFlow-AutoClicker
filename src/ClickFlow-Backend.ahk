@@ -1,6 +1,7 @@
 ; ClickFlow WebView2 - backend AutoHotkey (moteur et profils).
 ; Conserve le format de settings.ini des versions AutoHotkey 0.2.x.
 ; Les clics sont envoyés uniquement lorsque l'utilisateur active un raccourci.
+#Include ClickFlow-Maintenance.ahk
 
 global CF := {
     hwnd: 0, web: 0, event: 0,
@@ -267,6 +268,76 @@ EditConfig(field, value) {
     SetTimer(SendState, -160)
 }
 
+CFOpenStorageFolder(kind) {
+    if kind != "program" && kind != "profiles"
+        return
+    folder := kind = "program" ? EnvGet("LOCALAPPDATA") "\ClickFlow"
+        : EnvGet("APPDATA") "\ClickFlow"
+    try {
+        DirCreate(folder)
+        Run('explorer.exe "' folder '"')
+    } catch as err {
+        SetNotice("Impossible d'ouvrir ce dossier : " err.Message)
+    }
+}
+
+CFStartUninstall(mode) {
+    global CF
+    if mode != "keep" && mode != "all"
+        return
+    if CF.shuttingDown
+        return
+
+    if mode = "keep" {
+        answer := MsgBox("Désinstaller ClickFlow de ce PC ?"
+            Chr(10) Chr(10) "Seront supprimés : les raccourcis ClickFlow, les versions locales du programme, son icône et ses caches WebView2."
+            Chr(10) Chr(10) "Seront CONSERVÉS : les profils, les raccourcis configurés dans les profils, et les paramètres dans %APPDATA%\ClickFlow."
+            Chr(10) Chr(10) "Le fichier .ahk présent dans Téléchargements ne sera pas supprimé.",
+            "ClickFlow - Conserver mes données", "YesNo Icon!")
+        if answer != "Yes"
+            return
+    } else {
+        answer := MsgBox("Supprimer ClickFlow ET toutes ses données personnelles ?"
+            Chr(10) Chr(10) "Les raccourcis, les fichiers locaux, les profils et leurs sauvegardes seront effacés."
+            Chr(10) "Cette opération est irréversible."
+            Chr(10) Chr(10) "Le fichier téléchargé en dehors des dossiers ClickFlow ne sera pas supprimé.",
+            "ClickFlow - Suppression complète", "YesNo Icon!")
+        if answer != "Yes"
+            return
+        verification := InputBox('Pour confirmer, écris exactement SUPPRIMER :',
+            "Confirmation de suppression définitive", "w370 h150")
+        if verification.Result != "OK" || verification.Value != "SUPPRIMER" {
+            SetNotice("Désinstallation complète annulée.")
+            return
+        }
+    }
+
+    ; Une copie du désinstallateur doit survivre à la suppression du runtime.
+    helperSource := A_ScriptDir "\ClickFlow-Uninstall.ahk"
+    maintenanceSource := A_ScriptDir "\ClickFlow-Maintenance.ahk"
+    if !FileExist(helperSource) || !FileExist(maintenanceSource) {
+        SetNotice("Les composants de désinstallation sont introuvables.")
+        return
+    }
+
+    tempFolder := A_Temp "\ClickFlow-Uninstall-" A_TickCount "-" DllCall("Kernel32\GetCurrentProcessId", "UInt")
+    try {
+        DirCreate(tempFolder)
+        FileCopy(helperSource, tempFolder "\ClickFlow-Uninstall.ahk", true)
+        FileCopy(maintenanceSource, tempFolder "\ClickFlow-Maintenance.ahk", true)
+        StopAll("Désinstallation de ClickFlow.")
+        SaveSettings()
+        parentPid := DllCall("Kernel32\GetCurrentProcessId", "UInt")
+        Run('"' A_AhkPath '" "' tempFolder '\ClickFlow-Uninstall.ahk" ' mode ' ' parentPid, , "Hide")
+    } catch as err {
+        SetNotice("Impossible de lancer la désinstallation : " err.Message)
+        return
+    }
+    ; Le Close handler désactive les raccourcis et libère WebView2 proprement.
+    DllCall("User32\PostMessageW", "Ptr", CF.hwnd, "UInt", 0x10,
+        "Ptr", 0, "Ptr", 0)
+}
+
 BackendMessage(sender, args) {
     global CF
     try {
@@ -299,6 +370,14 @@ BackendMessage(sender, args) {
         }
         if cmd = "captureStop" {
             StartCapture("emergency")
+            return
+        }
+        if cmd = "storage" && parts.Length >= 2 {
+            CFOpenStorageFolder(parts[2])
+            return
+        }
+        if cmd = "uninstall" && parts.Length >= 2 {
+            CFStartUninstall(parts[2])
             return
         }
         if cmd = "shortcuts" && parts.Length >= 2 {

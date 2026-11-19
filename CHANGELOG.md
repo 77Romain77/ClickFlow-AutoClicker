@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.1.0 - 2026-11-19
+
+- Boutons dans "À propos" pour ouvrir les dossiers locaux de ClickFlow et des profils personnels.
+- Deux modes de désinstallation : supprimer le programme en conservant les profils, ou effacer aussi les profils et leurs sauvegardes.
+- Confirmation de la désinstallation et saisie de SUPPRIMER pour l'effacement complet.
+- Désinstallateur AutoHotkey temporaire qui attend la fermeture propre de la fenêtre avant de supprimer les fichiers.
+- Suppression limitée aux dossiers et raccourcis appartenant à ClickFlow ; aucun exécutable supplémentaire.
+
 ## 1.0.2 - 2026-11-19
 
 - Gestion indépendante des raccourcis du Bureau et du menu Démarrer dans l'onglet "À propos".

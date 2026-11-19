@@ -90,6 +90,10 @@ body.compact #page-dashboard{display:block!important}
 .shortcut-setting .subnote{margin:5px 0 0}
 .shortcut-setting .btn{flex-shrink:0;min-width:175px}
 @media(max-width:620px){.shortcut-setting{align-items:flex-start;flex-direction:column}.shortcut-setting .btn{width:100%}}
+.maintenance-section{border-top:1px solid #32435c;padding-top:18px;margin-top:22px}
+.maintenance-section h3{font-size:15px;margin:0 0 8px}
+.maintenance-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.maintenance-actions .btn{flex:1 1 185px;min-height:40px}
 </style>
 </head>
 <body>
@@ -106,7 +110,7 @@ body.compact #page-dashboard{display:block!important}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.0.2 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.1.0 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -157,13 +161,26 @@ body.compact #page-dashboard{display:block!important}
   <div class="card"><div class="card-head"><div class="card-title">Profils enregistrés</div><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div><div id="profileList"></div><div class="mutedline">Les profils synchronisés seront conservés au prochain lancement.</div></div>
  </section>
  <section id="page-about" class="hidden">
-  <div class="hero"><div><h2>ClickFlow, autrement.</h2><p>Une nouvelle interface graphique, sans réécrire la logique des clics.</p></div></div>
+  <div class="hero"><div><h2>À propos de ClickFlow.</h2><p>Gère les raccourcis, le stockage et la désinstallation de l'application.</p></div></div>
   <div class="card" style="max-width:690px"><span class="pill"><i class="dot"></i> Application Windows</span><h3 style="margin:18px 0 8px">ClickFlow, prêt à être lancé depuis Windows</h3><p style="color:var(--muted)">ClickFlow utilise AutoHotkey v2 et WebView2 pour ouvrir une fenêtre indépendante, avec sauvegarde des profils et des réglages.</p><p style="color:var(--muted)">Le fichier unique peut créer des raccourcis avec notre icône dans le menu Démarrer et sur ton bureau. Aucun exécutable ClickFlow n'est nécessaire.</p>
      <div class="shortcut-settings">
        <div class="shortcut-setting"><div><strong>Raccourci sur le bureau</strong><p class="subnote" id="desktopShortcutStatus">Vérification...</p></div><button id="desktopShortcutButton" class="btn primary" type="button">Ajouter au bureau</button></div>
        <div class="shortcut-setting"><div><strong>Raccourci dans le menu Démarrer</strong><p class="subnote" id="startShortcutStatus">Vérification...</p></div><button id="startShortcutButton" class="btn primary" type="button">Ajouter au menu Démarrer</button></div>
      </div>
      <p class="subnote">Les deux raccourcis sont indépendants. Si tu en supprimes un depuis Windows, ClickFlow ne le recréera pas automatiquement. Tu pourras toujours le réinstaller ici.</p>
+     <div class="maintenance-section">
+       <h3>Stockage et désinstallation</h3>
+       <p class="subnote">Ouvre les dossiers de ClickFlow ou désinstalle le programme depuis cette fenêtre.</p>
+       <div class="maintenance-actions">
+         <button class="btn quiet" id="openAppFolder" type="button">Ouvrir les fichiers du programme</button>
+         <button class="btn quiet" id="openProfilesFolder" type="button">Ouvrir les profils et paramètres</button>
+       </div>
+       <div class="maintenance-actions" style="margin-top:12px">
+         <button class="btn quiet" id="uninstallKeep" type="button">Désinstaller - conserver les données</button>
+         <button class="btn danger" id="uninstallAll" type="button">Tout désinstaller et effacer</button>
+       </div>
+       <p class="subnote" style="margin-top:12px">Une confirmation sera demandée. L'effacement complet nécessitera aussi de saisir SUPPRIMER. Le fichier .ahk téléchargé ailleurs sur le disque n'est pas effacé automatiquement.</p>
+     </div>
      <div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
  </section>
 </main>
@@ -388,7 +405,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.0.2 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.1.0 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
@@ -441,6 +458,16 @@ for(const place of ['desktop','start']){
         send('shortcuts',place,model.shortcuts[place]?'remove':'create');
     };
 }
+$('openAppFolder').onclick=()=>{if(connected)send('storage','program');else toast('Action disponible depuis ClickFlow sous Windows.');};
+$('openProfilesFolder').onclick=()=>{if(connected)send('storage','profiles');else toast('Action disponible depuis ClickFlow sous Windows.');};
+$('uninstallKeep').onclick=()=>{
+    if(connected)send('uninstall','keep');
+    else toast('La désinstallation nécessite la version Windows.');
+};
+$('uninstallAll').onclick=()=>{
+    if(connected)send('uninstall','all');
+    else toast('La désinstallation nécessite la version Windows.');
+};
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
     const page=btn.dataset.page;
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));
