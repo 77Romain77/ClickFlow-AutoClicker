@@ -104,7 +104,7 @@ try {
         throw Error("La hauteur flottante n'est pas sauvegardée.")
     CFDesktopSetPreference("compactChart", "0")
     CFDesktopSetFloat(true)
-    WinGetPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
+    WinGetClientPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
     if Abs(restoredW - savedW) > 5 || Abs(restoredH - savedH) > 5
         throw Error("Les dimensions flottantes ne sont pas restaurées.")
     CFDesktopSetFloat(false)
