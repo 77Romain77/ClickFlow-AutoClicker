@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 1.6.0 - 2026-11-19
+
+- Moniteur CPS sur le tableau de bord : courbe glissante des 30 dernières secondes, état et CPS réels en direct. Désactivable depuis Paramètres ; données en mémoire seulement.
+- Réglages rapides du Test CPS : modifier un brouillon de mode, minimum/maximum et intensité pour n'importe quel profil. Boutons Appliquer et Annuler, validation des plages et modification atomique du profil choisi.
+- Mini-fenêtre Windows flottante au premier plan, indépendante de WebView2, avec profil actif, état, CPS, clics, Ouvrir et Stop.
+- Icône de notification Windows : ouvrir/restaurer ClickFlow, arrêt, choix du profil et quitter proprement.
+- Profils sous forme de cartes avec favoris et ordre personnalisable, persistés dans chaque fichier .ini individuel. Boutons Activer, Tester et Exporter.
+- Nouvel onglet Paramètres pour l'affichage, les préférences de réduction/fermeture vers la zone de notification, les raccourcis Windows, le stockage et la désinstallation.
+- Les options de masquage sont désactivées par défaut : le bouton X quitte toujours sauf choix explicite. Les relancements restaurent désormais l'application même masquée.
+- Tests Windows et JavaScript complémentaires pour le moteur, les paramètres, la persistance et les nouvelles commandes.
+
 ## 1.5.0 - 2026-11-19
 
 - Mode Naturel renforcé : variations progressives beaucoup plus visibles, avec un niveau Faible proche de l'ancien niveau Élevé.
