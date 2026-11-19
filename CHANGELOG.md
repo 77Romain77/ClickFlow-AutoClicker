@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.0 - 2026-11-19
+
+- Raccourcis globaux entièrement facultatifs et sans affectation par défaut : profil suivant/précédent, afficher/masquer l'overlay, ouvrir ClickFlow, accéder au Test CPS. Chaque action possède son bouton "Aucun" ; touche d'arrêt d'urgence conservée.
+- Capture clavier intégrée, contrôle des collisions avec les touches d'activation de tous les profils, l'arrêt d'urgence et les autres actions globales. Préférences persistantes dans settings.ini.
+- Sauvegarde complète : export de settings.ini et de tous les profils en un ZIP. Validation stricte de la structure et de la taille avant restauration, sauvegarde temporaire et restauration de secours en cas d'échec, rechargement des profils et raccourcis après succès.
+- Overlay : trois tailles optionnelles (mini, standard, grande) et possibilité de montrer le nom du profil sous la ligne de statut. La taille mini et le nom caché restent les valeurs par défaut.
+- Paramètres réorganisés en six sections repliables : Général, Overlay, Raccourcis globaux, Raccourcis Windows, Sauvegarde complète et Maintenance.
+- Tests Windows et JavaScript couvrant les raccourcis facultatifs, les conflits, l'export/import ZIP, les données rejetées, les tailles d'overlay et l'organisation des préférences.
+
 ## 1.8.2 - 2026-11-19
 
 - Ajout du réglage "Période CPS moyens" dans Paramètres > Overlay : durée personnalisée de 1 à 60 secondes, valeur par défaut 5 secondes.
