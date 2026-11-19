@@ -75,8 +75,12 @@ jobs:
           $script = (Resolve-Path 'tests/ahk-global-settings.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError settings-test.err -RedirectStandardOutput settings-test.out
           if (-not $p.WaitForExit(15000)) {
+            $p.Refresh()
+            $title = $p.MainWindowTitle
+            $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
+            $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
             Stop-Process -Id $p.Id -Force
-            throw 'Global settings test timed out'
+            throw "Global settings test timed out. Window=$title stdout=$out stderr=$err"
           }
           $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
           $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
