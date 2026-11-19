@@ -99,9 +99,13 @@ try {
 }
 
 FindRunningClickFlow() {
-    ; Limiter la recherche aux fenêtres GUI AHK de ClickFlow.
+    ; La fenêtre peut être masquée par les préférences de notification.
+    ; Le mutex empêche toute seconde instance même lorsqu'elle est invisible.
     SetTitleMatchMode(2)
-    return WinExist("ClickFlow - AutoCliker ahk_class AutoHotkeyGUI")
+    DetectHiddenWindows(true)
+    hwnd := WinExist("ClickFlow - AutoCliker ahk_class AutoHotkeyGUI")
+    DetectHiddenWindows(false)
+    return hwnd
 }
 
 RaiseRunningClickFlow() {
