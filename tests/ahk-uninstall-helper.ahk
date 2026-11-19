@@ -35,10 +35,20 @@ try {
         FileCopy(sourceRoot "\ClickFlow-Uninstall.ahk", helper, true)
         FileCopy(sourceRoot "\ClickFlow-Maintenance.ahk",
             helperDir "\ClickFlow-Maintenance.ahk", true)
-        ; Use a non-existent PID to simulate the application's completed close.
-        exitCode := RunWait('"' A_AhkPath '" "' helper '" ' mode ' 999998', , "Hide")
-        if exitCode
-            throw Error("Detached helper failed in " mode " mode. Exit: " exitCode)
+        ; Use a closed PID to simulate an application that has already exited.
+        ; A bounded subprocess check prevents a hidden native error dialog from
+        ; holding the Windows test runner indefinitely.
+        Run('"' A_AhkPath '" "' helper '" ' mode ' 999998', , "Hide", &helperPid)
+        Loop 40 {
+            if !ProcessExist(helperPid)
+                break
+            Sleep(250)
+        }
+        if ProcessExist(helperPid) {
+            ProcessClose(helperPid)
+            throw Error("Detached helper did not exit (mode: " mode
+                "; CI flag: " EnvGet("CLICKFLOW_UNINSTALL_CI") ").")
+        }
         if DirExist(app "\Runtime-1.1.0") || FileExist(app "\ClickFlow.ahk")
             throw Error("Detached helper did not delete the installed program.")
         if mode = "keep" && !FileExist(roaming "\settings.ini")
