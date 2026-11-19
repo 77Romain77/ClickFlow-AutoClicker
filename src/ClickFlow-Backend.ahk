@@ -20,6 +20,7 @@ global CF := {
     floatChartPaintCount: 0, floatGraphActive: false,
     overlayGui: 0, overlayVisible: false, overlayEditing: false,
     overlayAlwaysVisible: false, overlayOpacity: 85, overlayMargin: 20,
+    overlayAverageSeconds: 5,
     overlayMonitor: 1, overlayPosition: "tm",
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
     overlayRecent: [], overlayStart: 0,
@@ -845,7 +846,8 @@ UpdateStats() {
     now := A_TickCount
     while CF.recent.Length && CF.recent[1] < now - 1000
         CF.recent.RemoveAt(1)
-    while CF.overlayRecent.Length && CF.overlayRecent[1] < now - 5000
+    windowStart := now - CF.overlayAverageSeconds * 1000
+    while CF.overlayRecent.Length && CF.overlayRecent[1] < windowStart
         CF.overlayRecent.RemoveAt(1)
     SendStats()
     CFDesktopUpdate()
@@ -1094,6 +1096,7 @@ SaveSettings(*) {
         IniWrite(CF.overlayAlwaysVisible ? 1 : 0, CF.configFile, "General", "OverlayAlwaysVisible")
         IniWrite(CF.overlayOpacity, CF.configFile, "General", "OverlayOpacity")
         IniWrite(CF.overlayMargin, CF.configFile, "General", "OverlayMargin")
+        IniWrite(CF.overlayAverageSeconds, CF.configFile, "General", "OverlayAverageSeconds")
         IniWrite(CF.overlayMonitor, CF.configFile, "General", "OverlayMonitor")
         IniWrite(CF.overlayPosition, CF.configFile, "General", "OverlayPosition")
         IniWrite(CF.overlayX, CF.configFile, "General", "OverlayX")
