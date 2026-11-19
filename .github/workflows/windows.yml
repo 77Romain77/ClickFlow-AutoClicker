@@ -83,6 +83,14 @@ jobs:
               $root = [System.Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
               $items = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
               $uiText = ($items | ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Select-Object -First 25) -join ' | '
+              foreach ($item in $items) {
+                if ($item.Current.Name -eq 'RichEdit Control') {
+                  try {
+                    $pattern = $item.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
+                    $uiText += ' AHK ERROR: ' + $pattern.DocumentRange.GetText(3000)
+                  } catch { $uiText += ' UIAutomation text error: ' + $_.Exception.Message }
+                }
+              }
             } catch { $uiText = $_.Exception.Message }
             $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
             $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
