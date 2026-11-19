@@ -29,7 +29,7 @@ jobs:
       - name: Obtain official Microsoft WebView2Loader x64
         shell: pwsh
         run: |
-          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.1.0903.40' -OutFile webview2-sdk.zip
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.2903.40' -OutFile webview2-sdk.zip
           Expand-Archive webview2-sdk.zip -DestinationPath webview2-sdk
           $dll = Get-ChildItem webview2-sdk -Recurse -Filter WebView2Loader.dll |
             Where-Object { $_.FullName -match '[\\/]win-x64[\\/]' } |
