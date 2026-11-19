@@ -1,6 +1,8 @@
 ; ClickFlow v1.8.0 - Tray Windows et overlay d'état léger.
 ; Pas de WebView2 secondaire, de courbe GDI, ni d'historique disque.
 CFDesktopInt(value, fallback, minimum, maximum) {
+    if String(value) = "-99999"
+        return fallback
     if !RegExMatch(String(value), "^-?\d{1,7}$")
         return fallback
     return Max(minimum, Min(maximum, value + 0))
@@ -213,19 +215,19 @@ CFOverlayCreate() {
     global CF
     if IsObject(CF.overlayGui)
         return
-    gui := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20",
+    overlay := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20",
         "ClickFlow - Overlay")
-    gui.MarginX := 0
-    gui.MarginY := 0
-    gui.BackColor := "121F32"
-    gui.SetFont("s9 bold c9AE4D4", "Segoe UI")
+    overlay.MarginX := 0
+    overlay.MarginY := 0
+    overlay.BackColor := "121F32"
+    overlay.SetFont("s9 bold c9AE4D4", "Segoe UI")
     CF.overlayStatusText := gui.Add("Text",
         "x12 y11 w98 h25 +0x100 0x200", "ARRÊTÉ")
-    gui.SetFont("s11 bold cEDF6FF", "Segoe UI")
+    overlay.SetFont("s11 bold cEDF6FF", "Segoe UI")
     CF.overlayCpsText := gui.Add("Text",
         "x111 y7 w105 h31 Right 0x200 +0x100", "0,0 CPS")
-    CF.overlayGui := gui
-    gui.Show("NA Hide w226 h48")
+    CF.overlayGui := overlay
+    overlay.Show("NA Hide w226 h48")
     CFOverlayApplyTransparency()
 }
 
