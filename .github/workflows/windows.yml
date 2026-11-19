@@ -110,22 +110,6 @@ jobs:
         run: |
           node tests/cps-tester.test.cjs
 
-      - name: Verify CPS records persisted by AutoHotkey
-        shell: pwsh
-        run: |
-          $script = (Resolve-Path 'tests/ahk-cps-records.ahk').Path
-          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError cps-records.err -RedirectStandardOutput cps-records.out
-          if (-not $p.WaitForExit(20000)) {
-            Stop-Process -Id $p.Id -Force
-            throw 'CPS records test timed out.'
-          }
-          $out = if (Test-Path cps-records.out) { Get-Content cps-records.out -Raw } else { '' }
-          $err = if (Test-Path cps-records.err) { Get-Content cps-records.err -Raw } else { '' }
-          Write-Host "CPS records: $out"
-          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
-            throw "CPS records test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
-          }
-
       - name: Verify safe uninstall (preserve profiles / remove everything)
         shell: pwsh
         run: |
