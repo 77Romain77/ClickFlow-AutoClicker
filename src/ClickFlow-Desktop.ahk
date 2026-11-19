@@ -194,8 +194,11 @@ CFDesktopSaveFloatBounds(*) {
     if !CF.floatReady || !IsObject(CF.floatGui)
         return
     try {
-        WinGetPos(&x, &y, &w, &h, "ahk_id " CF.floatGui.Hwnd)
-        if w < 280 || h < 180
+        WinGetPos(&x, &y, , , "ahk_id " CF.floatGui.Hwnd)
+        ; Gui.Show w/h utilise la taille CLIENT, pas le cadre extérieur.
+        ; Stocker cette même unité évite de grossir la fenêtre à chaque ouverture.
+        WinGetClientPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
+        if w < 250 || h < 140
             return
         CF.floatX := x
         CF.floatY := y
