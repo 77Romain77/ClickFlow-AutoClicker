@@ -108,6 +108,86 @@ SendState() {
     try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey)) ',"compact":' (CF.compactMode ? "true" : "false") '}')
 }
 
+; Gestion indépendante des raccourcis Windows. L'état affiché est celui
+; des fichiers présents sur le disque et non d'une ancienne préférence INI.
+; Une suppression manuelle n'entraîne donc aucune recréation.
+CFShortcutPaths() {
+    appRoot := EnvGet("LOCALAPPDATA") "\ClickFlow"
+    desktop := EnvGet("CLICKFLOW_SHORTCUT_TEST_DESKTOP")
+    startMenu := EnvGet("CLICKFLOW_SHORTCUT_TEST_STARTMENU")
+    if desktop = ""
+        desktop := A_Desktop
+    if startMenu = ""
+        startMenu := A_Programs
+    return {app: appRoot, desktop: desktop, start: startMenu,
+        script: appRoot "\ClickFlow.ahk", icon: appRoot "\ClickFlow.ico",
+        ini: appRoot "\shortcuts.ini"}
+}
+
+CFShortcutIsOwned(file) {
+    if !FileExist(file)
+        return false
+    paths := CFShortcutPaths()
+    try {
+        link := ComObject("WScript.Shell").CreateShortcut(file)
+        return StrLower(link.TargetPath) = StrLower(A_AhkPath)
+            && InStr(StrLower(link.Arguments), StrLower(paths.script)) != 0
+    }
+    return false
+}
+
+CFShortcutHas(place) {
+    paths := CFShortcutPaths()
+    folder := place = "desktop" ? paths.desktop : place = "start" ? paths.start : ""
+    if folder = ""
+        return false
+    return CFShortcutIsOwned(folder "\ClickFlow - AutoCliker.lnk")
+        || CFShortcutIsOwned(folder "\ClickFlow.lnk")
+}
+
+CFShortcutChange(place, action) {
+    if place != "desktop" && place != "start"
+        throw Error("Emplacement de raccourci inconnu.")
+    if action != "create" && action != "remove"
+        throw Error("Action de raccourci inconnue.")
+    paths := CFShortcutPaths()
+    folder := place = "desktop" ? paths.desktop : paths.start
+    target := folder "\ClickFlow - AutoCliker.lnk"
+    old := folder "\ClickFlow.lnk"
+
+    if action = "create" {
+        if !FileExist(paths.script) || !FileExist(paths.icon)
+            throw Error("Lance le fichier unique ClickFlow pour installer les raccourcis.")
+        if FileExist(target) && !CFShortcutIsOwned(target)
+            throw Error("Un autre raccourci utilise déjà ce nom.")
+        DirCreate(folder)
+        FileCreateShortcut(A_AhkPath, target, paths.app,
+            '"' paths.script '"', "ClickFlow - AutoCliker", paths.icon)
+        if CFShortcutIsOwned(old)
+            FileDelete(old)
+    } else {
+        ; Ne jamais supprimer un raccourci appartenant à un autre logiciel.
+        if CFShortcutIsOwned(target)
+            FileDelete(target)
+        if CFShortcutIsOwned(old)
+            FileDelete(old)
+    }
+    ; La préférence de chaque destination est distincte, mais aucun raccourci
+    ; n'est restauré automatiquement : seule une action explicite le crée.
+    IniWrite(action = "create" ? "1" : "0", paths.ini,
+        "Shortcuts", place = "desktop" ? "Desktop" : "StartMenu")
+}
+
+CFSendShortcutStatus(errorMessage := "") {
+    global CF
+    if !CF.web
+        return
+    d := CFShortcutHas("desktop") ? "true" : "false"
+    m := CFShortcutHas("start") ? "true" : "false"
+    try CF.web.PostWebMessageAsString('{"type":"shortcuts","desktop":' d
+        ',"start":' m ',"error":' JsonQuote(errorMessage) '}')
+}
+
 SendStats() {
     global CF
     if !CF.web
@@ -196,6 +276,7 @@ BackendMessage(sender, args) {
         if cmd = "ready" {
             SendState()
             SendStats()
+            CFSendShortcutStatus()
             return
         }
         if cmd = "connected" {
@@ -221,15 +302,18 @@ BackendMessage(sender, args) {
             return
         }
         if cmd = "shortcuts" && parts.Length >= 2 {
-            stable := EnvGet("LOCALAPPDATA") "\ClickFlow\ClickFlow.ahk"
-            if !FileExist(stable) {
-                SetNotice("L'installation des raccourcis nécessite le fichier unique ClickFlow.")
+            if parts[2] = "status" {
+                CFSendShortcutStatus()
                 return
             }
-            if parts[2] != "create" && parts[2] != "remove"
+            if parts.Length < 3
                 return
-            arg := parts[2] = "create" ? "--shortcuts" : "--remove-shortcuts"
-            Run('"' A_AhkPath '" "' stable '" ' arg)
+            try {
+                CFShortcutChange(parts[2], parts[3])
+                CFSendShortcutStatus()
+            } catch as err {
+                CFSendShortcutStatus(err.Message)
+            }
             return
         }
         if cmd = "view" && parts.Length >= 2 {

@@ -5,7 +5,7 @@
 ; Tests sans clics : persistance des reglages globaux et mode de fenetre.
 global CF
 CF.loading := false
-CF.configFile := A_Temp "\clickflow-1.0.1-test-" A_TickCount ".ini"
+CF.configFile := A_Temp "\clickflow-1.0.2-test-" A_TickCount ".ini"
 CF.emergencyKey := "F10"
 CF.compactMode := true
 CF.profiles := [{id: 1, name: "Principal", cfg: DefaultConfig()}]

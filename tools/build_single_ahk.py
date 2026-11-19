@@ -13,7 +13,7 @@ from pathlib import Path
 import textwrap
 import zipfile
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 RUNTIME_FILES = [
     "ClickFlow-WebView2.ahk",
@@ -31,7 +31,7 @@ BOOTSTRAP = r'''#Requires AutoHotkey v2.0
 #SingleInstance Force
 #ErrorStdOut "UTF-8"
 
-; ClickFlow v1.0.1 : un seul script a telecharger, AutoHotkey v2 x64 requis.
+; ClickFlow v1.0.2 : un seul script a telecharger, AutoHotkey v2 x64 requis.
 ; Les composants sont extraits en local, sans EXE ClickFlow et sans telechargement.
 
 if A_PtrSize != 8 {
@@ -44,7 +44,7 @@ if localAppData = "" {
     ExitApp(1)
 }
 appDir := localAppData "\ClickFlow"
-runtimeDir := appDir "\Runtime-1.0.1"
+runtimeDir := appDir "\Runtime-1.0.2"
 launchFile := runtimeDir "\ClickFlow-WebView2.ahk"
 readyFlag := runtimeDir "\.extracted-ok"
 stableScript := appDir "\ClickFlow.ahk"
@@ -87,7 +87,7 @@ if !FileExist(readyFlag) || !FileExist(launchFile) || !FileExist(runtimeDir "\as
         if exitCode != 0 || !FileExist(launchFile)
             throw Error("Extraction impossible (code " exitCode ").")
         FileDelete(zipFile)
-        FileAppend("1.0.1", readyFlag, "UTF-8")
+        FileAppend("1.0.2", readyFlag, "UTF-8")
     } catch as err {
         MsgBox("Impossible de préparer ClickFlow : " err.Message, "ClickFlow", "Icon!")
         ExitApp(1)
@@ -109,113 +109,13 @@ try {
             err.Message, "ClickFlow", "Icon!")
 }
 
-; Les chemins des raccourcis sont toujours ceux de l'utilisateur courant.
-; Les variables de test permettent aux tests GitHub Actions d'éviter de
-; modifier le vrai bureau et le vrai menu Démarrer du runner.
-desktopDir := EnvGet("CLICKFLOW_SHORTCUT_TEST_DESKTOP")
-startDir := EnvGet("CLICKFLOW_SHORTCUT_TEST_STARTMENU")
-if desktopDir = ""
-    desktopDir := A_Desktop
-if startDir = ""
-    startDir := A_Programs
-
-if A_Args.Length && A_Args[1] = "--shortcuts" {
-    try {
-        InstallClickFlowShortcuts()
-        if EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE") = ""
-            MsgBox("Raccourcis ClickFlow - AutoCliker créés sur le Bureau et dans le menu Démarrer.",
-                "ClickFlow", "Iconi")
-    } catch as err {
-        probeFile := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
-        if probeFile != ""
-            FileAppend(err.Message, probeFile ".shortcut-error", "UTF-8")
-        else
-            MsgBox("Impossible de créer les raccourcis : " err.Message, "ClickFlow", "Icon!")
-        ExitApp(1)
-    }
-    ExitApp()
-}
-if A_Args.Length && A_Args[1] = "--remove-shortcuts" {
-    try {
-        RemoveClickFlowShortcuts()
-        if EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE") = ""
-            MsgBox("Raccourcis ClickFlow - AutoCliker supprimés.", "ClickFlow", "Iconi")
-    } catch as err {
-        probeFile := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
-        if probeFile != ""
-            FileAppend(err.Message, probeFile ".shortcut-error", "UTF-8")
-        else
-            MsgBox("Erreur : " err.Message, "ClickFlow", "Icon!")
-        ExitApp(1)
-    }
-    ExitApp()
-}
-
-; Premier lancement : demander une seule fois si l'utilisateur souhaite
-; les raccourcis. Aucun raccourci n'est imposé sans son accord.
-savedChoice := IniRead(shortcutsIni, "Shortcuts", "Enabled", "")
-testAction := EnvGet("CLICKFLOW_SHORTCUTS_TEST_ACTION")
-if testAction = "create" {
-    InstallClickFlowShortcuts()
-} else if testAction = "remove" {
-    try RemoveClickFlowShortcuts()
-} else if savedChoice = "" && EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE") = "" {
-    answer := MsgBox("Créer un raccourci ClickFlow - AutoCliker sur le Bureau et dans le menu Démarrer ?"
-        Chr(10) "Ils ouvriront toujours ta copie locale de ClickFlow.",
-        "ClickFlow - AutoCliker", "YesNo Icon?")
-    IniWrite(answer = "Yes" ? "1" : "0", shortcutsIni, "Shortcuts", "Enabled")
-    if answer = "Yes" {
-        try InstallClickFlowShortcuts()
-        catch as err
-            MsgBox("Impossible de créer les raccourcis : " err.Message, "ClickFlow", "Icon!")
-    }
-} else if savedChoice = "1" {
-    ; Restaurer les raccourcis si une version précédente a été remplacée.
-    try InstallClickFlowShortcuts()
-}
-
+; Les raccourcis Bureau / menu Démarrer sont gérés individuellement depuis
+; l'onglet "À propos" du moteur AutoHotkey (ClickFlow-Backend.ahk).
+; Ne pas les créer à chaque lancement : si l'utilisateur supprime l'un d'eux
+; à la main, il doit rester absent. Les anciens réglages Enabled=1 ne
+; déclenchent plus aucune restauration silencieuse.
 Run('"' A_AhkPath '" "' launchFile '"')
 ExitApp()
-
-InstallClickFlowShortcuts() {
-    global stableScript, stableIcon, appDir, desktopDir, startDir, shortcutsIni
-    if !FileExist(stableScript) || !FileExist(stableIcon)
-        throw Error("La copie locale de ClickFlow ou son icône est absente.")
-    DirCreate(desktopDir)
-    DirCreate(startDir)
-    args := '"' stableScript '"'
-    ; Migration des anciens raccourcis "ClickFlow" publiés avant v1.0.1.
-    ; On ne touche qu'aux raccourcis qui ciblent notre script local.
-    RemoveLegacyClickFlowShortcut(desktopDir)
-    RemoveLegacyClickFlowShortcut(startDir)
-    FileCreateShortcut(A_AhkPath, desktopDir "\ClickFlow - AutoCliker.lnk", appDir,
-        args, "ClickFlow - AutoCliker", stableIcon)
-    FileCreateShortcut(A_AhkPath, startDir "\ClickFlow - AutoCliker.lnk", appDir,
-        args, "ClickFlow - AutoCliker", stableIcon)
-    IniWrite("1", shortcutsIni, "Shortcuts", "Enabled")
-}
-
-RemoveLegacyClickFlowShortcut(dir) {
-    global stableScript
-    file := dir "\ClickFlow.lnk"
-    if !FileExist(file)
-        return
-    try {
-        link := ComObject("WScript.Shell").CreateShortcut(file)
-        if InStr(StrLower(link.Arguments), StrLower(stableScript))
-            FileDelete(file)
-    }
-}
-
-RemoveClickFlowShortcuts() {
-    global desktopDir, startDir
-    for dir in [desktopDir, startDir] {
-        newFile := dir "\ClickFlow - AutoCliker.lnk"
-        if FileExist(newFile)
-            FileDelete(newFile)
-        RemoveLegacyClickFlowShortcut(dir)
-    }
-}
 
 ;--BEGIN-CLICKFLOW-PAYLOAD--
 '''
@@ -226,7 +126,7 @@ FOOTER = ";--END-CLICKFLOW-PAYLOAD--\n"
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path("stage"))
-    parser.add_argument("--output", type=Path, default=Path("ClickFlow-v1.0.1.ahk"))
+    parser.add_argument("--output", type=Path, default=Path("ClickFlow-v1.0.2.ahk"))
     args = parser.parse_args()
     root: Path = args.root
     for rel in RUNTIME_FILES:

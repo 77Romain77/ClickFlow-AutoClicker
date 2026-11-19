@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.0.2 - 2026-11-19
+
+- Gestion indépendante des raccourcis du Bureau et du menu Démarrer dans l'onglet "À propos".
+- Présence des raccourcis relue depuis Windows, y compris après une suppression manuelle.
+- Suppression de la restauration automatique des raccourcis lors du lancement.
+- Compatibilité avec les anciens raccourcis ClickFlow, sans supprimer ceux d'autres programmes.
+- Conservation du fichier unique, des profils et de toutes les fonctionnalités v1.0.1.
+
 ## 1.0.1 - 2026-11-18
 
 - Une seule instance active : relancer ClickFlow remet la fenêtre existante au premier plan.
