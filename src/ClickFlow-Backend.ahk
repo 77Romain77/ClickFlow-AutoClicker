@@ -12,7 +12,10 @@ global CF := {
     test: {active: false},
     desktopReady: false, trayProfiles: 0, floatGui: 0,
     closeToTray: false, minimizeToTray: false, floatShown: false,
-    liveMonitor: true, forceExit: false,
+    liveMonitor: true, compactChart: true, forceExit: false,
+    floatGraph: false, floatTopMost: true, floatOpacity: 100,
+    floatWidth: 340, floatHeight: 205, floatX: -99999, floatY: -99999,
+    floatPoints: [], floatLastSample: 0, floatReady: false, floatBitmap: 0,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
     naturalBurstLeft: 0, total: 0, recent: [],
@@ -81,8 +84,8 @@ BackendExit(*) {
     try SetTimer(SaveSettings, 0)
     try SetTimer(SendState, 0)
     CF.desktopReady := false
-    if IsObject(CF.floatGui)
-        try CF.floatGui.Destroy()
+    SetTimer(CFDesktopSaveFloatBounds, 0)
+    CFDesktopReleaseFloat()
     if CF.capture {
         try CF.inputHook.Stop()
         CF.capture := false
@@ -1051,6 +1054,14 @@ SaveSettings(*) {
         IniWrite(CF.minimizeToTray ? 1 : 0, CF.configFile, "General", "MinimizeToTray")
         IniWrite(CF.floatShown ? 1 : 0, CF.configFile, "General", "FloatShown")
         IniWrite(CF.liveMonitor ? 1 : 0, CF.configFile, "General", "LiveMonitor")
+        IniWrite(CF.compactChart ? 1 : 0, CF.configFile, "General", "CompactChart")
+        IniWrite(CF.floatGraph ? 1 : 0, CF.configFile, "General", "FloatGraph")
+        IniWrite(CF.floatTopMost ? 1 : 0, CF.configFile, "General", "FloatTopMost")
+        IniWrite(CF.floatOpacity, CF.configFile, "General", "FloatOpacity")
+        IniWrite(CF.floatWidth, CF.configFile, "General", "FloatWidth")
+        IniWrite(CF.floatHeight, CF.configFile, "General", "FloatHeight")
+        IniWrite(CF.floatX, CF.configFile, "General", "FloatX")
+        IniWrite(CF.floatY, CF.configFile, "General", "FloatY")
     } catch as err {
         SetNotice("Sauvegarde impossible : " err.Message)
     }
