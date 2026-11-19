@@ -291,7 +291,7 @@ CFStartUninstall(mode) {
     if mode = "keep" {
         answer := MsgBox("Désinstaller ClickFlow de ce PC ?"
             Chr(10) Chr(10) "Seront supprimés : les raccourcis ClickFlow, les versions locales du programme, son icône et ses caches WebView2."
-            Chr(10) Chr(10) "Seront CONSERVÉS : les profils, les raccourcis configurés dans les profils, et les paramètres dans %APPDATA%\\ClickFlow."
+            Chr(10) Chr(10) "Seront CONSERVÉS : les profils, les raccourcis configurés dans les profils, et les paramètres dans %APPDATA%\ClickFlow."
             Chr(10) Chr(10) "Le fichier .ahk présent dans Téléchargements ne sera pas supprimé.",
             "ClickFlow - Conserver mes données", "YesNo Icon!")
         if answer != "Yes"
