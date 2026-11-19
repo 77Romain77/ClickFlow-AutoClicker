@@ -79,6 +79,14 @@ try {
     if !rejected
         throw Error("Un fichier non ClickFlow a été accepté.")
 
+    ; Une fois migré, un ancien contenu du fichier global ne réapparaît pas
+    ; quand les profils individuels ont été explicitement retirés.
+    FileDelete(CFProfileFile(2))
+    FileDelete(CFProfileFile(3))
+    LoadSettings()
+    if CF.profiles.Length != 1 || CF.profiles[1].name != "Principal"
+        throw Error("Des anciens profils ont ressurgi après migration.")
+
     try DirDelete(parent, true)
     FileAppend("Profile migration, independent storage and import passed.", "*", "UTF-8")
     ExitApp(0)
