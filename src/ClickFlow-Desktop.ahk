@@ -1,24 +1,54 @@
-; ClickFlow v1.6 - intégration Windows : notification, mini-fenêtre, préférences.
-; Pas de fichier de scores. La fermeture par défaut quitte toujours ClickFlow.
+; ClickFlow v1.7 - Windows tray + mini-fenêtre redimensionnable.
+; La courbe est un bitmap GDI natif en mémoire, sans WebView2 secondaire.
+; Aucun historique de CPS n'est conservé après la fermeture.
+CFDesktopInt(value, fallback, minimum, maximum) {
+    return RegExMatch(String(value), "^-?\d{1,7}$")
+        ? Max(minimum, Min(maximum, value + 0)) : fallback
+}
+
 CFDesktopReadPreferences() {
     global CF
-    CF.closeToTray := IniRead(CF.configFile, "General", "CloseToTray", "0") = "1"
-    CF.minimizeToTray := IniRead(CF.configFile, "General", "MinimizeToTray", "0") = "1"
-    CF.floatShown := IniRead(CF.configFile, "General", "FloatShown", "0") = "1"
-    CF.liveMonitor := IniRead(CF.configFile, "General", "LiveMonitor", "1") != "0"
+    file := CF.configFile
+    CF.closeToTray := IniRead(file, "General", "CloseToTray", "0") = "1"
+    CF.minimizeToTray := IniRead(file, "General", "MinimizeToTray", "0") = "1"
+    CF.floatShown := IniRead(file, "General", "FloatShown", "0") = "1"
+    CF.liveMonitor := IniRead(file, "General", "LiveMonitor", "1") != "0"
+    CF.compactChart := IniRead(file, "General", "CompactChart", "1") != "0"
+    CF.floatGraph := IniRead(file, "General", "FloatGraph", "0") = "1"
+    CF.floatTopMost := IniRead(file, "General", "FloatTopMost", "1") != "0"
+    CF.floatOpacity := CFDesktopInt(IniRead(file, "General", "FloatOpacity", "100"),
+        100, 70, 100)
+    CF.floatWidth := CFDesktopInt(IniRead(file, "General", "FloatWidth", "340"),
+        340, 280, 1300)
+    CF.floatHeight := CFDesktopInt(IniRead(file, "General", "FloatHeight", "205"),
+        205, 180, 950)
+    CF.floatX := CFDesktopInt(IniRead(file, "General", "FloatX", "-99999"),
+        -99999, -30000, 30000)
+    CF.floatY := CFDesktopInt(IniRead(file, "General", "FloatY", "-99999"),
+        -99999, -30000, 30000)
+    CF.floatPoints := []
+    CF.floatLastSample := 0
+    CF.floatReady := false
+    CF.floatBitmap := 0
 }
 
 CFDesktopPreferencesJson() {
     global CF
-    return '{"closeToTray":' (CF.closeToTray ? "true" : "false") ',"minimizeToTray":' (CF.minimizeToTray ? "true" : "false") ',"floatShown":' (CF.floatShown ? "true" : "false") ',"liveMonitor":' (CF.liveMonitor ? "true" : "false") '}'
+    return '{"closeToTray":' (CF.closeToTray ? "true" : "false")
+        . ',"minimizeToTray":' (CF.minimizeToTray ? "true" : "false")
+        . ',"floatShown":' (CF.floatShown ? "true" : "false")
+        . ',"liveMonitor":' (CF.liveMonitor ? "true" : "false")
+        . ',"compactChart":' (CF.compactChart ? "true" : "false")
+        . ',"floatGraph":' (CF.floatGraph ? "true" : "false")
+        . ',"floatTopMost":' (CF.floatTopMost ? "true" : "false")
+        . ',"floatOpacity":' CF.floatOpacity '}'
 }
 
 CFDesktopInit() {
     global CF
-    ; Remplace les items AHK par un menu de notification ClickFlow.
     A_TrayMenu.Delete()
-    A_TrayMenu.Add("Ouvrir ClickFlow", CFDesktopOpen)
-    A_TrayMenu.Default := "Ouvrir ClickFlow"
+    A_TrayMenu.Add("Ouvrir l'interface", CFDesktopOpen)
+    A_TrayMenu.Default := "Ouvrir l'interface"
     A_TrayMenu.Add("Arrêter les clics", CFDesktopStop)
     A_TrayMenu.Add("Afficher la mini-fenêtre", CFDesktopToggleFloat)
     A_TrayMenu.Add()
@@ -28,6 +58,7 @@ CFDesktopInit() {
     A_TrayMenu.Add("Quitter ClickFlow", CFDesktopQuit)
     CF.desktopReady := true
     CFDesktopRebuildProfiles()
+    OnMessage(0x232, CFDesktopExitSizeMove)
     if CF.floatShown
         CFDesktopSetFloat(true, false)
     CFDesktopUpdate()
@@ -57,7 +88,6 @@ CFDesktopStop(*) {
 CFDesktopQuit(*) {
     global CF
     CF.forceExit := true
-    ; Le gestionnaire de fermeture libère WebView2 proprement.
     if CF.hwnd {
         try DllCall("User32\PostMessageW", "Ptr", CF.hwnd,
             "UInt", 0x10, "Ptr", 0, "Ptr", 0)
@@ -76,33 +106,108 @@ CFDesktopRebuildProfiles() {
     if !CF.desktopReady
         return
     try CF.trayProfiles.Delete()
-    for p in CF.profiles {
-        label := "Profil " p.id " - " p.name
-        CF.trayProfiles.Add(label, CFDesktopSelectProfile.Bind(p.id))
-        if p.id = CF.selectedId
+    for profile in CF.profiles {
+        ; Escape & car Windows l'interprète comme raccourci de menu.
+        label := StrReplace(profile.name, "&", "&&")
+        CF.trayProfiles.Add(label, CFDesktopSelectProfile.Bind(profile.id))
+        if profile.id = CF.selectedId
             CF.trayProfiles.Check(label)
     }
+}
+
+CFDesktopFloatPositionValid(x, y, width, height) {
+    if x = -99999 || y = -99999
+        return false
+    Loop MonitorGetCount() {
+        MonitorGetWorkArea(A_Index, &left, &top, &right, &bottom)
+        if x + width >= left + 80 && x <= right - 80
+            && y + height >= top + 65 && y <= bottom - 65
+            return true
+    }
+    return false
 }
 
 CFDesktopCreateFloat() {
     global CF
     if IsObject(CF.floatGui)
         return
-    mini := Gui("+AlwaysOnTop +ToolWindow", "ClickFlow - Mini")
-    mini.MarginX := 12
-    mini.MarginY := 10
+    mini := Gui("+Resize +MinSize280x180 +ToolWindow +AlwaysOnTop",
+        "ClickFlow - Mini")
+    mini.MarginX := 0
+    mini.MarginY := 0
     mini.BackColor := "142136"
-    mini.SetFont("s10 cF0F5FF", "Segoe UI")
-    CF.floatProfile := mini.Add("Text", "xm ym w218 h23", "Profil : Principal")
-    mini.SetFont("s9 cA6C5E1", "Segoe UI")
-    CF.floatStatus := mini.Add("Text", "xm y+4 w218 h20", "Prêt")
+    mini.SetFont("s10 cF1F6FF", "Segoe UI")
+    CF.floatProfile := mini.Add("Text", "x12 y9 w230 h37 +0x80", "Principal")
+    mini.SetFont("s9 c9DBDE0", "Segoe UI")
+    CF.floatStatus := mini.Add("Text", "x12 y50 w260 h20", "Prêt")
     mini.SetFont("s11 cFFFFFF bold", "Segoe UI")
-    CF.floatCps := mini.Add("Text", "xm y+4 w218 h24", "0 CPS")
-    mini.SetFont("s9 norm", "Segoe UI")
-    mini.Add("Button", "xm y+8 w105 h30", "Ouvrir").OnEvent("Click", CFDesktopOpen)
-    mini.Add("Button", "x+8 yp w105 h30", "STOP").OnEvent("Click", CFDesktopStop)
+    CF.floatCps := mini.Add("Text", "x12 y73 w260 h27", "0 CPS - 0 clics")
+    mini.SetFont("s9 norm cECF5FF", "Segoe UI")
+    CF.floatGraphButton := mini.Add("Button", "x250 y9 w78 h29", "Courbe")
+    CF.floatGraphButton.OnEvent("Click", CFDesktopToggleGraph)
+    CF.floatChart := mini.Add("Picture", "x12 y108 w300 h65")
+    CF.floatChartHint := mini.Add("Text", "x12 y111 w300 h21 c97B2D0",
+        "Agrandis la fenêtre pour voir la courbe")
+    CF.floatOpen := mini.Add("Button", "x12 y165 w145 h33", "Interface")
+    CF.floatOpen.OnEvent("Click", CFDesktopOpen)
+    CF.floatStop := mini.Add("Button", "x165 y165 w145 h33", "STOP")
+    CF.floatStop.OnEvent("Click", CFDesktopStop)
     mini.OnEvent("Close", CFDesktopCloseFloat)
+    mini.OnEvent("Size", CFDesktopResizeFloat)
     CF.floatGui := mini
+}
+
+CFDesktopResizeFloat(guiObj, state, width, height) {
+    global CF
+    if state = -1 || !CF.floatReady
+        return
+    width := Max(260, width)
+    height := Max(140, height)
+    margin := 12
+    inner := width - 2 * margin
+    ; Le nom a deux lignes et l'action courbe reste à droite.
+    CF.floatProfile.Move(margin, 8, Max(120, inner - 87), 40)
+    CF.floatGraphButton.Move(width - 89, 9, 77, 29)
+    CF.floatStatus.Move(margin, 49, inner, 20)
+    CF.floatCps.Move(margin, 72, inner, 27)
+    buttonY := height - 44
+    buttonWidth := Floor((inner - 9) / 2)
+    CF.floatOpen.Move(margin, buttonY, buttonWidth, 33)
+    CF.floatStop.Move(margin + buttonWidth + 9, buttonY,
+        inner - buttonWidth - 9, 33)
+    graphHeight := Max(0, buttonY - 109)
+    showChart := CF.floatGraph && graphHeight >= 48
+    CF.floatChart.Visible := showChart
+    CF.floatChartHint.Visible := CF.floatGraph && !showChart
+    if showChart {
+        CF.floatChart.Move(margin, 105, inner, graphHeight)
+        CFDesktopDrawFloatChart()
+    } else if CF.floatGraph
+        CF.floatChartHint.Move(margin, 105, inner, 21)
+    ; On ne réécrit pas settings.ini sur chaque pixel du glisser-déposer.
+}
+
+CFDesktopSaveFloatBounds(*) {
+    global CF
+    if !CF.floatReady || !IsObject(CF.floatGui)
+        return
+    try {
+        WinGetPos(&x, &y, &w, &h, "ahk_id " CF.floatGui.Hwnd)
+        if w < 280 || h < 180
+            return
+        CF.floatX := x
+        CF.floatY := y
+        CF.floatWidth := w
+        CF.floatHeight := h
+        SaveSettings()
+    }
+}
+
+CFDesktopExitSizeMove(wParam, lParam, msg, hwnd) {
+    global CF
+    if !CF.floatReady || !IsObject(CF.floatGui) || hwnd != CF.floatGui.Hwnd
+        return
+    CFDesktopSaveFloatBounds()
 }
 
 CFDesktopCloseFloat(*) {
@@ -116,10 +221,22 @@ CFDesktopSetFloat(visible, persist := true) {
     if CF.desktopReady {
         if CF.floatShown {
             CFDesktopCreateFloat()
-            CF.floatGui.Show("NA w242 h165")
+            CF.floatReady := false
+            options := "NA w" CF.floatWidth " h" CF.floatHeight
+            if CFDesktopFloatPositionValid(CF.floatX, CF.floatY,
+                CF.floatWidth, CF.floatHeight)
+                options .= " x" CF.floatX " y" CF.floatY
+            CF.floatGui.Show(options)
+            CF.floatReady := true
+            WinGetClientPos(, , &clientWidth, &clientHeight,
+                "ahk_id " CF.floatGui.Hwnd)
+            CFDesktopResizeFloat(CF.floatGui, 0, clientWidth, clientHeight)
+            CFDesktopApplyWindowAppearance()
             CFDesktopUpdate()
-        } else if IsObject(CF.floatGui)
+        } else if IsObject(CF.floatGui) {
+            CFDesktopSaveFloatBounds()
             CF.floatGui.Hide()
+        }
         if CF.floatShown {
             try A_TrayMenu.Check("Afficher la mini-fenêtre")
         } else {
@@ -137,6 +254,32 @@ CFDesktopToggleFloat(*) {
     CFDesktopSetFloat(!CF.floatShown)
 }
 
+CFDesktopToggleGraph(*) {
+    global CF
+    CF.floatGraph := !CF.floatGraph
+    if CF.floatGraph && IsObject(CF.floatGui) {
+        WinGetPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
+        if h < 270
+            CF.floatGui.Show("NA h285")
+    }
+    if CF.floatShown && IsObject(CF.floatGui) {
+        WinGetClientPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
+        CFDesktopResizeFloat(CF.floatGui, 0, w, h)
+    }
+    CFDesktopSaveFloatBounds()
+    SaveSettings()
+    SendState()
+}
+
+CFDesktopApplyWindowAppearance() {
+    global CF
+    if !IsObject(CF.floatGui)
+        return
+    CF.floatGui.Opt(CF.floatTopMost ? "+AlwaysOnTop" : "-AlwaysOnTop")
+    try WinSetTransparent(Round(255 * CF.floatOpacity / 100),
+        "ahk_id " CF.floatGui.Hwnd)
+}
+
 CFDesktopSetPreference(field, value) {
     global CF
     enabled := value = "1"
@@ -149,11 +292,107 @@ CFDesktopSetPreference(field, value) {
             CFDesktopSetFloat(enabled, false)
         case "liveMonitor":
             CF.liveMonitor := enabled
+        case "compactChart":
+            CF.compactChart := enabled
+        case "floatGraph":
+            CF.floatGraph := enabled
+            if CF.floatShown && IsObject(CF.floatGui) {
+                WinGetClientPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
+                CFDesktopResizeFloat(CF.floatGui, 0, w, h)
+            }
+        case "floatTopMost":
+            CF.floatTopMost := enabled
+            CFDesktopApplyWindowAppearance()
+        case "floatOpacity":
+            if !RegExMatch(value, "^(70|80|90|100)$")
+                return
+            CF.floatOpacity := value + 0
+            CFDesktopApplyWindowAppearance()
         default:
             return
     }
     SaveSettings()
     SendState()
+}
+
+CFDesktopChartPen(dc, color, thickness := 1) {
+    pen := DllCall("gdi32\CreatePen", "Int", 0, "Int", thickness,
+        "UInt", color, "Ptr")
+    old := DllCall("gdi32\SelectObject", "Ptr", dc, "Ptr", pen, "Ptr")
+    return {pen: pen, old: old}
+}
+
+CFDesktopDrawFloatChart() {
+    global CF
+    if !CF.floatShown || !CF.floatGraph || !CF.floatReady
+        || !IsObject(CF.floatChart) || !CF.floatChart.Visible
+        return
+    CF.floatChart.GetPos(, , &width, &height)
+    width := Round(width), height := Round(height)
+    if width < 40 || height < 40
+        return
+    hwnd := CF.floatChart.Hwnd
+    screenDC := DllCall("User32\GetDC", "Ptr", hwnd, "Ptr")
+    if !screenDC
+        return
+    memDC := DllCall("gdi32\CreateCompatibleDC", "Ptr", screenDC, "Ptr")
+    bitmap := DllCall("gdi32\CreateCompatibleBitmap", "Ptr", screenDC,
+        "Int", width, "Int", height, "Ptr")
+    if !memDC || !bitmap {
+        if bitmap
+            DllCall("gdi32\DeleteObject", "Ptr", bitmap)
+        if memDC
+            DllCall("gdi32\DeleteDC", "Ptr", memDC)
+        DllCall("User32\ReleaseDC", "Ptr", hwnd, "Ptr", screenDC)
+        return
+    }
+    original := DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", bitmap, "Ptr")
+    brush := DllCall("gdi32\CreateSolidBrush", "UInt", 0x0023190D, "Ptr")
+    rect := Buffer(16, 0)
+    NumPut("Int", 0, "Int", 0, "Int", width, "Int", height, rect)
+    DllCall("User32\FillRect", "Ptr", memDC, "Ptr", rect, "Ptr", brush)
+    DllCall("gdi32\DeleteObject", "Ptr", brush)
+    grid := CFDesktopChartPen(memDC, 0x00433527)
+    Loop 3 {
+        y := Round(height * A_Index / 4)
+        DllCall("gdi32\MoveToEx", "Ptr", memDC, "Int", 0, "Int", y, "Ptr", 0)
+        DllCall("gdi32\LineTo", "Ptr", memDC, "Int", width, "Int", y)
+    }
+    DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", grid.old)
+    DllCall("gdi32\DeleteObject", "Ptr", grid.pen)
+    samples := CF.floatPoints
+    if samples.Length {
+        lastTick := A_TickCount
+        peak := 5
+        for sample in samples
+            peak := Max(peak, sample.cps)
+        pen := CFDesktopChartPen(memDC, 0x00FFB775, 2)
+        first := true
+        for sample in samples {
+            x := Round(3 + (width - 6) * (1 - (lastTick - sample.t) / 30000))
+            x := Max(2, Min(width - 3, x))
+            y := Round(height - 4 - (height - 8) * sample.cps / (peak + 2))
+            if first {
+                DllCall("gdi32\MoveToEx", "Ptr", memDC,
+                    "Int", x, "Int", y, "Ptr", 0)
+                first := false
+            } else
+                DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
+        }
+        DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", pen.old)
+        DllCall("gdi32\DeleteObject", "Ptr", pen.pen)
+    }
+    DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", original)
+    DllCall("gdi32\DeleteDC", "Ptr", memDC)
+    DllCall("User32\ReleaseDC", "Ptr", hwnd, "Ptr", screenDC)
+    try {
+        previous := SendMessage(0x172, 0, bitmap, , "ahk_id " hwnd)
+        if previous && previous != bitmap
+            DllCall("gdi32\DeleteObject", "Ptr", previous)
+        CF.floatBitmap := bitmap
+    } catch {
+        DllCall("gdi32\DeleteObject", "Ptr", bitmap)
+    }
 }
 
 CFDesktopUpdate() {
@@ -164,12 +403,42 @@ CFDesktopUpdate() {
         : CF.armed ? (CF.cfg.mouseGate
             && !GetKeyState(CF.cfg.gateButton, "P") ? "En attente" : "Clics actifs")
         : "Prêt"
-    p := CFProfileById(CF.selectedId)
-    name := IsObject(p) ? p.name : "Principal"
+    profile := CFProfileById(CF.selectedId)
+    name := IsObject(profile) ? profile.name : "Principal"
     try A_IconTip := "ClickFlow - " status " - " name
+    now := A_TickCount
+    if CF.floatLastSample = 0 || now - CF.floatLastSample >= 180 {
+        CF.floatLastSample := now
+        CF.floatPoints.Push({t: now, cps: CF.recent.Length})
+        while CF.floatPoints.Length
+            && CF.floatPoints[1].t < now - 30000
+            CF.floatPoints.RemoveAt(1)
+        if CF.floatPoints.Length > 160
+            CF.floatPoints.RemoveAt(1)
+    }
     if CF.floatShown && IsObject(CF.floatGui) {
-        CF.floatProfile.Text := "Profil : " name
+        CF.floatProfile.Text := name
         CF.floatStatus.Text := status
         CF.floatCps.Text := CF.recent.Length " CPS - " CF.total " clics"
+        CF.floatGraphButton.Text := CF.floatGraph ? "Courbe : ON" : "Courbe"
+        CFDesktopDrawFloatChart()
     }
+}
+
+CFDesktopReleaseFloat() {
+    global CF
+    if !IsObject(CF.floatGui)
+        return
+    CFDesktopSaveFloatBounds()
+    if CF.floatBitmap {
+        try {
+            old := SendMessage(0x172, 0, 0, ,
+                "ahk_id " CF.floatChart.Hwnd)
+            if old
+                DllCall("gdi32\DeleteObject", "Ptr", old)
+        }
+        CF.floatBitmap := 0
+    }
+    try CF.floatGui.Destroy()
+    CF.floatReady := false
 }
