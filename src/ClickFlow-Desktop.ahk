@@ -16,14 +16,14 @@ CFDesktopReadPreferences() {
     CF.floatShown := IniRead(file, "General", "FloatShown", "0") = "1"
     CF.liveMonitor := IniRead(file, "General", "LiveMonitor", "1") != "0"
     CF.compactChart := IniRead(file, "General", "CompactChart", "1") != "0"
-    CF.floatGraph := IniRead(file, "General", "FloatGraph", "0") = "1"
+    CF.floatGraph := IniRead(file, "General", "FloatGraph", "1") = "1"
     CF.floatTopMost := IniRead(file, "General", "FloatTopMost", "1") != "0"
     CF.floatOpacity := CFDesktopInt(IniRead(file, "General", "FloatOpacity", "100"),
         100, 70, 100)
-    CF.floatWidth := CFDesktopInt(IniRead(file, "General", "FloatWidth", "340"),
-        340, 280, 1300)
-    CF.floatHeight := CFDesktopInt(IniRead(file, "General", "FloatHeight", "205"),
-        205, 180, 950)
+    CF.floatWidth := CFDesktopInt(IniRead(file, "General", "FloatWidth", "310"),
+        310, 260, 1300)
+    CF.floatHeight := CFDesktopInt(IniRead(file, "General", "FloatHeight", "150"),
+        150, 110, 950)
     CF.floatX := CFDesktopInt(IniRead(file, "General", "FloatX", "-99999"),
         -99999, -30000, 30000)
     CF.floatY := CFDesktopInt(IniRead(file, "General", "FloatY", "-99999"),
@@ -133,27 +133,39 @@ CFDesktopCreateFloat() {
     global CF
     if IsObject(CF.floatGui)
         return
-    mini := Gui("+Resize +MinSize280x180 +ToolWindow +AlwaysOnTop",
+    mini := Gui("+Resize +MinSize260x110 +ToolWindow +AlwaysOnTop",
         "ClickFlow - Mini")
     mini.MarginX := 0
     mini.MarginY := 0
     mini.BackColor := "142136"
-    mini.SetFont("s10 cF1F6FF", "Segoe UI")
-    CF.floatProfile := mini.Add("Text", "x12 y9 w230 h37 +0x80", "Principal")
-    mini.SetFont("s9 c9DBDE0", "Segoe UI")
-    CF.floatStatus := mini.Add("Text", "x12 y50 w260 h20", "Prêt")
-    mini.SetFont("s11 cFFFFFF bold", "Segoe UI")
-    CF.floatCps := mini.Add("Text", "x12 y73 w260 h27", "0 CPS - 0 clics")
-    mini.SetFont("s9 norm cECF5FF", "Segoe UI")
-    CF.floatGraphButton := mini.Add("Button", "x250 y51 w78 h29", "Courbe")
+
+    mini.SetFont("s8 cF1F6FF", "Segoe UI")
+    CF.floatProfile := mini.Add("Text", "x10 y9 w193 h27 +0x100", "Principal")
+    ; Double-clic sur le nom : restaurer l'interface complète.
+    CF.floatProfile.OnEvent("DoubleClick", CFDesktopOpen)
+    mini.SetFont("s8 norm c9DBDE0", "Segoe UI")
+    CF.floatStatus := mini.Add("Text", "x10 y37 w282 h16", "Prêt")
+    mini.SetFont("s9 bold cEDF5FF", "Segoe UI")
+    CF.floatCps := mini.Add("Text", "x10 y56 w282 h20", "0 CPS - 0 clics")
+
+    ; Deux actions discrètes, dessinées aux couleurs de ClickFlow.
+    ; Des libellés SS_NOTIFY transparents recouvrent les fonds colorés.
+    mini.SetFont("s8 norm cE3EEFF", "Segoe UI")
+    CF.floatGraphBg := mini.Add("Progress",
+        "x207 y8 w41 h23 -Theme Smooth c355982 Background1D2B43", 100)
+    CF.floatGraphButton := mini.Add("Text",
+        "x207 y8 w41 h23 +0x100 Center 0x200 BackgroundTrans", "CPS")
     CF.floatGraphButton.OnEvent("Click", CFDesktopToggleGraph)
-    CF.floatChart := mini.Add("Picture", "x12 y108 w300 h65")
-    CF.floatChartHint := mini.Add("Text", "x12 y111 w300 h21 c97B2D0",
-        "Agrandis la fenêtre pour voir la courbe")
-    CF.floatOpen := mini.Add("Button", "x12 y165 w145 h33", "Interface")
-    CF.floatOpen.OnEvent("Click", CFDesktopOpen)
-    CF.floatStop := mini.Add("Button", "x165 y165 w145 h33", "STOP")
+    mini.SetFont("s8 bold cFFFFFF", "Segoe UI")
+    CF.floatStopBg := mini.Add("Progress",
+        "x255 y8 w47 h23 -Theme Smooth c7D3A55 Background2C2132", 100)
+    CF.floatStop := mini.Add("Text",
+        "x255 y8 w47 h23 +0x100 Center 0x200 BackgroundTrans", "STOP")
     CF.floatStop.OnEvent("Click", CFDesktopStop)
+
+    ; SS_BITMAP (0xE) est indispensable à STM_SETIMAGE (0x172).
+    ; Sans ce style, l'ancien contrôle recevait un bitmap mais restait vide.
+    CF.floatChart := mini.Add("Picture", "x10 y82 w290 h60 +0xE")
     mini.OnEvent("Close", CFDesktopCloseFloat)
     mini.OnEvent("Size", CFDesktopResizeFloat)
     CF.floatGui := mini
@@ -163,31 +175,28 @@ CFDesktopResizeFloat(guiObj, state, width, height) {
     global CF
     if state = -1 || !CF.floatReady
         return
-    width := Max(260, width)
-    height := Max(140, height)
-    margin := 12
+    width := Max(245, width)
+    height := Max(96, height)
+    margin := 10
     inner := width - 2 * margin
-    ; Le nom a deux lignes et l'action courbe reste à droite.
-    ; Le nom utilise toute la largeur : les profils longs passent sur deux lignes.
-    CF.floatProfile.Move(margin, 8, inner, 40)
-    CF.floatGraphButton.Move(width - 89, 51, 77, 29)
-    CF.floatStatus.Move(margin, 53, Max(120, inner - 87), 20)
-    CF.floatCps.Move(margin, 79, inner, 27)
-    buttonY := height - 44
-    buttonWidth := Floor((inner - 9) / 2)
-    CF.floatOpen.Move(margin, buttonY, buttonWidth, 33)
-    CF.floatStop.Move(margin + buttonWidth + 9, buttonY,
-        inner - buttonWidth - 9, 33)
-    graphHeight := Max(0, buttonY - 117)
-    showChart := CF.floatGraph && graphHeight >= 48
+    ; Petits boutons fixes, police compacte et nom autorisé sur deux lignes.
+    graphX := width - 102
+    stopX := width - 56
+    CF.floatProfile.Move(margin, 7, Max(105, inner - 107), 29)
+    CF.floatGraphBg.Move(graphX, 8, 40, 23)
+    CF.floatGraphButton.Move(graphX, 8, 40, 23)
+    CF.floatStopBg.Move(stopX, 8, 46, 23)
+    CF.floatStop.Move(stopX, 8, 46, 23)
+    CF.floatStatus.Move(margin, 37, inner, 16)
+    CF.floatCps.Move(margin, 55, inner, 20)
+
+    chartHeight := Max(0, height - 87)
+    showChart := CF.floatGraph && chartHeight >= 22
     CF.floatChart.Visible := showChart
-    CF.floatChartHint.Visible := CF.floatGraph && !showChart
     if showChart {
-        CF.floatChart.Move(margin, 113, inner, graphHeight)
+        CF.floatChart.Move(margin, 80, inner, chartHeight)
         CFDesktopDrawFloatChart()
-    } else if CF.floatGraph
-        CF.floatChartHint.Move(margin, 113, inner, 21)
-    ; On ne réécrit pas settings.ini sur chaque pixel du glisser-déposer.
+    }
 }
 
 CFDesktopSaveFloatBounds(*) {
@@ -199,7 +208,7 @@ CFDesktopSaveFloatBounds(*) {
         ; Gui.Show w/h utilise la taille CLIENT, pas le cadre extérieur.
         ; Stocker cette même unité évite de grossir la fenêtre à chaque ouverture.
         WinGetClientPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
-        if w < 250 || h < 140
+        if w < 240 || h < 90
             return
         CF.floatX := x
         CF.floatY := y
@@ -233,6 +242,7 @@ CFDesktopSetFloat(visible, persist := true) {
                 CF.floatWidth, CF.floatHeight)
                 options .= " x" CF.floatX " y" CF.floatY
             CF.floatGui.Show(options)
+            CFDesktopStyleTitlebar(CF.floatGui.Hwnd)
             CF.floatReady := true
             WinGetClientPos(, , &clientWidth, &clientHeight,
                 "ahk_id " CF.floatGui.Hwnd)
@@ -264,9 +274,9 @@ CFDesktopToggleGraph(*) {
     global CF
     CF.floatGraph := !CF.floatGraph
     if CF.floatGraph && IsObject(CF.floatGui) {
-        WinGetPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
-        if h < 270
-            CF.floatGui.Show("NA h285")
+        WinGetClientPos(, , , &h, "ahk_id " CF.floatGui.Hwnd)
+        if h < 130
+            CF.floatGui.Show("NA h144")
     }
     if CF.floatShown && IsObject(CF.floatGui) {
         WinGetClientPos(, , &w, &h, "ahk_id " CF.floatGui.Hwnd)
@@ -275,6 +285,29 @@ CFDesktopToggleGraph(*) {
     CFDesktopSaveFloatBounds()
     SaveSettings()
     SendState()
+}
+
+CFDesktopStyleTitlebar(hwnd) {
+    ; Barre de titre Windows native : thème sombre et couleurs ClickFlow.
+    ; Les attributs DWM sont ignorés sans erreur par les anciens Windows.
+    if !hwnd
+        return false
+    dark := Buffer(4, 0)
+    NumPut("Int", 1, dark)
+    hr := DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", hwnd,
+        "UInt", 20, "Ptr", dark, "UInt", 4, "Int")
+    if hr != 0
+        hr := DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", hwnd,
+            "UInt", 19, "Ptr", dark, "UInt", 4, "Int")
+    caption := Buffer(4, 0)
+    NumPut("UInt", 0x00271A12, caption) ; COLORREF (#121A27)
+    DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", hwnd,
+        "UInt", 35, "Ptr", caption, "UInt", 4, "Int")
+    foreground := Buffer(4, 0)
+    NumPut("UInt", 0x00FFF3E9, foreground)
+    DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", hwnd,
+        "UInt", 36, "Ptr", foreground, "UInt", 4, "Int")
+    return hr = 0
 }
 
 CFDesktopApplyWindowAppearance() {
@@ -426,7 +459,7 @@ CFDesktopUpdate() {
         CF.floatProfile.Text := name
         CF.floatStatus.Text := status
         CF.floatCps.Text := CF.recent.Length " CPS - " CF.total " clics"
-        CF.floatGraphButton.Text := CF.floatGraph ? "Courbe : ON" : "Courbe"
+        CF.floatGraphButton.Text := CF.floatGraph ? "CPS" : "OFF"
         CFDesktopDrawFloatChart()
     }
 }

@@ -368,7 +368,16 @@ BackendMessage(sender, args) {
         raw := args.TryGetWebMessageAsString()
         parts := StrSplit(raw, Chr(9))
         cmd := parts[1]
+        if cmd = "uiError" {
+            probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+            if probe != "" && parts.Length >= 2
+                FileAppend(parts[2] "`n", probe ".js-error", "UTF-8")
+            return
+        }
         if cmd = "ready" {
+            probe := EnvGet("CLICKFLOW_WEBVIEW_SMOKE_FILE")
+            if probe != ""
+                FileAppend("received ready", probe ".ready", "UTF-8")
             SendState()
             SendStats()
             CFSendShortcutStatus()

@@ -69,6 +69,8 @@ try {
     if !IsObject(CF.floatGui) || !CF.floatShown
         throw Error("Mini-fenêtre non affichée.")
     CFDesktopUpdate()
+    if !CFDesktopStyleTitlebar(g.Hwnd)
+        FileAppend("DWM dark caption unavailable on this Windows version. ", "*", "UTF-8")
     if !CF.floatProfile || !CF.floatStop || !CF.floatGraphButton
         throw Error("Contrôles de la mini-fenêtre incomplets.")
     if CF.floatX != -99999
@@ -86,6 +88,17 @@ try {
     CFDesktopDrawFloatChart()
     if !CF.floatBitmap
         throw Error("La courbe CPS native n'a pas été dessinée.")
+    ; Vérifier que le contrôle expose vraiment SS_BITMAP et affiche le bitmap.
+    chartStyle := DllCall("User32\GetWindowLongPtrW",
+        "Ptr", CF.floatChart.Hwnd, "Int", -16, "Ptr")
+    if (chartStyle & 0xF) != 0xE
+        throw Error("La courbe n'a pas le style Windows SS_BITMAP.")
+    attached := SendMessage(0x173, 0, 0, ,
+        "ahk_id " CF.floatChart.Hwnd)
+    if !attached || attached != CF.floatBitmap
+        throw Error("Le bitmap dessiné n'est pas réellement affiché dans la mini-fenêtre.")
+    if !CF.floatStopBg || !CF.floatGraphBg
+        throw Error("Les boutons colorés de la mini-fenêtre sont absents.")
     CFDesktopSetPreference("floatOpacity", "80")
     CFDesktopSetPreference("floatTopMost", "0")
     if CF.floatOpacity != 80 || CF.floatTopMost

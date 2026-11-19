@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.7.1 - 2026-11-19
+
+- Mini-fenêtre réellement compacte : plus de deux grands boutons en bas. Deux petits boutons colorés "CPS" et "STOP" restent visibles en haut, avec double-clic sur le nom pour ouvrir l'interface.
+- Correction de la courbe Windows vide : contrôle graphique SS_BITMAP correct (affichage du bitmap vérifié automatiquement), courbe de 30 secondes visible dès une petite taille, activée par défaut sur les nouvelles installations.
+- Dimensions par défaut réduites (310 x 150), redimensionnement et sauvegarde de la position/taille conservés ; aucune modification de taille forcée pour les utilisateurs qui ont déjà personnalisé leur mini-fenêtre.
+- Nouveau panneau compact WebView2 autonome, en petits blocs avec police plus petite : profil, état, CPS et total côte à côte, STOP, mode, CPS min/max, intensité Naturel, raccourcis et courbe optionnelle.
+- Ligne CPS des cartes de profil incluant désormais l'intensité Naturel ; ligne Activation réservée au raccourci.
+- Barre de titre Windows native harmonisée au thème sombre avec DWM (si le système prend ces attributs en charge), tout en conservant les boutons Windows et le redimensionnement.
+- Tests supplémentaires : association effective du bitmap à son contrôle Windows, apparence des boutons, interactions compactes et régressions AutoHotkey/WebView2.
+
 ## 1.7.0 - 2026-11-19
 
 - Mini-fenêtre flottante redimensionnable en tirant les bords ou les coins, avec largeur, hauteur et position restaurées au prochain démarrage.

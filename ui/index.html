@@ -228,6 +228,68 @@ body.compact #page-dashboard{display:block!important}
 }
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
+
+/* v1.7.1 : panneau compact autonome, plus petit et sans grandes cartes. */
+.compact-panel{display:none}
+body.compact{font-size:11px}
+body.compact main{max-width:520px;padding:9px 11px 14px}
+body.compact .topline{margin-bottom:7px;gap:6px}
+body.compact .breadcrumb{font-size:9px;letter-spacing:.6px}
+body.compact .view-button{min-height:27px;padding:4px 8px;font-size:10px;border-radius:7px}
+body.compact .compact-top{margin:5px 0 9px}
+body.compact .compact-top strong{font-size:13px}
+body.compact .compact-top small{display:none}
+body.compact .compact-status{padding:4px 7px;font-size:9px}
+body.compact .dashboard{display:none!important}
+body.compact .compact-panel{display:grid;gap:8px}
+.compact-tile{min-width:0;border-radius:10px;border:1px solid #29405f;background:#111d30;padding:10px 11px}
+.compact-caption{color:#94afd1;letter-spacing:.8px;font-size:9px;font-weight:800;line-height:1.2}
+.compact-profile-tile{display:flex;align-items:center;gap:10px;padding:7px 10px}
+.compact-profile-tile .compact-caption{flex:0 0 90px}
+.compact-profile-tile .select{min-height:29px;font-size:11px;padding:5px 29px 5px 9px;border-radius:7px}
+.compact-session-tile{padding:7px 9px}
+.compact-state-strip{display:flex;justify-content:space-between;align-items:center;gap:7px;color:#b1c6e0;font-size:10px;margin-bottom:7px}
+.compact-state-strip>span:first-child{font-weight:750;color:#aee6d5}
+.compact-state-strip>span:last-child{color:#86a1c5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compact-stat-row{display:grid;grid-template-columns:1fr 1fr minmax(95px,1fr);gap:6px;align-items:stretch}
+.compact-stat{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;background:#0b1829;border:1px solid #233957;border-radius:7px;padding:6px 8px}
+.compact-stat small{font-size:9px;color:#90a9cc;letter-spacing:.7px}
+.compact-stat strong{font-size:16px;font-variant-numeric:tabular-nums;color:#edf6ff;overflow:hidden;text-overflow:ellipsis}
+.compact-stop{border:1px solid #85475d;background:#582838;color:#ffe1e9;border-radius:7px;font-size:11px;font-weight:850;padding:5px;min-height:32px;white-space:nowrap}
+.compact-stop:hover{background:#733247}
+.compact-stop span{font-size:9px;color:#f5b3c1;margin-left:4px}
+.compact-cadence-tile{padding:9px 10px}
+.compact-cadence-tile>.compact-caption{display:flex;justify-content:space-between;gap:8px}
+#compactModeLabel{font-size:9px;color:#74baff;letter-spacing:0}
+.compact-segment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:6px}
+.compact-segment button{background:#1c2a41;border:1px solid #2a4366;color:#b2c8e7;font-size:10px;font-weight:650;border-radius:6px;min-height:27px;padding:4px 3px}
+.compact-segment button.active{background:#295aaa;border-color:#4e8be8;color:#fff}
+.compact-segment button:hover:not(.active){background:#2a3b57}
+.compact-numbers{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
+.compact-numbers label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:#b6c9e3}
+.compact-numbers .input{width:65px;min-height:27px;height:27px;text-align:center;padding:3px;font-size:11px;border-radius:6px}
+.compact-intensity{display:flex;align-items:center;gap:8px;margin-top:6px}
+.compact-intensity .compact-caption{flex:0 0 77px}
+.compact-intensity .compact-segment{flex:1;margin:0}
+.compact-intensity .compact-segment button{min-height:25px}
+.compact-shortcuts-tile{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px}
+.compact-shortcut-hint{font-size:9px;color:#7894b9;margin:2px 0 0}
+.compact-shortcut-buttons{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.compact-key-button{border:1px solid #2d476b;background:#1c2e47;color:#a9c9ed;border-radius:7px;padding:6px 8px;font-size:10px;white-space:nowrap;min-height:27px}
+.compact-key-button strong{font-size:10px;color:#ecf5ff}
+.compact-key-button:hover{background:#294b73}
+.compact-chart-tile{padding:8px 10px 6px}
+.compact-chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#7e9cc3;font-size:9px}
+#compactCpsChart{width:100%;height:65px;display:block;margin-top:3px}
+@media(max-width:385px){
+ .compact-profile-tile .compact-caption{flex-basis:65px}
+ .compact-stat-row{grid-template-columns:1fr 1fr 75px}
+ .compact-stop span{display:none}
+ .compact-shortcuts-tile{align-items:flex-start;flex-direction:column;gap:5px}
+ .compact-shortcut-buttons{width:100%;justify-content:stretch}
+ .compact-key-button{flex:1}
+ .compact-numbers .input{width:53px}
+}
 </style>
 </head>
 <body>
@@ -246,13 +308,58 @@ body.compact #page-dashboard{display:block!important}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.7.0 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.7.1 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
  <section id="page-dashboard">
   <div id="compactTop" class="compact-top"><div><strong>Contrôle rapide</strong><small>Réglages essentiels du profil actif</small></div><span id="compactStatus" class="compact-status">PRÊT</span></div>
   <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Connexion au moteur AutoHotkey...</div></div>
+  <div id="compactPanel" class="compact-panel">
+   <section class="compact-tile compact-profile-tile">
+    <label class="compact-caption" for="compactProfileSelect">PROFIL ACTIF</label>
+    <select id="compactProfileSelect" class="select" aria-label="Profil actif en mode compact"></select>
+   </section>
+   <section class="compact-tile compact-session-tile">
+    <div class="compact-state-strip"><span id="compactSessionState">Prêt</span><span id="compactActivationInfo">Activation : F6</span></div>
+    <div class="compact-stat-row">
+     <div class="compact-stat"><small>CPS</small><strong id="compactCps">0</strong></div>
+     <div class="compact-stat"><small>CLICS</small><strong id="compactClicks">0</strong></div>
+     <button id="compactStop" class="compact-stop" type="button" title="Arrêter immédiatement les clics">STOP <span id="compactStopKey">F12</span></button>
+    </div>
+   </section>
+   <section class="compact-tile compact-cadence-tile">
+    <div class="compact-caption">CADENCE <span id="compactModeLabel"></span></div>
+    <div class="compact-segment" id="compactModeSeg">
+     <button type="button" data-compact-mode="fixed">Fixe</button>
+     <button type="button" data-compact-mode="random">Aléatoire</button>
+     <button type="button" data-compact-mode="natural">Naturel</button>
+    </div>
+    <div class="compact-numbers">
+     <label>CPS min<input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
+     <label id="compactMaxWrap">CPS max<input id="compactMax" class="input" type="number" min="1" max="100" aria-label="CPS maximum compact"></label>
+    </div>
+    <div id="compactIntensity" class="compact-intensity">
+     <span class="compact-caption">VARIATIONS</span>
+     <div class="compact-segment" id="compactIntensitySeg">
+      <button type="button" data-compact-intensity="low">Faible</button>
+      <button type="button" data-compact-intensity="medium">Moyenne</button>
+      <button type="button" data-compact-intensity="high">Élevée</button>
+     </div>
+    </div>
+   </section>
+   <section class="compact-tile compact-shortcuts-tile">
+    <div><span class="compact-caption">RACCOURCIS</span><p class="compact-shortcut-hint">Cliquer pour modifier</p></div>
+    <div class="compact-shortcut-buttons">
+     <button id="compactCapture" class="compact-key-button" type="button" title="Modifier la touche d'activation">Activer : <strong id="compactHotkey">F6</strong></button>
+     <button id="compactCaptureStop" class="compact-key-button" type="button" title="Modifier la touche d'arrêt">Arrêt : <strong id="compactEmergencyKey">F12</strong></button>
+    </div>
+   </section>
+   <section id="compactChartTile" class="compact-tile compact-chart-tile">
+    <div class="compact-chart-head"><span class="compact-caption">CPS EN DIRECT</span><span>30 s</span></div>
+    <canvas id="compactCpsChart" width="420" height="76" aria-label="Courbe CPS compact"></canvas>
+   </section>
+  </div>
   <div class="dashboard">
    <div class="stack">
     <div class="card">
@@ -399,6 +506,14 @@ const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activati
 const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,floatGraph:false,floatTopMost:true,floatOpacity:100}};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
+if(bridge) {
+    window.addEventListener('error',event=>{
+        try {window.chrome.webview.postMessage('uiError\t'+String(event.message||'Erreur JavaScript'));} catch {}
+    });
+    window.addEventListener('unhandledrejection',event=>{
+        try {window.chrome.webview.postMessage('uiError\t'+String(event.reason||'Promesse rejetée'));} catch {}
+    });
+}
 const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
 const config = () => active().settings;
 const send = (cmd,...args) => {
@@ -448,7 +563,61 @@ function render() {
     $('gateChoose').style.display=c.gate?'flex':'none';
     renderProfiles();
     renderSettings();
+    renderCompactPanel();
 }
+// Contrôle compact : composants indépendants du dashboard étendu,
+// mais toujours reliés au même profil et aux commandes du moteur.
+function renderCompactPanel() {
+    const p=active(),c=p.settings,sel=$('compactProfileSelect');
+    const previous=sel.value;
+    sel.replaceChildren();
+    for(const item of model.profiles) {
+        const opt=document.createElement('option');
+        opt.value=String(item.id);
+        opt.textContent=(item.favorite?'★ ':'')+item.name;
+        sel.append(opt);
+    }
+    sel.value=String(model.selected);
+    selectedButtons('compactModeSeg','compactMode',c.mode);
+    selectedButtons('compactIntensitySeg','compactIntensity',c.intensity);
+    $('compactMin').value=c.min;
+    $('compactMax').value=c.max;
+    $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed');
+    $('compactIntensity').classList.toggle('hidden',c.mode!=='natural');
+    $('compactModeLabel').textContent=c.mode==='fixed'?'Fixe':
+        c.mode==='random'?'Aléatoire':'Naturel';
+    $('compactHotkey').textContent=model.capturing&&model.captureTarget==='activation'
+        ?'...' : c.hotkey;
+    $('compactEmergencyKey').textContent=model.capturing&&model.captureTarget==='emergency'
+        ?'...' : model.emergencyKey;
+    $('compactStopKey').textContent=model.emergencyKey;
+    $('compactActivationInfo').textContent='Activation : '+c.hotkey;
+    $('compactChartTile').classList.toggle('hidden',!model.preferences.compactChart);
+    if(model.compact)setTimeout(drawLiveMonitor,0);
+}
+$('compactProfileSelect').onchange=e=>chooseProfile(Number(e.target.value));
+document.querySelectorAll('[data-compact-mode]').forEach(btn=>{
+    btn.onclick=()=>{
+        const value=btn.dataset.compactMode;
+        config().mode=value;render();send('set','mode',value);
+    };
+});
+document.querySelectorAll('[data-compact-intensity]').forEach(btn=>{
+    btn.onclick=()=>{
+        const value=btn.dataset.compactIntensity;
+        config().intensity=value;render();send('set','intensity',value);
+    };
+});
+for(const field of ['min','max']){
+    $('compact'+field[0].toUpperCase()+field.slice(1)).onchange=e=>{
+        changeCps(field,e.target.value);
+        render();
+    };
+}
+$('compactStop').onclick=()=> $('demoToggle').click();
+$('compactCapture').onclick=()=> $('captureButton').click();
+$('compactCaptureStop').onclick=()=> $('emergencyCapture').click();
+
 function renderProfiles() {
     const sel=$('profileSelect');
     sel.replaceChildren();
@@ -476,10 +645,10 @@ function renderProfiles() {
         head.append(name,fav);
         const mode=document.createElement('div');mode.className='profile-card-meta';
         mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel'})[p.settings.mode]
-            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS';
-        const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
-        shortcut.textContent='Activation : '+(p.settings.hotkey||'F6')
+            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS'
             +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'');
+        const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
+        shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');
         const actions=document.createElement('div');actions.className='profile-card-actions';
         function action(label,cls,fn,disabled=false) {
             const button=document.createElement('button');
@@ -672,7 +841,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.7.0 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.7.1 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
@@ -681,33 +850,38 @@ function setLiveAppearance() {
     $('demoToggle').classList.add('danger');
 }
 const liveMonitor={samples:[],lastStamp:0};
-function drawLiveMonitor() {
-    if(!(model.compact?model.preferences.compactChart:model.preferences.liveMonitor)
-        ||$('page-dashboard').classList.contains('hidden'))return;
-    const canvas=$('liveCpsChart');
+function drawMonitorCanvas(canvas, height) {
     const bounds=canvas.getBoundingClientRect();
     if(!bounds.width)return;
-    const w=Math.max(260,Math.round(bounds.width)),h=115;
+    const w=Math.max(200,Math.round(bounds.width)),h=height;
     const dpr=Math.min(2,window.devicePixelRatio||1);
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
     const ctx=canvas.getContext('2d');if(!ctx)return;
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
     const pts=liveMonitor.samples;
-    const max=Math.max(5,...pts.map(p=>p.cps));
-    const yMax=Math.ceil((max+2)/5)*5;
-    ctx.strokeStyle='#2a3d58';ctx.lineWidth=1;
+    const yMax=Math.ceil((Math.max(5,...pts.map(p=>p.cps))+2)/5)*5;
+    ctx.strokeStyle='#263b57';ctx.lineWidth=1;
     for(let i=1;i<=3;i++){
-        ctx.beginPath();ctx.moveTo(8,i*h/4);ctx.lineTo(w-8,i*h/4);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(6,i*h/4);ctx.lineTo(w-6,i*h/4);ctx.stroke();
     }
     if(!pts.length)return;
-    const last=pts[pts.length-1].t;
-    ctx.beginPath();ctx.strokeStyle='#63b2ff';ctx.lineWidth=2.2;ctx.lineJoin='round';
+    const now=pts[pts.length-1].t;
+    ctx.beginPath();ctx.strokeStyle='#6cbaff';ctx.lineWidth=2;ctx.lineJoin='round';
     pts.forEach((p,i)=>{
-        const px=8+(w-16)*(1-(last-p.t)/30000);
-        const py=8+(h-16)*(1-p.cps/yMax);
+        const px=Math.max(6,6+(w-12)*(1-(now-p.t)/30000));
+        const py=6+(h-12)*(1-p.cps/yMax);
         if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
     });
     ctx.stroke();
+}
+function drawLiveMonitor() {
+    if($('page-dashboard').classList.contains('hidden'))return;
+    if(model.compact){
+        if(model.preferences.compactChart)
+            drawMonitorCanvas($('compactCpsChart'),65);
+    } else if(model.preferences.liveMonitor) {
+        drawMonitorCanvas($('liveCpsChart'),115);
+    }
 }
 function updateLiveMonitor(data) {
     const now=performance.now();
@@ -716,6 +890,10 @@ function updateLiveMonitor(data) {
         data.armed?'Clics en cours':'Prêt';
     $('liveMonitorStatus').textContent=status;
     $('liveMonitorValue').textContent=cps+' CPS';
+    $('compactCps').textContent=String(data.cps||0);
+    $('compactClicks').textContent=String(data.total||0);
+    $('compactSessionState').textContent=status;
+    $('compactActivationInfo').textContent='Activation : '+(data.hotkey||config().hotkey);
     const compact=$('compactStatus');
     compact.textContent=data.waiting?'EN ATTENTE':data.armed?'ACTIF':'PRÊT';
     compact.classList.toggle('is-active',!!data.armed&&!data.waiting);
@@ -741,6 +919,8 @@ function updateLiveStats(data) {
     const counters=document.querySelectorAll('.status-box .stat b');
     if(counters.length>1){counters[0].textContent=String(data.cps||0);counters[1].textContent=String(data.total||0);}
     $('hotkeyView').textContent=data.capturing && model.captureTarget==='activation'?'Appuyez...':data.hotkey;
+    $('compactHotkey').textContent=data.capturing && model.captureTarget==='activation'?'...':data.hotkey;
+    $('compactEmergencyKey').textContent=data.capturing && model.captureTarget==='emergency'?'...':model.emergencyKey;
     $('emergencyView').textContent=data.capturing && model.captureTarget==='emergency'?'Appuyez...':model.emergencyKey;
     $('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle. Les profils et les clics sont synchronisés.';
     updateLiveMonitor(data);

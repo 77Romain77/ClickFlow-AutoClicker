@@ -47,4 +47,23 @@ assert(html.includes("send('preference','floatOpacity',value)"),
     'Opacity selector must notify the Windows engine');
 assert(html.includes('model.preferences.compactChart'),
     'Compact chart must use its independent preference');
+for(const id of ['compactPanel','compactProfileSelect','compactModeSeg',
+    'compactIntensitySeg','compactMin','compactMax','compactStop',
+    'compactCps','compactClicks','compactCapture','compactCaptureStop',
+    'compactCpsChart','compactChartTile','compactHotkey','compactEmergencyKey'])
+    assert(ids.includes(id),'Missing dense compact panel control: '+id);
+assert(html.includes('body.compact .dashboard{display:none!important}'),
+    'Compact mode must hide expanded dashboard rather than shrink large cards');
+assert(html.includes('body.compact .compact-panel{display:grid'),
+    'Compact mode must have its own responsive card layout');
+assert(html.includes("config().mode=value;render();send('set','mode',value)"),
+    'Compact mode selector must change real profile mode');
+assert(html.includes("config().intensity=value;render();send('set','intensity',value)"),
+    'Compact variation selector must change the profile');
+assert(html.includes("$('compactStop').onclick"),'Compact stop must be actionable');
+assert(html.includes('drawMonitorCanvas'), 'Compact graph must use live CPS buffer');
+assert(html.includes("mode.textContent=({fixed:"),
+    'Profile mode and intensity must remain in the CPS information line');
+assert(html.includes("shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');"),
+    'Activation line should only show hotkey');
 console.log('Workspace HTML structure, live monitor, settings, profile and quick edit JS syntax passed.');

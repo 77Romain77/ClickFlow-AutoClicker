@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.7.0 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.7.1 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.7.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.7.0)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.7.1.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.7.1)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.7.0.ahk`.
+2. Télécharger `ClickFlow-v1.7.1.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.7.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.7.1`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -44,7 +44,17 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
-## Ergonomie de la mini-fenêtre et du mode compact (v1.7.0)
+## Ajustements ergonomiques (v1.7.1)
+
+La mini-fenêtre est plus compacte (310 x 150 au premier lancement sans taille déjà enregistrée), sans les deux gros boutons en bas. En haut, deux petits contrôles assortis au thème permettent de **basculer la courbe CPS** (CPS/OFF) ou **STOP**. Un double-clic sur le nom du profil restaure la fenêtre complète; le menu de notification propose toujours "Ouvrir l'interface". La courbe repose désormais sur un véritable contrôle bitmap Windows, ce qui corrige son absence d'affichage en v1.7.0. Elle est activée par défaut lorsqu'aucune préférence antérieure n'existe, et peut être désactivée. Les dimensions et positions déjà enregistrées sont respectées.
+
+Le mode compact est maintenant un panneau spécifique, en petites cartes et police réduite, avec : sélection du profil, statistiques CPS/clics, arrêt, choix Fixe/Aléatoire/Naturel, valeurs CPS min/max, intensité Naturel, commandes de capture des raccourcis et courbe optionnelle. Le mode étendu et les paramètres historiques restent disponibles.
+
+Dans les cartes de profils, l'intensité du mode Naturel apparaît sur la même ligne que le mode et la plage CPS. La touche d'activation reste seule sur la ligne suivante.
+
+La barre de titre de l'application principale et de la mini-fenêtre utilise les options DWM de Windows pour adopter un fond sombre, lorsque prises en charge par la version de Windows. Les boutons natifs Réduire, Agrandir et Fermer restent gérés par Windows; leur forme ne peut pas être librement personnalisée sans une barre de titre entièrement dessinée par l'application.
+
+## Ergonomie de la mini-fenêtre et du mode compact (v1.7.1)
 
 La **mini-fenêtre** peut être redimensionnée en tirant ses bords ou ses coins (minimum 280 x 180 pixels). Sa largeur, sa hauteur et sa position sont conservées dans les paramètres généraux de ClickFlow. Si l'écran change et que sa position n'est plus accessible, elle est recentrée automatiquement. Le nom du profil a maintenant une zone prévue pour deux lignes.
 
@@ -56,7 +66,7 @@ Le **mode compact** n'est plus un tableau de bord simplement raccourci : c'est u
 
 Les cartes de profils présentent désormais la réorganisation dans une zone dédiée avec deux flèches de taille stable. Le menu Windows utilise exclusivement les noms de profils enregistrés, sans préfixe numérique interne.
 
-## Espace de travail et zone de notification (v1.7.0)
+## Espace de travail et zone de notification (v1.7.1)
 
 Le tableau de bord peut montrer une courbe des CPS envoyés sur les **30 dernières secondes**. Cette courbe est locale à la session et ne sauvegarde ni score ni historique. L'affichage est désactivable dans **Paramètres**. La fenêtre flottante, accessible depuis le tableau de bord, Paramètres ou le menu de notification, affiche le profil courant, son état et le nombre de clics. Elle possède un bouton STOP et un bouton pour ouvrir l'interface principale.
 
@@ -99,7 +109,7 @@ Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow
 
 ## Profils et mises à jour
 
-Depuis v1.7.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
+Depuis v1.7.1, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
 
 **Migration automatique :** les profils de la v1.1.0 et des anciennes versions sont lus une seule fois depuis `settings.ini`, puis enregistrés dans des fichiers indépendants. Les anciennes sections et les sauvegardes restent disponibles par précaution. Les fichiers exportés se réimportent individuellement, sans écraser les profils déjà présents. Si un nom existe déjà, ClickFlow ajoute un suffixe numérique.
 
