@@ -521,33 +521,41 @@ CFDesktopPaintChartDC(destination, hwnd) {
     DllCall("gdi32\DeleteObject", "Ptr", grid.pen)
 
     now := A_TickCount
+    samples := CF.floatPoints
     peak := 5
-    for sample in CF.floatPoints
-        if sample.t >= now - 30000
+    firstTick := now
+    for sample in samples {
+        if sample.t >= now - 30000 {
             peak := Max(peak, sample.cps)
+            firstTick := Min(firstTick, sample.t)
+        }
+    }
+    ; Durant les premières secondes, utiliser la largeur disponible au
+    ; lieu de concentrer les points sur les 3 % à droite d'un axe de 30 s.
+    windowStart := Max(now - 30000, firstTick)
+    span := Max(1000, now - windowStart)
     pen := CFDesktopChartPen(memDC, 0x00FFB775, 2)
-    ; Toujours dessiner une ligne de base sur toute la largeur, même
-    ; à zéro CPS : le graphique n'a jamais l'air vide.
-    bottomY := height - 5
-    DllCall("gdi32\MoveToEx", "Ptr", memDC,
-        "Int", 3, "Int", bottomY, "Ptr", 0)
     first := true
-    for sample in CF.floatPoints {
+    for sample in samples {
         if sample.t < now - 30000
             continue
         x := Max(2, Min(width - 3, Round(3 + (width - 6)
-            * (1 - (now - sample.t) / 30000))))
+            * (sample.t - windowStart) / span)))
         y := Max(3, Min(height - 4, Round(height - 4
             - (height - 8) * sample.cps / (peak + 2))))
         if first {
-            DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
+            DllCall("gdi32\MoveToEx", "Ptr", memDC,
+                "Int", x, "Int", y, "Ptr", 0)
+            ; Un seul point doit être visible dès le premier clic.
+            DllCall("gdi32\LineTo", "Ptr", memDC,
+                "Int", Min(width - 3, x + 3), "Int", y)
+            DllCall("gdi32\MoveToEx", "Ptr", memDC,
+                "Int", x, "Int", y, "Ptr", 0)
             first := false
         } else {
             DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
         }
     }
-    DllCall("gdi32\LineTo", "Ptr", memDC, "Int", width - 3, "Int",
-        first ? bottomY : y)
     DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", pen.old)
     DllCall("gdi32\DeleteObject", "Ptr", pen.pen)
     DllCall("gdi32\BitBlt", "Ptr", destination,
@@ -598,13 +606,15 @@ CFDesktopUpdate() {
         CF.floatStatus.Text := status
         CF.floatCps.Text := CF.recent.Length " CPS - " CF.total " clics"
         CF.floatGraphButton.Text := CF.floatGraph ? "Courbe" : "OFF"
-        if CF.floatGraph && CF.floatGraphActive && CF.floatReady {
-            WinGetClientPos(, , &clientW, &clientH,
-                "ahk_id " CF.floatGui.Hwnd)
-            CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
-            CFDesktopDrawFloatChart()
-        } else if IsObject(CF.floatChart) {
-            CF.floatChart.Visible := false
+        if CF.floatReady && IsObject(CF.floatChart) {
+            shouldShow := CF.floatGraph && CF.floatGraphActive
+            if shouldShow != CF.floatChart.Visible {
+                WinGetClientPos(, , &clientW, &clientH,
+                    "ahk_id " CF.floatGui.Hwnd)
+                CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
+            }
+            if shouldShow
+                CFDesktopDrawFloatChart()
         }
     }
 }
