@@ -148,7 +148,7 @@ body.compact #page-cps{display:none!important}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.4.0 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.5.0 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -162,7 +162,7 @@ body.compact #page-cps{display:none!important}
      <div class="seg" id="modeSeg"><button data-mode="fixed">Fixe</button><button data-mode="random">Aléatoire</button><button data-mode="natural" class="active">Naturel</button></div>
      <div class="range-group"><div class="range-top"><b id="minLabel">CPS minimum</b><span class="subnote">1 à 100 CPS</span></div><div class="value-row"><input aria-label="CPS minimum" id="minRange" class="range" type="range" min="1" max="100" value="8"><input aria-label="Valeur minimum" id="minNumber" class="input number-input" type="number" min="1" max="100" value="8"></div></div>
      <div class="range-group" id="maxGroup"><div class="range-top"><b>CPS maximum</b><span class="subnote">Valeur supérieure ou égale au minimum</span></div><div class="value-row"><input aria-label="CPS maximum" id="maxRange" class="range" type="range" min="1" max="100" value="14"><input aria-label="Valeur maximum" id="maxNumber" class="input number-input" type="number" min="1" max="100" value="14"></div></div>
-     <div id="intensityBlock"><div class="range-top" style="margin-top:20px"><b>Intensité des variations</b></div><div class="mini-tab" id="intensitySeg"><button data-intensity="low">Faible</button><button data-intensity="medium" class="active">Moyenne</button><button data-intensity="high">Élevée</button></div></div>
+     <div id="intensityBlock"><div class="range-top" style="margin-top:20px"><b>Intensité des variations</b></div><div class="mini-tab" id="intensitySeg"><button data-intensity="low">Faible</button><button data-intensity="medium" class="active">Moyenne</button><button data-intensity="high">Élevée</button></div><p class="subnote" id="naturalIntensityHint" style="margin-top:10px"></p></div>
      <div class="mutedline">La précision réelle dépend des minuteries de Windows et de l'application cible.</div>
     </div>
     <div class="card">
@@ -304,6 +304,7 @@ function render() {
     $('emergencyView').textContent=model.emergencyKey;
     selectedButtons('modeSeg','mode',c.mode);
     selectedButtons('intensitySeg','intensity',c.intensity);
+    $('naturalIntensityHint').textContent=({low:'Variations sensibles, micro-irrégularités légères et rares hésitations.',medium:'Variations plus amples, clics irréguliers et hésitations occasionnelles.',high:'Variations marquées, petites accélérations et hésitations plus fréquentes.'})[c.intensity]||'';
     selectedButtons('activationSeg','activation',c.activation);
     updateRanges();
     $('mouseButton').value=c.mouse;
@@ -491,7 +492,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.4.0 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.5.0 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
