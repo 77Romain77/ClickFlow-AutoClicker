@@ -23,6 +23,8 @@ CFDesktopReadPreferences() {
         "OverlayOpacity", "85"), 85, 0, 100)
     CF.overlayMargin := CFDesktopInt(IniRead(file, "General",
         "OverlayMargin", "20"), 20, 0, 100)
+    CF.overlayAverageSeconds := CFDesktopInt(IniRead(file, "General",
+        "OverlayAverageSeconds", "5"), 5, 1, 60)
     CF.overlayMonitor := CFDesktopInt(IniRead(file, "General",
         "OverlayMonitor", "1"), 1, 1, Max(1, MonitorGetCount()))
     pos := IniRead(file, "General", "OverlayPosition", "tm")
@@ -50,6 +52,7 @@ CFDesktopPreferencesJson() {
         . ',"overlayAlwaysVisible":' (CF.overlayAlwaysVisible ? "true" : "false")
         . ',"overlayOpacity":' CF.overlayOpacity
         . ',"overlayMargin":' CF.overlayMargin
+        . ',"overlayAverageSeconds":' CF.overlayAverageSeconds
         . ',"overlayMonitor":' CF.overlayMonitor
         . ',"overlayMonitorCount":' Max(1, MonitorGetCount())
         . ',"overlayPosition":' JsonQuote(CF.overlayPosition)
@@ -305,9 +308,14 @@ CFOverlayShow(visible) {
 
 CFOverlayAverage(now) {
     global CF
+    ; Ne conserver que les clics du délai choisi (1 à 60 secondes).
+    ; Le nettoyage est également immédiat si l'utilisateur réduit le délai.
+    windowMs := CF.overlayAverageSeconds * 1000
+    while CF.overlayRecent.Length && CF.overlayRecent[1] < now - windowMs
+        CF.overlayRecent.RemoveAt(1)
     if !CF.armed || !CF.overlayRecent.Length
         return 0
-    elapsed := Max(200, Min(5000, now - CF.overlayStart))
+    elapsed := Max(200, Min(windowMs, now - CF.overlayStart))
     return Round(CF.overlayRecent.Length * 1000 / elapsed, 1)
 }
 
@@ -438,6 +446,11 @@ CFDesktopSetPreference(field, value) {
                 return
             CF.overlayOpacity := value + 0
             CFOverlayApplyTransparency()
+        case "overlayAverageSeconds":
+            if !RegExMatch(value, "^([1-9]|[1-5]\d|60)$")
+                return
+            CF.overlayAverageSeconds := value + 0
+            CFOverlayAverage(A_TickCount)
         case "overlayMargin":
             if !RegExMatch(value, "^(\d|[1-9]\d|100)$")
                 return
