@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.9.2 - 2026-11-20
+
+- Corrige la capture des raccourcis globaux qui restait bloquée sur "Appuyez..." : la touche est désormais récupérée par WebView2 (fenêtre qui possède le focus) et validée puis enregistrée par AutoHotkey.
+- Nouvelle séquence de messages begin/set/cancel/clear, avec suspension des raccourcis pendant l'attribution et réponse de synchronisation de l'état après la modification.
+- Corrige le bouton "Aucun" de l'arrêt d'urgence et des autres actions ; la touche vide est conservée dans les paramètres et l'affichage est mis à jour après confirmation du moteur.
+- Échap annule la capture, les collisions entre raccourcis/profils sont refusées, et l'arrêt reste possible depuis le tableau de bord ou l'icône Windows.
+- Tests Windows AutoHotkey des commandes réelles WebView2, et tests JavaScript simulant les frappes F9/F10, l'annulation, "Aucun" et la synchronisation du navigateur.
+
 ## 1.9.1 - 2026-11-20
 
 - Arrêt d'urgence déplacé dans la liste des raccourcis globaux avec un bouton pour modifier la touche et un bouton "Aucun".
