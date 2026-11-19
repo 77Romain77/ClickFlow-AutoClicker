@@ -4,7 +4,7 @@
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v1.7.1 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v1.7.2 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
 ; La touche d'arrêt d'urgence est personnalisable (F12 par défaut).
 
@@ -50,13 +50,26 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.7.1")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.7.2")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)
 main.OnEvent("Size", ResizeClickFlow)
-compactAtStart := IniRead(A_AppData "\ClickFlow\settings.ini", "General", "CompactMode", "0") = "1"
-main.Show(compactAtStart ? "w465 h600" : "w1120 h800")
+settingsPath := A_AppData "\ClickFlow\settings.ini"
+compactAtStart := IniRead(settingsPath, "General", "CompactMode", "0") = "1"
+; Les tailles sont des rectangles EXTERIEURS, identiques à WinMove.
+startW := compactAtStart
+    ? CFDesktopInt(IniRead(settingsPath, "General", "MainCompactWidth", "480"),
+        480, 480, 1200)
+    : CFDesktopInt(IniRead(settingsPath, "General", "MainExpandedWidth", "1120"),
+        1120, 600, 2400)
+startH := compactAtStart
+    ? CFDesktopInt(IniRead(settingsPath, "General", "MainCompactHeight", "600"),
+        600, 480, 1600)
+    : CFDesktopInt(IniRead(settingsPath, "General", "MainExpandedHeight", "800"),
+        800, 500, 1600)
+main.Show("w" startW " h" startH)
+WinMove(, , startW, startH, "ahk_id " main.Hwnd)
 ; Conserver la barre Windows native (redimensionnement, fermer/réduire)
 ; en harmonisant sa couleur avec le thème de ClickFlow quand DWM le permet.
 try CFDesktopStyleTitlebar(main.Hwnd)
@@ -165,12 +178,24 @@ CloseClickFlow(*) {
     ExitApp()
 }
 
+CFDesktopMainResizePersist(*) {
+    global CF
+    if CF.loading || CF.shuttingDown
+        return
+    CFDesktopCaptureMainBounds()
+    SaveSettings()
+}
+
 ResizeClickFlow(gui, state, width, height) {
     global controller, CF
     if state = -1 && CF.minimizeToTray {
         CFDesktopHide()
         return
     }
-    if state != -1 && IsSet(controller) && controller
-        try controller.Fill()
+    if state != -1 {
+        if IsSet(controller) && controller
+            try controller.Fill()
+        if !CF.loading && !CF.shuttingDown
+            SetTimer(CFDesktopMainResizePersist, -350)
+    }
 }

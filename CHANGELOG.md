@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.7.2 - 2026-11-19
+
+- Correction de l'agrandissement involontaire de la mini-fenêtre après fermeture et réouverture : sauvegarde/restauration d'un seul rectangle extérieur, avec migration de la taille enregistrée par les versions précédentes.
+- La courbe CPS de la mini-fenêtre réagit maintenant aux clics réellement envoyés par AutoHotkey, rafraîchie pendant l'activité et masquée quand il n'y a aucun clic récent.
+- Graphique redessiné directement avec GDI dans la surface disponible, sans mini-bitmap figé : tracé adaptatif même lors des premières secondes et après redimensionnement.
+- Les boutons Courbe et STOP sont maintenant des contrôles Windows simples avec fond coloré natif, sans les anciennes barres Progress qui débordaient lors d'un redimensionnement.
+- Dimensions indépendantes pour les fenêtres principales Compacte et Étendue, restaurées lors des changements de mode et conservées après fermeture.
+- Aides au survol et au focus clavier pour les modes Fixe, Aléatoire et Naturel, dans les deux interfaces.
+- Tests Windows renforcés : plusieurs fermetures/réouvertures sans croissance, tracé CPS alimenté par les événements réels du moteur, arrêt du tracé au repos, dimensions et boutons.
+
 ## 1.7.1 - 2026-11-19
 
 - Mini-fenêtre réellement compacte : plus de deux grands boutons en bas. Deux petits boutons colorés "CPS" et "STOP" restent visibles en haut, avec double-clic sur le nom pour ouvrir l'interface.

@@ -16,6 +16,10 @@ global CF := {
     floatGraph: false, floatTopMost: true, floatOpacity: 100,
     floatWidth: 340, floatHeight: 205, floatX: -99999, floatY: -99999,
     floatPoints: [], floatLastSample: 0, floatReady: false, floatBitmap: 0,
+    floatBoundsOuter: false, floatLegacyClient: false,
+    floatChartPaintCount: 0, floatGraphActive: false,
+    mainExpandedW: 1120, mainExpandedH: 800,
+    mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
     naturalBurstLeft: 0, total: 0, recent: [],
@@ -73,6 +77,7 @@ BackendExit(*) {
     global CF
     if CF.shuttingDown
         return
+    CFDesktopCaptureMainBounds(CF.compactMode)
     CF.shuttingDown := true
 
     ; Aucun nouveau clic, timer ou message WebView2 pendant la fermeture.
@@ -495,6 +500,7 @@ BackendMessage(sender, args) {
         if cmd = "view" && parts.Length >= 2 {
             compact := parts[2] = "compact"
             if compact != CF.compactMode {
+                CFDesktopCaptureMainBounds(CF.compactMode)
                 CF.compactMode := compact
                 StopAll("Mode d'affichage changé.")
                 ApplyWindowMode()
@@ -609,7 +615,7 @@ ApplyWindowMode() {
     global CF
     if !CF.hwnd
         return
-    WinMove(, , CF.compactMode ? 540 : 1120, CF.compactMode ? 700 : 800, "ahk_id " CF.hwnd)
+    CFDesktopRestoreMainBounds()
 }
 
 RegisterActivation() {
@@ -1071,6 +1077,12 @@ SaveSettings(*) {
         IniWrite(CF.floatHeight, CF.configFile, "General", "FloatHeight")
         IniWrite(CF.floatX, CF.configFile, "General", "FloatX")
         IniWrite(CF.floatY, CF.configFile, "General", "FloatY")
+        IniWrite(CF.floatBoundsOuter ? "outer" : "client",
+            CF.configFile, "General", "FloatBoundsFormat")
+        IniWrite(CF.mainExpandedW, CF.configFile, "General", "MainExpandedWidth")
+        IniWrite(CF.mainExpandedH, CF.configFile, "General", "MainExpandedHeight")
+        IniWrite(CF.mainCompactW, CF.configFile, "General", "MainCompactWidth")
+        IniWrite(CF.mainCompactH, CF.configFile, "General", "MainCompactHeight")
     } catch as err {
         SetNotice("Sauvegarde impossible : " err.Message)
     }

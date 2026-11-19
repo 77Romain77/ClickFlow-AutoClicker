@@ -79,26 +79,45 @@ try {
     CF.floatGui.Show("NA w420 h340")
     WinGetClientPos(, , &clientW, &clientH, "ahk_id " CF.floatGui.Hwnd)
     CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
-    if !CF.floatChart.Visible
-        throw Error("La courbe ne s'affiche pas lors de l'agrandissement.")
-    ; Le bitmap GDI utilise les CPS de l'unique moteur et reste en mémoire.
-    CF.floatPoints := [{t: A_TickCount - 600, cps: 10},
-        {t: A_TickCount - 400, cps: 12},
-        {t: A_TickCount - 200, cps: 8}]
+    ; Au repos, l'utilisateur ne veut pas d'une courbe vide et animée.
+    CF.recent := []
+    CFDesktopUpdate()
+    if CF.floatChart.Visible || CF.floatGraphActive
+        throw Error("La courbe doit rester inactive sans clic envoyé.")
+    ; Simulation de la même liste CF.recent alimentée par EngineTick.
+    CF.recent := [A_TickCount - 180, A_TickCount - 90, A_TickCount - 10]
+    CFDesktopUpdate()
+    if !CF.floatGraphActive || !CF.floatChart.Visible
+        throw Error("La courbe ne se déclenche pas sur les clics du moteur.")
+    if CF.floatPoints.Length = 0 || CF.floatPoints[1].cps != 3
+        throw Error("Les CPS réels ne sont pas transmis au graphique.")
+    beforePaint := CF.floatChartPaintCount
+    Sleep(220)
+    CF.recent.Push(A_TickCount)
+    CFDesktopUpdate()
+    if CF.floatPoints.Length < 2 || CF.floatChartPaintCount <= beforePaint
+        throw Error("La courbe ne réagit pas au changement de CPS.")
+    ; Un clic envoyé doit être visible même sur une fenêtre très large.
     CFDesktopDrawFloatChart()
-    if !CF.floatBitmap
-        throw Error("La courbe CPS native n'a pas été dessinée.")
-    ; Vérifier que le contrôle expose vraiment SS_BITMAP et affiche le bitmap.
-    chartStyle := DllCall("User32\GetWindowLongPtrW",
-        "Ptr", CF.floatChart.Hwnd, "Int", -16, "Ptr")
-    if (chartStyle & 0xF) != 0xE
-        throw Error("La courbe n'a pas le style Windows SS_BITMAP.")
-    attached := SendMessage(0x173, 0, 0, ,
+    if CF.floatChartPaintCount <= beforePaint
+        throw Error("La courbe native ne se repeint pas.")
+    WinGetClientPos(, , &chartWidth, &chartHeight,
         "ahk_id " CF.floatChart.Hwnd)
-    if !attached || attached != CF.floatBitmap
-        throw Error("Le bitmap dessiné n'est pas réellement affiché dans la mini-fenêtre.")
-    if !CF.floatStopBg || !CF.floatGraphBg
-        throw Error("Les boutons colorés de la mini-fenêtre sont absents.")
+    if chartWidth < 380 || chartHeight < 180
+        throw Error("La courbe n'utilise pas l'espace disponible : "
+            chartWidth " x " chartHeight)
+    CF.recent := []
+    CFDesktopUpdate()
+    if CF.floatChart.Visible
+        throw Error("La courbe reste visible après l'arrêt de l'activité.")
+    ; Contrôles colorés réels, sans faux boutons Progress superposés.
+    if !CF.floatStopBrush || !CF.floatGraphBrush
+        throw Error("Les contrôles colorés n'ont pas été créés.")
+    if CF.floatGraphButton.Hwnd = CF.floatStop.Hwnd
+        throw Error("Les deux boutons partagent le même HWND.")
+    CFDesktopStop()
+    if CF.armed
+        throw Error("Le bouton STOP n'a pas arrêté les clics.")
     CFDesktopSetPreference("floatOpacity", "80")
     CFDesktopSetPreference("floatTopMost", "0")
     if CF.floatOpacity != 80 || CF.floatTopMost
@@ -106,7 +125,7 @@ try {
     CFDesktopSaveFloatBounds()
     savedW := CF.floatWidth
     savedH := CF.floatHeight
-    if savedW < 415 || savedH < 330
+    if savedW < 415 || savedH < 335
         throw Error("Les dimensions redimensionnées ne sont pas mémorisées.")
     CFDesktopSetFloat(false)
     if CF.floatShown
@@ -117,10 +136,19 @@ try {
         throw Error("La hauteur flottante n'est pas sauvegardée.")
     CFDesktopSetPreference("compactChart", "0")
     CFDesktopSetFloat(true)
-    WinGetClientPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
+    WinGetPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
     if Abs(restoredW - savedW) > 5 || Abs(restoredH - savedH) > 5
         throw Error("Les dimensions flottantes ne sont pas restaurées.")
     CFDesktopSetFloat(false)
+    ; Vérifier que fermer/réouvrir plusieurs fois NE gonfle JAMAIS la fenêtre.
+    Loop 5 {
+        CFDesktopSetFloat(true)
+        WinGetPos(, , &loopW, &loopH, "ahk_id " CF.floatGui.Hwnd)
+        if Abs(loopW - savedW) > 3 || Abs(loopH - savedH) > 3
+            throw Error("La fenêtre gonfle à la réouverture " A_Index
+                " : " loopW "x" loopH " vs " savedW "x" savedH)
+        CFDesktopSetFloat(false)
+    }
     if CF.total != 0 || CF.armed
         throw Error("Le panneau de bureau a déclenché le moteur.")
     CF.desktopReady := false

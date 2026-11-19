@@ -33,20 +33,58 @@ try {
         throw Error("Un raccourci d'activation bloque l'arret d'urgence.")
 
     g := Gui("+Resize +MinSize460x480", "ClickFlow-test-view")
-    g.Show("w900 h800")
+    g.Show("w900 h760")
     CF.hwnd := g.Hwnd
+    CF.shuttingDown := false
+
+    ; Les deux modes possèdent désormais des tailles indépendantes.
+    CF.mainCompactW := 480
+    CF.mainCompactH := 580
+    CF.mainExpandedW := 900
+    CF.mainExpandedH := 760
+    CF.compactMode := false
+    CFDesktopRestoreMainBounds()
+    WinGetPos(, , &wideW, &wideH, "ahk_id " g.Hwnd)
+    ; Windows CI peut limiter la hauteur d'une fenêtre à la surface de
+    ; l'écran ; comparer ensuite au rectangle réellement obtenu.
+    if wideW < 870 || wideH < 690
+        throw Error("La taille du mode étendu est anormalement petite.")
+
+    ; Simuler un passage étendu -> compact, puis le retour étendu.
+    CFDesktopCaptureMainBounds(false)
+    CF.compactMode := true
     ApplyWindowMode()
     WinGetPos(, , &w, &h, "ahk_id " g.Hwnd)
-    if Abs(w - 540) > 6 || Abs(h - 700) > 6
-        throw Error("La taille compacte n'est pas respectee: " w "x" h)
+    if Abs(w - 480) > 6 || Abs(h - 580) > 6
+        throw Error("La taille du mode compact est incorrecte : " w "x" h)
+
+    CFDesktopCaptureMainBounds(true)
     CF.compactMode := false
     ApplyWindowMode()
     WinGetPos(, , &w, &h, "ahk_id " g.Hwnd)
-    ; Sur les machines CI 1024x768, Windows limite la taille demandee
-    ; a l'espace du bureau. La fenetre doit toutefois etre bien plus
-    ; grande que le mode compact.
-    if w < 900 || h < 730
-        throw Error("La taille etendue n'est pas respectee: " w "x" h)
+    if Abs(w - wideW) > 6 || Abs(h - wideH) > 6
+        throw Error("La taille du mode étendu n'est pas restaurée : " w "x" h)
+
+    ; Redimensionner manuellement chaque mode et vérifier la persistance.
+    WinMove(, , 940, 730, "ahk_id " g.Hwnd)
+    CFDesktopCaptureMainBounds(false)
+    CF.compactMode := true
+    ApplyWindowMode()
+    WinMove(, , 480, 520, "ahk_id " g.Hwnd)
+    CFDesktopCaptureMainBounds(true)
+    CF.compactMode := false
+    ApplyWindowMode()
+    WinGetPos(, , &w, &h, "ahk_id " g.Hwnd)
+    if Abs(w - CF.mainExpandedW) > 6 || Abs(h - CF.mainExpandedH) > 6
+        throw Error("Les dimensions personnalisées du mode étendu sont perdues.")
+    if Abs(CF.mainCompactW - 480) > 6 || Abs(CF.mainCompactH - 520) > 6
+        throw Error("Les dimensions personnalisées du mode compact sont perdues.")
+
+    SaveSettings()
+    if IniRead(CF.configFile, "General", "MainExpandedWidth", "") != CF.mainExpandedW
+        throw Error("La taille étendue n'est pas sauvegardée.")
+    if IniRead(CF.configFile, "General", "MainCompactWidth", "") != CF.mainCompactW
+        throw Error("La taille compacte n'est pas sauvegardée.")
     g.Destroy()
     FileDelete(CF.configFile)
     DirDelete(CF.profilesDir, true)
