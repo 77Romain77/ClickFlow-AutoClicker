@@ -21,6 +21,17 @@ for(const suffix of ['Next','Previous','Overlay','Test','Open']){
 }
 assert.equal((html.match(/class="kbd">Aucun<\/span>/g)||[]).length,5,
     'Every optional hotkey must be unassigned by default');
+for(const id of ['globalCaptureEmergency','globalClearEmergency','globalKeyEmergency'])
+    assert(ids.includes(id),'Missing configurable emergency key in global settings: '+id);
+assert(settings.includes('Arrêt d\'urgence') && settings.includes('F12 par défaut'),
+    'Emergency key must be described alongside optional global shortcuts');
+assert(html.includes("send('globalHotkey','clear','emergency')"),
+    'Aucun must disable the actual emergency shortcut, not a second hotkey');
+assert(html.includes("model.emergencyKey=msg.emergencyKey??'F12'"),
+    'The WebView must preserve an explicitly blank emergency key from backend');
+assert(html.includes("model.emergencyKey||'Aucun'"),
+    'Emergency key labels must show Aucun when no key is assigned');
+
 assert(html.includes("send('globalHotkey','clear',action)"),
     'Clear action must send explicit unassignment to AutoHotkey');
 assert(html.includes("send('globalHotkey','capture',action)"),
