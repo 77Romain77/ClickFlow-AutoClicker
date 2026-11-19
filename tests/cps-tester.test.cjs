@@ -59,6 +59,7 @@ const durationButtons = durations.map(n=>{
 });
 const ctx={
     performance:{now:()=>time},
+    $:get,
     document:{
         getElementById:get,
         createElement:()=>element(),
@@ -106,12 +107,13 @@ assert.equal(get('cpsInstant').textContent,'4.0','Rolling CPS must drop oldest c
 time=5100;
 for(const callback of [...timers.values()])callback();
 assert.equal(state.phase,'done','Test must finish after chosen duration');
-assert.equal(state.history.length,1);
-assert.equal(state.history[0].average,1);
+assert.equal(state.last.average,1);
+assert.equal(state.last.clicks,5);
+assert.equal(state.last.seconds,5);
 assert.equal(get('cpsAverage').textContent,'1.0');
 assert.equal(get('cpsRemaining').textContent,'0.0 s restantes');
-assert.equal(state.best[5],5);
-assert(messages.some(x=>x.join('|')==='cpsTest|result|5|5'),'Result must reach AHK backend');
+assert.equal(get('cpsLast').textContent.includes('5 clics'),true);
+assert.equal(messages.length,0,'Test results must not be sent for storage');
 press(5300);
 assert.equal(state.clicks.length,5,'Clicks after finish must be ignored');
 durationButtons[0].onclick();
@@ -122,13 +124,13 @@ press(6500);
 time=8001;
 for(const callback of [...timers.values()])callback();
 assert.equal(state.phase,'done');
-assert.equal(state.history.length,2);
-assert.equal(state.history[0].seconds,2);
-assert.equal(state.history[0].clicks,2);
-assert.equal(get('cpsRecord').textContent,'1.0 CPS');
-assert(messages.some(x=>x.join('|')==='cpsTest|result|2|2'));
+assert.equal(state.last.seconds,2);
+assert.equal(state.last.clicks,2);
+assert.equal(state.last.average,1);
+assert.equal(get('cpsLast').textContent.includes('2 clics'),true);
+assert.equal(messages.length,0,'Latest result must stay in memory only');
 get('cpsReset').onclick();
 assert.equal(state.phase,'ready');
 assert.equal(state.clicks.length,0);
-assert.equal(state.history.length,2,'Restart must preserve session history');
-console.log('CPS test durations, left-only input, 1s rolling CPS, records and chart passed.');
+assert.equal(state.last.clicks,2,'Restart must preserve the latest completed result');
+console.log('CPS test durations, left-only input, 1s rolling CPS, last result and chart passed.');
