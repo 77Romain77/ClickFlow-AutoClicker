@@ -5,8 +5,8 @@
 - Nouvel onglet Test CPS manuel : durées 2, 5, 10, 30 et 60 secondes.
 - CPS actuels, moyens, pic sur une seconde, total de clics et barre de progression.
 - Courbe CPS en direct et animation discrète au point de clic.
-- Historique des six derniers essais et record personnel sauvegardé pour chaque durée.
-- Tests automatisés JavaScript et AutoHotkey du chronométrage et des records.
+- Affichage du dernier résultat terminé uniquement, sans historique ni sauvegarde des scores.
+- Tests automatisés JavaScript du chronométrage, des clics et du dernier résultat.
 
 ## 1.2.0 - 2026-11-19
 
