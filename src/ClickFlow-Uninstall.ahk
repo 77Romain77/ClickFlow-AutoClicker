@@ -12,8 +12,10 @@ pid := A_Args[2]
 if !RegExMatch(pid, "^\d{1,9}$") || (pid + 0) < 1
     ExitApp(2)
 
-; Never delete the files used by a running WebView2 instance.
-try ProcessWaitClose(pid + 0, 20)
+; Never delete files used by a running WebView2 instance.
+; If the parent has already closed, don't wait for an absent PID.
+if ProcessExist(pid + 0)
+    try ProcessWaitClose(pid + 0, 20)
 if ProcessExist(pid + 0) {
     MsgBox("ClickFlow n'a pas pu se fermer. Aucun fichier n'a été supprimé.",
         "ClickFlow - Désinstallation", "Icon!")
