@@ -33,8 +33,8 @@ CFDesktopReadPreferences() {
         1120, 600, 2400)
     CF.mainExpandedH := CFDesktopInt(IniRead(file, "General", "MainExpandedHeight", "800"),
         800, 500, 1600)
-    CF.mainCompactW := CFDesktopInt(IniRead(file, "General", "MainCompactWidth", "465"),
-        465, 460, 1200)
+    CF.mainCompactW := CFDesktopInt(IniRead(file, "General", "MainCompactWidth", "480"),
+        480, 480, 1200)
     CF.mainCompactH := CFDesktopInt(IniRead(file, "General", "MainCompactHeight", "600"),
         600, 480, 1600)
     CF.floatX := CFDesktopInt(IniRead(file, "General", "FloatX", "-99999"),
