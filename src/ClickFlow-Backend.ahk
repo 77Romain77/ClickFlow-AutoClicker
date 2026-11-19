@@ -4,11 +4,15 @@
 #Include ClickFlow-Maintenance.ahk
 #Include ClickFlow-ProfileStore.ahk
 #Include ClickFlow-CpsTest.ahk
+#Include ClickFlow-Desktop.ahk
 
 global CF := {
     hwnd: 0, web: 0, event: 0,
     capture: false, inputHook: 0, pressed: false, armed: false,
     test: {active: false},
+    desktopReady: false, trayProfiles: 0, floatGui: 0,
+    closeToTray: false, minimizeToTray: false, floatShown: false,
+    liveMonitor: true, forceExit: false,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
     naturalBurstLeft: 0, total: 0, recent: [],
@@ -42,6 +46,7 @@ BackendInit(hwnd, web) {
     if CF.emergencyKey = "" || CF.emergencyKey = "!" || CF.emergencyKey = "Escape"
         CF.emergencyKey := "F12"
     LoadSettings()
+    CFDesktopReadPreferences()
     ; Au démarrage un raccourci d'urgence ne doit jamais entrer en conflit
     ; avec l'activation du profil actuel. On préfère une touche de secours.
     for p in CF.profiles {
@@ -57,6 +62,7 @@ BackendInit(hwnd, web) {
     SetTimer(UpdateStats, 200)
     OnExit(BackendExit)
     SaveSettings()
+    CFDesktopInit()
     SetNotice("Prêt. Choisis une fenêtre cible et utilise " DisplayKey(CF.cfg.activation) ".")
 }
 
@@ -74,6 +80,9 @@ BackendExit(*) {
     try SetTimer(UpdateStats, 0)
     try SetTimer(SaveSettings, 0)
     try SetTimer(SendState, 0)
+    CF.desktopReady := false
+    if IsObject(CF.floatGui)
+        try CF.floatGui.Destroy()
     if CF.capture {
         try CF.inputHook.Stop()
         CF.capture := false
@@ -110,9 +119,17 @@ SendState() {
     if !CF.web
         return
     profiles := ""
-    for p in CF.profiles
-        profiles .= (profiles = "" ? "" : ",") '{"id":' p.id ',"name":' JsonQuote(p.name) ',"settings":' ToUiCfg(p.cfg) '}'
-    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey)) ',"compact":' (CF.compactMode ? "true" : "false") '}')
+    for p in CF.profiles {
+        fav := p.HasOwnProp("favorite") && p.favorite ? "true" : "false"
+        profiles .= (profiles = "" ? "" : ",") '{"id":' p.id
+            ',"name":' JsonQuote(p.name) ',"favorite":' fav
+            ',"settings":' ToUiCfg(p.cfg) '}'
+    }
+    CFDesktopRebuildProfiles()
+    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId
+        ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey))
+        ',"compact":' (CF.compactMode ? "true" : "false")
+        ',"preferences":' CFDesktopPreferencesJson() '}')
 }
 
 ; Gestion indépendante des raccourcis Windows. L'état affiché est celui
@@ -340,6 +357,8 @@ CFStartUninstall(mode) {
         SetNotice("Impossible de lancer la désinstallation : " err.Message)
         return
     }
+    ; Ignorer la fermeture vers la zone de notification lors de la désinstallation.
+    CF.forceExit := true
     ; Le Close handler désactive les raccourcis et libère WebView2 proprement.
     DllCall("User32\PostMessageW", "Ptr", CF.hwnd, "UInt", 0x10,
         "Ptr", 0, "Ptr", 0)
@@ -365,6 +384,36 @@ BackendMessage(sender, args) {
         }
         if cmd = "set" && parts.Length >= 3 {
             EditConfig(parts[2], parts[3])
+            return
+        }
+        if cmd = "quickSettings" && parts.Length >= 7 {
+            try CFApplyQuickSettings(parts[2], parts[3], parts[4],
+                parts[5], parts[6], parts[7])
+            catch as err
+                CFProfileMessage("Réglages rapides refusés : " err.Message, true)
+            return
+        }
+        if cmd = "favorite" && parts.Length >= 2 {
+            if RegExMatch(parts[2], "^[1-9]\d{0,8}$")
+                CFToggleProfileFavorite(parts[2] + 0)
+            return
+        }
+        if cmd = "reorder" && parts.Length >= 3 {
+            if RegExMatch(parts[2], "^[1-9]\d{0,8}$")
+                CFReorderProfile(parts[2] + 0, parts[3])
+            return
+        }
+        if cmd = "preference" && parts.Length >= 3 {
+            CFDesktopSetPreference(parts[2], parts[3])
+            return
+        }
+        if cmd = "desktop" && parts.Length >= 2 {
+            if parts[2] = "show"
+                CFDesktopOpen()
+            else if parts[2] = "float"
+                CFDesktopToggleFloat()
+            else if parts[2] = "hide"
+                CFDesktopHide()
             return
         }
         if cmd = "stop" {
@@ -502,6 +551,33 @@ BackendMessage(sender, args) {
     }
 }
 
+
+CFApplyQuickSettings(id, mode, minimum, maximum, variation) {
+    global CF
+    if !RegExMatch(id, "^[1-9]\d{0,8}$")
+        throw Error("Identifiant invalide.")
+    profile := CFProfileById(id + 0)
+    if !profile
+        throw Error("Profil introuvable.")
+    if !RegExMatch(minimum, "^\d{1,3}$") || !RegExMatch(maximum, "^\d{1,3}$")
+        throw Error("Indique des CPS compris entre 1 et 100.")
+    low := minimum + 0
+    high := maximum + 0
+    if low < 1 || high > 100 || high < low
+        throw Error("La valeur maximale doit être supérieure ou égale au minimum.")
+    if !HasValue(["fixed", "random", "natural"], mode)
+        throw Error("Mode invalide.")
+    if !HasValue(["low", "medium", "high"], variation)
+        throw Error("Intensité invalide.")
+    StopAll("Profil ajusté depuis le Test CPS.")
+    profile.cfg.mode := mode = "fixed" ? 1 : mode = "random" ? 2 : 3
+    profile.cfg.min := low
+    profile.cfg.max := high
+    profile.cfg.variation := variation = "low" ? 1 : variation = "medium" ? 2 : 3
+    SaveSettings()
+    SendState()
+}
+
 SameKey(a, b) {
     if a = b
         return true
@@ -563,6 +639,7 @@ ActivationDown(*) {
     CF.target := current
     CF.nextAt := A_TickCount
     CFNaturalReset(CF.cfg)
+    CFDesktopUpdate()
     SetNotice("Clics actifs dans la fenêtre choisie. " DisplayKey(CF.emergencyKey) " pour arrêter.")
 }
 
@@ -738,6 +815,7 @@ UpdateStats() {
     while CF.recent.Length && CF.recent[1] < now - 1000
         CF.recent.RemoveAt(1)
     SendStats()
+    CFDesktopUpdate()
 }
 
 StartCapture(kind := "activation") {
@@ -974,6 +1052,10 @@ SaveSettings(*) {
         IniWrite(CF.nextId, CF.configFile, "Profiles", "NextId")
         IniWrite(CF.emergencyKey, CF.configFile, "General", "EmergencyKey")
         IniWrite(CF.compactMode ? 1 : 0, CF.configFile, "General", "CompactMode")
+        IniWrite(CF.closeToTray ? 1 : 0, CF.configFile, "General", "CloseToTray")
+        IniWrite(CF.minimizeToTray ? 1 : 0, CF.configFile, "General", "MinimizeToTray")
+        IniWrite(CF.floatShown ? 1 : 0, CF.configFile, "General", "FloatShown")
+        IniWrite(CF.liveMonitor ? 1 : 0, CF.configFile, "General", "LiveMonitor")
     } catch as err {
         SetNotice("Sauvegarde impossible : " err.Message)
     }
