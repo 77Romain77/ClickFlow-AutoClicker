@@ -25,6 +25,10 @@ CFDesktopReadPreferences() {
         "OverlayMargin", "20"), 20, 0, 100)
     CF.overlayAverageSeconds := CFDesktopInt(IniRead(file, "General",
         "OverlayAverageSeconds", "5"), 5, 1, 60)
+    size := IniRead(file, "General", "OverlaySize", "mini")
+    CF.overlaySize := HasValue(["mini", "standard", "large"], size)
+        ? size : "mini"
+    CF.overlayShowProfile := IniRead(file, "General", "OverlayShowProfile", "0") = "1"
     CF.overlayMonitor := CFDesktopInt(IniRead(file, "General",
         "OverlayMonitor", "1"), 1, 1, Max(1, MonitorGetCount()))
     pos := IniRead(file, "General", "OverlayPosition", "tm")
@@ -53,6 +57,8 @@ CFDesktopPreferencesJson() {
         . ',"overlayOpacity":' CF.overlayOpacity
         . ',"overlayMargin":' CF.overlayMargin
         . ',"overlayAverageSeconds":' CF.overlayAverageSeconds
+        . ',"overlaySize":' JsonQuote(CF.overlaySize)
+        . ',"overlayShowProfile":' (CF.overlayShowProfile ? "true" : "false")
         . ',"overlayMonitor":' CF.overlayMonitor
         . ',"overlayMonitorCount":' Max(1, MonitorGetCount())
         . ',"overlayPosition":' JsonQuote(CF.overlayPosition)
@@ -198,17 +204,29 @@ CFDesktopFloatPositionValid(x, y, width, height) {
 }
 
 CFOverlayMetrics(dpi := 0) {
-    ; Mini-overlay : UNE LIGNE, 216x34 pixels physiques, même à 200% DPI.
-    ; La police est réduite en points à haut DPI pour conserver cette taille.
+    global CF
+    ; Mini inchangée (216x34) pour préserver l'apparence validée en v1.8.2.
     if !dpi
         dpi := A_ScreenDPI
-    font := Max(4, Round(8 * 96 / dpi))
+    size := CF.HasOwnProp("overlaySize") ? CF.overlaySize : "mini"
+    if size = "large" {
+        w := 330, h := 50, fontPx := 11, statusW := 132
+    } else if size = "standard" {
+        w := 270, h := 42, fontPx := 10, statusW := 112
+    } else {
+        w := 216, h := 34, fontPx := 8, statusW := 88
+    }
+    showProfile := CF.HasOwnProp("overlayShowProfile") && CF.overlayShowProfile
+    extra := showProfile ? 17 : 0
+    y := Max(3, Floor((h - 24) / 2))
     return {
-        w: 216, h: 34,
-        left: 9, top: 5,
-        statusW: 88, statusH: 24,
-        cpsX: 102, cpsTop: 5, cpsW: 105, cpsH: 24,
-        font: font, radius: 12
+        w: w, h: h + extra, left: 9, top: y,
+        statusW: statusW, statusH: 24,
+        cpsX: 10 + statusW + 5, cpsTop: y,
+        cpsW: w - 20 - statusW - 5, cpsH: 24,
+        font: Max(4, Round(fontPx * 96 / dpi)), radius: 12,
+        nameY: h - 2, nameW: w - 18,
+        nameFont: Max(4, Round(7 * 96 / dpi))
     }
 }
 
@@ -250,6 +268,10 @@ CFOverlayCreate() {
     CF.overlayCpsText := overlay.Add("Text",
         "x" m.cpsX " y" m.cpsTop " w" m.cpsW " h" m.cpsH
         " +0x100 0x200 Right", "0,0 CPS moy.")
+    overlay.SetFont("s" m.nameFont " norm cAFC4DD", "Segoe UI")
+    CF.overlayNameText := overlay.Add("Text", "x9 y" m.nameY
+        " w" m.nameW " h15 +0x100 0x200", "")
+    CF.overlayNameText.Visible := CF.overlayShowProfile
     CF.overlayGui := overlay
     overlay.Show("NA Hide w" m.w " h" m.h)
     CFOverlayApplyTransparency()
@@ -349,6 +371,9 @@ CFDesktopUpdate() {
         : status = "PLACEMENT" ? "c87BAFF" : "cABB9CE")
     CF.overlayCpsText.Text := StrReplace(
         Format("{:.1f}", CFOverlayAverage(now)), ".", ",") " CPS moy."
+    if CF.overlayShowProfile
+        CF.overlayNameText.Text := StrLen(name) > 38
+            ? SubStr(name, 1, 37) "..." : name
 }
 
 CFOverlaySaveLocation() {
@@ -425,6 +450,17 @@ CFDesktopToggleFloat(*) {
     CFDesktopSetFloat(!CF.floatShown)
 }
 
+CFOverlayRebuild() {
+    global CF
+    ; Aucune recréation si l'overlay n'est pas visible.
+    if IsObject(CF.overlayGui) {
+        try CF.overlayGui.Destroy()
+        CF.overlayGui := 0
+        CF.overlayVisible := false
+    }
+    CFDesktopUpdate()
+}
+
 CFDesktopSetPreference(field, value) {
     global CF
     enabled := value = "1"
@@ -446,6 +482,14 @@ CFDesktopSetPreference(field, value) {
                 return
             CF.overlayOpacity := value + 0
             CFOverlayApplyTransparency()
+        case "overlaySize":
+            if !HasValue(["mini", "standard", "large"], value)
+                return
+            CF.overlaySize := value
+            CFOverlayRebuild()
+        case "overlayShowProfile":
+            CF.overlayShowProfile := enabled
+            CFOverlayRebuild()
         case "overlayAverageSeconds":
             if !RegExMatch(value, "^([1-9]|[1-5]\d|60)$")
                 return
