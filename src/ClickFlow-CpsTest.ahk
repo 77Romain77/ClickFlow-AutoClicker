@@ -30,9 +30,7 @@ CFTestStart(duration, runId, profileId) {
     StopAll("Test CPS du profil " profile.name " : démarrage.")
     now := A_TickCount
     duration += 0
-    CF.naturalCps := (profile.cfg.min + profile.cfg.max) / 2
-    CF.naturalTarget := CF.naturalCps
-    CF.nextVariation := 0
+    CFNaturalReset(profile.cfg)
     CF.test := {active: true, run: runId + 0, duration: duration,
         started: now, nextAt: now, lastFlush: now, pending: [],
         clicks: [], profile: profile.name, cfg: CopyConfig(profile.cfg)}
@@ -97,11 +95,11 @@ CFTestTick(now := "") {
     }
     if now < test.nextAt
         return
-    cps := GetNextCps(test.cfg)
+    intervalMs := GetNextIntervalMs(test.cfg, now)
     elapsed := Max(0, now - test.started)
     test.clicks.Push(elapsed)
     test.pending.Push(elapsed)
-    test.nextAt := now + Max(10, Round(1000 / cps))
+    test.nextAt := now + intervalMs
     if now - test.lastFlush >= 55 || test.pending.Length >= 12
         CFTestFlush()
 }
