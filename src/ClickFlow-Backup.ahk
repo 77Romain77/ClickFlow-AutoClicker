@@ -93,7 +93,8 @@ CFBackupReloadState() {
     CFDesktopReleaseFloat()
     CF.loading := true
     CF.emergencyKey := IniRead(CF.configFile, "General", "EmergencyKey", "F12")
-    if CF.emergencyKey = "" || CF.emergencyKey = "Escape" || CF.emergencyKey = "!"
+    ; "Aucun" est sauvegardé par une chaîne vide et doit être conservé.
+    if CF.emergencyKey = "Escape" || CF.emergencyKey = "!"
         CF.emergencyKey := "F12"
     CF.compactMode := IniRead(CF.configFile, "General", "CompactMode", "0") = "1"
     CF.profiles := []
