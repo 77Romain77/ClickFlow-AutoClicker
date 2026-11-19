@@ -47,8 +47,12 @@ try {
     WinGetPos(, , &wideW, &wideH, "ahk_id " g.Hwnd)
     ; Windows CI peut limiter la hauteur d'une fenêtre à la surface de
     ; l'écran ; comparer ensuite au rectangle réellement obtenu.
-    if wideW < 870 || wideH < 690
-        throw Error("La taille du mode étendu est anormalement petite.")
+    CFDesktopMonitorArea(MonitorGetPrimary(), &left, &top, &right, &bottom)
+    expectedW := Min(900, Max(460, right - left - 36))
+    expectedH := Min(760, Max(420, bottom - top - 36))
+    if Abs(wideW - expectedW) > 6 || Abs(wideH - expectedH) > 6
+        throw Error("La taille étendue doit respecter l'espace visible : "
+            wideW "x" wideH " attendu " expectedW "x" expectedH)
 
     ; Simuler un passage étendu -> compact, puis le retour étendu.
     CFDesktopCaptureMainBounds(false)
@@ -75,8 +79,10 @@ try {
     CF.compactMode := false
     ApplyWindowMode()
     WinGetPos(, , &w, &h, "ahk_id " g.Hwnd)
-    if Abs(w - CF.mainExpandedW) > 6 || Abs(h - CF.mainExpandedH) > 6
-        throw Error("Les dimensions personnalisées du mode étendu sont perdues.")
+    expectedW := Min(CF.mainExpandedW, Max(460, right - left - 36))
+    expectedH := Min(CF.mainExpandedH, Max(420, bottom - top - 36))
+    if Abs(w - expectedW) > 6 || Abs(h - expectedH) > 6
+        throw Error("Les dimensions étendues ne sont pas adaptées à l'écran.")
     if Abs(CF.mainCompactW - 480) > 6 || Abs(CF.mainCompactH - 520) > 6
         throw Error("Les dimensions personnalisées du mode compact sont perdues.")
 

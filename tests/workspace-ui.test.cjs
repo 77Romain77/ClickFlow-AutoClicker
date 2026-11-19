@@ -17,7 +17,7 @@ for(const id of [
     'desktopShortcutButton','startShortcutButton','uninstallKeep','uninstallAll'
 ])assert(ids.includes(id),'Missing workspace control: '+id);
 for(const pref of ['closeToTray','minimizeToTray','floatShown','liveMonitor',
-    'compactChart','floatGraph','floatTopMost'])
+    'compactChart','overlayAlwaysVisible'])
     assert(html.includes('data-preference="'+pref+'"'),'Missing desktop preference '+pref);
 assert(html.includes("send('quickSettings'"),'Quick settings must use atomic backend command');
 assert(html.includes("send('favorite'"),'Favorite actions must use backend');
@@ -33,7 +33,9 @@ assert(html.includes('body.compact #page-settings{display:none!important}'),
     'Compact mode must keep the dashboard-only layout');
 assert(ids.includes('compactTop')&&ids.includes('compactStatus'),
     'Compact mode must have its own status banner');
-assert(ids.includes('floatOpacitySelect'),'Mini-window opacity preference missing');
+for(const control of ['overlayOpacity','overlayMargin','overlayMonitor',
+    'overlayPosition','overlayEdit','overlayEditHint'])
+    assert(ids.includes(control),'Missing overlay setting: '+control);
 assert(html.includes('id="intensityBlock"'),
     'Natural intensity controls must be available in compact mode');
 assert(html.includes('body.compact #intensityBlock:not(.hidden){display:block}'),
@@ -43,8 +45,13 @@ assert(html.includes('profile-order-row')&&html.includes('profile-order-buttons'
 assert(html.includes('profile-move-btn')&&html.includes('Monter le profil')
     &&html.includes('Descendre le profil'),
     'Up/down reorder arrows must have fixed-size accessible controls');
-assert(html.includes("send('preference','floatOpacity',value)"),
-    'Opacity selector must notify the Windows engine');
+assert(html.includes("overlaySetPreference(field,n)"),
+    'Free opacity/margin values must be validated and sent to backend');
+assert(html.includes("'overlayDone':'overlayEdit'"),
+    'Overlay positioning must allow entering and leaving drag mode');
+for(const pos of ['tl','tm','tr','bl','bm','br'])
+    assert(html.includes('value="'+pos+'"'),
+        'Missing overlay position '+pos);
 assert(html.includes('model.preferences.compactChart'),
     'Compact chart must use its independent preference');
 for(const id of ['compactPanel','compactProfileSelect','compactModeSeg',

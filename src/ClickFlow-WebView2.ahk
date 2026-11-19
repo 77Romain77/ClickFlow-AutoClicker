@@ -4,7 +4,7 @@
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v1.7.3 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v1.8.0 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
 ; La touche d'arrêt d'urgence est personnalisable (F12 par défaut).
 
@@ -50,7 +50,7 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.7.3")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.8.0")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)
@@ -69,7 +69,8 @@ startH := compactAtStart
     : CFDesktopInt(IniRead(settingsPath, "General", "MainExpandedHeight", "800"),
         800, 500, 1600)
 main.Show("w" startW " h" startH)
-WinMove(, , startW, startH, "ahk_id " main.Hwnd)
+; Position centrée sur l'écran actuel, dimensions limitées à la zone visible.
+CFDesktopCenterMain(main.Hwnd, startW, startH)
 ; Conserver la barre Windows native (redimensionnement, fermer/réduire)
 ; en harmonisant sa couleur avec le thème de ClickFlow quand DWM le permet.
 try CFDesktopStyleTitlebar(main.Hwnd)

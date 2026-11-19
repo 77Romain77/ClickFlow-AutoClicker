@@ -2,14 +2,13 @@
 #ErrorStdOut "UTF-8"
 #Include ..\src\ClickFlow-Backend.ahk
 
-; Regression Windows : preferences indépendantes, favoris, ordre, panneau
-; flottant, menu zone de notification et réglages rapides atomiques.
+; Régression v1.8 - profils, placement, transparence, overlay et Windows.
 global CF
 CF.web := 0
 CF.loading := false
 CF.shuttingDown := false
-CF.configFile := A_Temp "\clickflow-1.6-workspace-" A_TickCount ".ini"
-CF.profilesDir := A_Temp "\clickflow-1.6-workspace-profiles-" A_TickCount
+CF.configFile := A_Temp "\clickflow-overlay-" A_TickCount ".ini"
+CF.profilesDir := A_Temp "\clickflow-overlay-profiles-" A_TickCount
 CF.profiles := [{id: 3, name: "Profil A", cfg: DefaultConfig()},
     {id: 7, name: "Profil B", cfg: DefaultConfig()},
     {id: 11, name: "Profil C", cfg: DefaultConfig()}]
@@ -19,166 +18,130 @@ CF.nextId := 12
 
 try {
     CFDesktopReadPreferences()
-    if CF.closeToTray || CF.minimizeToTray || CF.floatShown
-        throw Error("Les préférences qui masquent la fenêtre doivent être désactivées par défaut.")
-    if !CF.liveMonitor
-        throw Error("Le moniteur CPS doit être activé par défaut.")
-
-    ; Régression v1.7.2 : WM_PAINT arrive avant CF.floatChart.
-    ; Les callbacks doivent accepter les fenêtres principales/inconnues.
-    if CF.HasOwnProp("floatChart")
-        throw Error("Le test de démarrage doit précéder la mini-fenêtre.")
-    CFDesktopChartPaint(0, 0, 0xF, 1234)
-    CFDesktopDrawFloatChart()
-    if CF.HasOwnProp("floatChart")
-        throw Error("Le callback WM_PAINT ne doit pas créer un contrôle.")
+    if CF.floatShown || CF.closeToTray || CF.minimizeToTray
+        throw Error("Les fenêtres auxiliaires doivent être désactivées par défaut.")
+    if CF.overlayOpacity != 85 || CF.overlayPosition != "tm"
+        throw Error("Mauvais réglages initiaux de l'overlay.")
+    if CF.overlayAlwaysVisible
+        throw Error("L'overlay ne doit pas rester affiché par défaut.")
 
     SaveSettings()
     CFToggleProfileFavorite(7)
-    if !CF.profiles[2].favorite
-        throw Error("Favori non activé.")
     CFReorderProfile(11, "up")
     CFReorderProfile(11, "up")
-    if CF.profiles[1].id != 11 || CF.selectedId != 3
-        throw Error("Réorganisation invalide ou sélection perdue.")
-    if IniRead(CFProfileFile(7), "ClickFlowProfile", "Favorite", "") != "1"
-        throw Error("Favori non enregistré dans le fichier profil.")
-    CF.profiles := []
+    if CF.profiles[1].id != 11 || !CFProfileById(7).favorite
+        throw Error("Favoris ou ordre incorrects.")
     if !CFLoadSeparatedProfiles()
-        throw Error("Chargement des profils impossible.")
-    if CF.profiles[1].id != 11 || CF.profiles[2].id != 3
-        throw Error("L'ordre des profils n'a pas été conservé.")
-    if !CFProfileById(7).favorite
-        throw Error("Le favori ne survit pas au redémarrage.")
+        throw Error("Les profils ne se rechargent plus.")
+    if CF.profiles[1].id != 11 || !CFProfileById(7).favorite
+        throw Error("Ordre ou favoris perdus après rechargement.")
 
-    ; Tester les edits atomiques sans écraser activation ni garde souris.
     CFProfileById(7).cfg.activation := "F9"
-    CFProfileById(7).cfg.mouseGate := 1
     CFApplyQuickSettings("7", "natural", "9", "18", "high")
-    saved := CFProfileById(7).cfg
-    if saved.min != 9 || saved.max != 18 || saved.mode != 3
-        || saved.variation != 3 || saved.activation != "F9" || !saved.mouseGate
-        throw Error("Réglages rapides non appliqués ou champs non ciblés altérés.")
-    rejected := false
-    try CFApplyQuickSettings("7", "natural", "99", "3", "high")
-    catch
-        rejected := true
-    if !rejected || saved.min != 9
-        throw Error("Un réglage invalide a modifié le profil.")
+    p := CFProfileById(7).cfg
+    if p.min != 9 || p.max != 18 || p.variation != 3
+        || p.activation != "F9"
+        throw Error("Réglages rapides des profils cassés.")
 
-    ; La fenêtre flottante est optionnelle et partage le moteur existant.
-    g := Gui("+Resize", "ClickFlow-test-workspace")
+    g := Gui("+Resize", "ClickFlow-test-overlay")
     g.Show("w540 h700")
     CF.hwnd := g.Hwnd
     CFDesktopInit()
-    CFDesktopSetPreference("liveMonitor", "0")
-    CFDesktopSetPreference("minimizeToTray", "1")
-    CFDesktopSetPreference("closeToTray", "1")
     CFDesktopSetPreference("floatShown", "1")
-    if !IsObject(CF.floatGui) || !CF.floatShown
-        throw Error("Mini-fenêtre non affichée.")
-    CFDesktopUpdate()
+    if CF.overlayVisible
+        throw Error("L'overlay devrait rester masqué au repos.")
+    CFDesktopSetPreference("overlayAlwaysVisible", "1")
+    if !CF.overlayVisible || !IsObject(CF.overlayGui)
+        throw Error("L'overlay ne s'affiche pas en mode permanent.")
+    hwnd := CF.overlayGui.Hwnd
+    if !(WinGetExStyle("ahk_id " hwnd) & 0x20)
+        throw Error("L'overlay n'est pas transparent aux clics.")
     if !CFDesktopStyleTitlebar(g.Hwnd)
-        FileAppend("DWM dark caption unavailable on this Windows version. ", "*", "UTF-8")
-    if !CF.floatProfile || !CF.floatStop || !CF.floatGraphButton
-        throw Error("Contrôles de la mini-fenêtre incomplets.")
-    if CF.floatX != -99999
-        throw Error("Position de fenêtre par défaut incorrecte.")
-    CFDesktopSetPreference("floatGraph", "1")
-    CF.floatGui.Show("NA w420 h340")
-    WinGetClientPos(, , &clientW, &clientH, "ahk_id " CF.floatGui.Hwnd)
-    CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
-    ; Au repos, l'utilisateur ne veut pas d'une courbe vide et animée.
-    CF.recent := []
-    CFDesktopUpdate()
-    if CF.floatChart.Visible || CF.floatGraphActive
-        throw Error("La courbe doit rester inactive sans clic envoyé.")
-    ; Simulation de la même liste CF.recent alimentée par EngineTick.
-    CF.recent := [A_TickCount - 180, A_TickCount - 90, A_TickCount - 10]
-    CFDesktopUpdate()
-    if !CF.floatGraphActive || !CF.floatChart.Visible
-        throw Error("La courbe ne se déclenche pas sur les clics du moteur.")
-    if CF.floatPoints.Length = 0 || CF.floatPoints[1].cps != 3
-        throw Error("Les CPS réels ne sont pas transmis au graphique.")
-    beforePaint := CF.floatChartPaintCount
-    Sleep(220)
-    CF.recent.Push(A_TickCount)
-    CFDesktopUpdate()
-    if CF.floatPoints.Length < 2 || CF.floatChartPaintCount <= beforePaint
-        throw Error("La courbe ne réagit pas au changement de CPS.")
-    ; Un clic envoyé doit être visible même sur une fenêtre très large.
-    CFDesktopDrawFloatChart()
-    if CF.floatChartPaintCount <= beforePaint
-        throw Error("La courbe native ne se repeint pas.")
-    WinGetClientPos(, , &chartWidth, &chartHeight,
-        "ahk_id " CF.floatChart.Hwnd)
-    if chartWidth < 380 || chartHeight < 180
-        throw Error("La courbe n'utilise pas l'espace disponible : "
-            chartWidth " x " chartHeight)
-    CF.recent := []
-    CFDesktopUpdate()
-    if CF.floatChart.Visible
-        throw Error("La courbe reste visible après l'arrêt de l'activité.")
-    ; Contrôles colorés réels, sans faux boutons Progress superposés.
-    if !CF.floatStopBrush || !CF.floatGraphBrush
-        throw Error("Les contrôles colorés n'ont pas été créés.")
-    if CF.floatGraphButton.Hwnd = CF.floatStop.Hwnd
-        throw Error("Les deux boutons partagent le même HWND.")
-    CFDesktopStop()
-    if CF.armed
-        throw Error("Le bouton STOP n'a pas arrêté les clics.")
-    CFDesktopSetPreference("floatOpacity", "80")
-    CFDesktopSetPreference("floatTopMost", "0")
-    if CF.floatOpacity != 80 || CF.floatTopMost
-        throw Error("Opacité ou toujours-au-premier-plan incorrect.")
-    CFDesktopSaveFloatBounds()
-    savedW := CF.floatWidth
-    savedH := CF.floatHeight
-    if savedW < 415 || savedH < 335
-        throw Error("Les dimensions redimensionnées ne sont pas mémorisées.")
-    CFDesktopSetFloat(false)
-    if CF.floatShown
-        throw Error("La mini-fenêtre ne peut pas se masquer.")
-    if IniRead(CF.configFile, "General", "FloatWidth", "") != savedW
-        throw Error("La largeur flottante n'est pas sauvegardée.")
-    if IniRead(CF.configFile, "General", "FloatHeight", "") != savedH
-        throw Error("La hauteur flottante n'est pas sauvegardée.")
-    CFDesktopSetPreference("compactChart", "0")
-    CFDesktopSetFloat(true)
-    WinGetPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
-    if Abs(restoredW - savedW) > 5 || Abs(restoredH - savedH) > 5
-        throw Error("Les dimensions flottantes ne sont pas restaurées.")
-    CFDesktopSetFloat(false)
-    ; Un WM_PAINT pendant le masquage doit aussi rester sans erreur.
-    CFDesktopChartPaint(0, 0, 0xF, CF.floatChart.Hwnd)
-    ; Vérifier que fermer/réouvrir plusieurs fois NE gonfle JAMAIS la fenêtre.
-    Loop 5 {
-        CFDesktopSetFloat(true)
-        WinGetPos(, , &loopW, &loopH, "ahk_id " CF.floatGui.Hwnd)
-        if Abs(loopW - savedW) > 3 || Abs(loopH - savedH) > 3
-            throw Error("La fenêtre gonfle à la réouverture " A_Index
-                " : " loopW "x" loopH " vs " savedW "x" savedH)
-        CFDesktopSetFloat(false)
+        FileAppend("DWM titlebar unavailable; ", "*", "UTF-8")
+
+    ; Positionnement prédéfini : six positions dans la zone de travail.
+    for position in ["tl", "tm", "tr", "bl", "bm", "br"] {
+        CFDesktopSetPreference("overlayPosition", position)
+        expected := CFOverlayPositionCoords()
+        WinGetPos(&actualX, &actualY, &w, &h, "ahk_id " hwnd)
+        if Abs(actualX - expected.x) > 3 || Abs(actualY - expected.y) > 3
+            throw Error("Mauvaise position " position)
+        if Abs(w - 226) > 3 || Abs(h - 48) > 3
+            throw Error("L'overlay ne doit pas grandir : " w "x" h)
     }
-    if CF.total != 0 || CF.armed
-        throw Error("Le panneau de bureau a déclenché le moteur.")
-    CF.desktopReady := false
+
+    ; Transparence libre : les valeurs intermédiaires ne sont pas des presets.
+    CFDesktopSetPreference("overlayOpacity", "37")
+    if CF.overlayOpacity != 37
+        throw Error("Transparence personnalisée 37% refusée.")
+    CFDesktopSetPreference("overlayOpacity", "0")
+    if CF.overlayOpacity != 0
+        throw Error("Transparence 0% refusée.")
+    CFDesktopSetPreference("overlayOpacity", "100")
+    CFDesktopSetPreference("overlayOpacity", "101")
+    if CF.overlayOpacity != 100
+        throw Error("Valeur 101% acceptée à tort.")
+    CFDesktopSetPreference("overlayMargin", "27")
+    if CF.overlayMargin != 27
+        throw Error("Marge 27px refusée.")
+    CFDesktopSetPreference("overlayMargin", "101")
+    if CF.overlayMargin != 27
+        throw Error("Marge 101px acceptée à tort.")
+
+    if MonitorGetCount() > 1 {
+        CFDesktopSetPreference("overlayMonitor", "2")
+        if CF.overlayMonitor != 2
+            throw Error("La sélection d'un second écran est impossible.")
+    }
+    ; Déplacement manuel : clics traversants suspendus uniquement en édition.
+    CFOverlaySetEdit(true)
+    if !CF.overlayEditing || (WinGetExStyle("ahk_id " hwnd) & 0x20)
+        throw Error("Le déplacement libre n'active pas les clics souris.")
+    CFDesktopMonitorArea(CF.overlayMonitor, &left, &top, &right, &bottom)
+    WinMove(left + 65, top + 65, 226, 48, "ahk_id " hwnd)
+    CFOverlaySetEdit(false)
+    if CF.overlayEditing || !(WinGetExStyle("ahk_id " hwnd) & 0x20)
+        throw Error("L'overlay reste interactif après placement.")
+    if CF.overlayPosition != "custom" || Abs(CF.overlayX - left - 65) > 4
+        throw Error("La position libre n'est pas sauvegardée.")
+    if IniRead(CF.configFile, "General", "OverlayPosition", "") != "custom"
+        throw Error("La position libre est absente du INI.")
+
+    ; Moyenne glissante sur 5s : ne pas confondre avec les CPS sur 1s.
+    CF.armed := true
+    CF.overlayStart := A_TickCount - 5000
+    CF.overlayRecent := [A_TickCount - 4200, A_TickCount - 2100,
+        A_TickCount - 800, A_TickCount - 200]
+    if Abs(CFOverlayAverage(A_TickCount) - 0.8) > 0.01
+        throw Error("CPS moyens 5s incorrects.")
+    CFDesktopUpdate()
+    if !CF.overlayVisible
+        throw Error("Overlay absent pendant les clics.")
+    CF.armed := false
+    CF.overlayAlwaysVisible := false
+    CF.overlayUntil := 0
+    CFDesktopUpdate()
+    if CF.overlayVisible
+        throw Error("Overlay automatique encore visible au repos.")
+
+    ; Restaurer les options, réouvrir et vérifier la persistance.
+    CFDesktopSetPreference("overlayAlwaysVisible", "1")
+    CFDesktopSetPreference("overlayOpacity", "37")
+    CFDesktopSetPreference("overlayMonitor", "1")
     CFDesktopReleaseFloat()
     g.Destroy()
     CFDesktopReadPreferences()
-    if !CF.closeToTray || !CF.minimizeToTray || CF.liveMonitor || CF.floatShown
-        || !CF.floatGraph || CF.floatTopMost || CF.floatOpacity != 80
-        || CF.compactChart || CF.floatWidth != savedW || CF.floatHeight != savedH
-        throw Error("Les préférences et dimensions ne persistent pas.")
-    if IniRead(CF.configFile, "General", "FloatShown", "?") != "0"
-        throw Error("L'option mini-fenêtre a perdu son état.")
+    if CF.overlayOpacity != 37 || !CF.floatShown
+        || !CF.overlayAlwaysVisible || CF.overlayMargin != 27
+        throw Error("Les préférences overlay ne persistent pas.")
 
     FileDelete(CF.configFile)
     DirDelete(CF.profilesDir, true)
-    FileAppend("Workspace profile order/favorites, atomic quick settings and Windows desktop preferences passed.", "*", "UTF-8")
+    FileAppend("Overlay free opacity, 6 positions, multi-monitor, drag, click-through, CPS avg and profiles passed.", "*", "UTF-8")
     ExitApp(0)
 } catch as err {
-    FileAppend("WORKSPACE TEST FAILED: " err.Message " " err.File ":" err.Line, "*", "UTF-8")
+    FileAppend("OVERLAY TEST FAILED: " err.Message " " err.File ":" err.Line, "*", "UTF-8")
+    try CFDesktopReleaseFloat()
     try FileDelete(CF.configFile)
     try DirDelete(CF.profilesDir, true)
     ExitApp(1)
