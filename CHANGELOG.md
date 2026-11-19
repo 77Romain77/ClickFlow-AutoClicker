@@ -8,8 +8,6 @@
 - Désinstallateur AutoHotkey temporaire qui attend la fermeture propre de la fenêtre avant de supprimer les fichiers.
 - Suppression limitée aux dossiers et raccourcis appartenant à ClickFlow ; aucun exécutable supplémentaire.
 
-
-
 ## 1.0.2 - 2026-11-19
 
 - Gestion indépendante des raccourcis du Bureau et du menu Démarrer dans l'onglet "À propos".
