@@ -45,8 +45,10 @@ try {
     CF.compactMode := false
     CFDesktopRestoreMainBounds()
     WinGetPos(, , &wideW, &wideH, "ahk_id " g.Hwnd)
-    if Abs(wideW - 900) > 6 || Abs(wideH - 760) > 6
-        throw Error("La taille du mode étendu n'est pas restaurée.")
+    ; Windows CI peut limiter la hauteur d'une fenêtre à la surface de
+    ; l'écran ; comparer ensuite au rectangle réellement obtenu.
+    if wideW < 870 || wideH < 690
+        throw Error("La taille du mode étendu est anormalement petite.")
 
     ; Simuler un passage étendu -> compact, puis le retour étendu.
     CFDesktopCaptureMainBounds(false)
