@@ -10,10 +10,7 @@ CFDesktopReadPreferences() {
 
 CFDesktopPreferencesJson() {
     global CF
-    return '{"closeToTray":' (CF.closeToTray ? "true" : "false")
-        ',"minimizeToTray":' (CF.minimizeToTray ? "true" : "false")
-        ',"floatShown":' (CF.floatShown ? "true" : "false")
-        ',"liveMonitor":' (CF.liveMonitor ? "true" : "false") '}'
+    return '{"closeToTray":' (CF.closeToTray ? "true" : "false") ',"minimizeToTray":' (CF.minimizeToTray ? "true" : "false") ',"floatShown":' (CF.floatShown ? "true" : "false") ',"liveMonitor":' (CF.liveMonitor ? "true" : "false") '}'
 }
 
 CFDesktopInit() {
