@@ -307,6 +307,9 @@ button[data-mode-tip]:hover::after,button[data-mode-tip]:focus-visible::after{
  opacity:1;visibility:visible;transform:translate(-50%,0);
 }
 .seg,.compact-segment{overflow:visible}
+.monitor-idle{display:flex;align-items:center;justify-content:center;min-height:56px;font-size:11px;color:#8faacb;text-align:center;border:1px dashed #29425f;border-radius:8px;background:#0e1b2e;padding:12px}
+.monitor-idle.hidden{display:none!important}
+body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 </style>
 </head>
 <body>
@@ -374,7 +377,8 @@ button[data-mode-tip]:hover::after,button[data-mode-tip]:focus-visible::after{
    </section>
    <section id="compactChartTile" class="compact-tile compact-chart-tile">
     <div class="compact-chart-head"><span class="compact-caption">CPS EN DIRECT</span><span>30 s</span></div>
-    <canvas id="compactCpsChart" width="420" height="76" aria-label="Courbe CPS compact"></canvas>
+    <canvas id="compactCpsChart" class="hidden" width="420" height="76" aria-label="Courbe CPS compact"></canvas>
+    <div id="compactMonitorIdle" class="monitor-idle">En veille - en attente de clics</div>
    </section>
   </div>
   <div class="dashboard">
@@ -415,7 +419,8 @@ button[data-mode-tip]:hover::after,button[data-mode-tip]:focus-visible::after{
     </div>
     <div class="card live-monitor-card" id="liveMonitorCard">
      <div class="live-monitor-head"><div><div class="card-title">Moniteur CPS</div><div class="card-description">Activité réelle des 30 dernières secondes</div></div><button id="floatQuick" class="btn sm quiet" type="button">Mini-fenêtre</button></div>
-     <canvas id="liveCpsChart" width="520" height="115" aria-label="Historique des CPS en direct"></canvas>
+     <canvas id="liveCpsChart" class="hidden" width="520" height="115" aria-label="Historique des CPS en direct"></canvas>
+     <div id="liveMonitorIdle" class="monitor-idle">En veille - le graphique s'active aux premiers clics</div>
      <div class="monitor-meta"><span id="liveMonitorStatus">Prêt</span><strong id="liveMonitorValue">0 CPS</strong></div>
     </div>
     <div class="note"><span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Un moteur fiable, une interface simple.</b><br>Les paramètres et profils sont conservés automatiquement dans ClickFlow.</span></div>
@@ -866,7 +871,7 @@ function setLiveAppearance() {
     $('demoToggle').classList.remove('primary');
     $('demoToggle').classList.add('danger');
 }
-const liveMonitor={samples:[],lastStamp:0};
+const liveMonitor={samples:[],lastStamp:0,active:false};
 function drawMonitorCanvas(canvas, height) {
     const bounds=canvas.getBoundingClientRect();
     if(!bounds.width)return;
@@ -892,6 +897,8 @@ function drawMonitorCanvas(canvas, height) {
     ctx.stroke();
 }
 function drawLiveMonitor() {
+    // En veille, pas de réinitialisation de canvas ni de rendu GPU/CPU.
+    if(!liveMonitor.active||!liveMonitor.samples.length)return;
     if($('page-dashboard').classList.contains('hidden'))return;
     if(model.compact){
         if(model.preferences.compactChart)
@@ -900,8 +907,19 @@ function drawLiveMonitor() {
         drawMonitorCanvas($('liveCpsChart'),115);
     }
 }
+function setLiveMonitorActive(active) {
+    if(liveMonitor.active===active)return;
+    liveMonitor.active=active;
+    $('liveCpsChart').classList.toggle('hidden',!active);
+    $('compactCpsChart').classList.toggle('hidden',!active);
+    $('liveMonitorIdle').classList.toggle('hidden',active);
+    $('compactMonitorIdle').classList.toggle('hidden',active);
+    if(!active){
+        liveMonitor.samples=[];
+        liveMonitor.lastStamp=0;
+    }
+}
 function updateLiveMonitor(data) {
-    const now=performance.now();
     const cps=Number(data.cps)||0;
     const status=data.waiting?'En attente du bouton souris':
         data.armed?'Clics en cours':'Prêt';
@@ -915,7 +933,17 @@ function updateLiveMonitor(data) {
     compact.textContent=data.waiting?'EN ATTENTE':data.armed?'ACTIF':'PRÊT';
     compact.classList.toggle('is-active',!!data.armed&&!data.waiting);
     compact.classList.toggle('is-waiting',!!data.waiting);
-    if(!liveMonitor.lastStamp||now-liveMonitor.lastStamp>=160) {
+    if(cps<=0){
+        // Aucun clic envoyé : zéro échantillon et zéro dessin.
+        setLiveMonitorActive(false);
+        return;
+    }
+    setLiveMonitorActive(true);
+    // Ne collecter que si le tableau de bord ET le graphique sont visibles.
+    if($('page-dashboard').classList.contains('hidden'))return;
+    if(!(model.compact?model.preferences.compactChart:model.preferences.liveMonitor))return;
+    const now=performance.now();
+    if(!liveMonitor.lastStamp||now-liveMonitor.lastStamp>=160){
         liveMonitor.lastStamp=now;
         liveMonitor.samples.push({t:now,cps});
         liveMonitor.samples=liveMonitor.samples.filter(p=>p.t>=now-30000);
