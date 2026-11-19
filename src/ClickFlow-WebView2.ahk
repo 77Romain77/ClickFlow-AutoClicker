@@ -4,7 +4,7 @@
 #Include lib\WebView2\WebView2.ahk
 #Include ClickFlow-Backend.ahk
 
-; ClickFlow v1.5.0 - interface WebView2 + moteur AutoHotkey.
+; ClickFlow v1.6.0 - interface WebView2 + moteur AutoHotkey.
 ; Aucune connexion à un serveur n'est requise.
 ; La touche d'arrêt d'urgence est personnalisable (F12 par défaut).
 
@@ -50,7 +50,7 @@ if dataRoot = "" {
 if probe != ""
     FileAppend("started", probe ".start", "UTF-8")
 
-main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.5.0")
+main := Gui("+Resize +MinSize460x480", "ClickFlow - AutoCliker v1.6.0")
 main.MarginX := 0
 main.MarginY := 0
 main.OnEvent("Close", CloseClickFlow)
@@ -109,6 +109,7 @@ RaiseRunningClickFlow() {
     Loop 35 {
         hwnd := FindRunningClickFlow()
         if hwnd {
+            try WinShow("ahk_id " hwnd)
             try WinRestore("ahk_id " hwnd)
             try WinActivate("ahk_id " hwnd)
             return true
@@ -143,7 +144,11 @@ CleanOldRuntimeCaches(*) {
 }
 
 CloseClickFlow(*) {
-    global controller, web, webEvent
+    global controller, web, webEvent, CF
+    if CF.closeToTray && !CF.forceExit {
+        CFDesktopHide()
+        return true
+    }
     ; Sauvegarder et desactiver le moteur AVANT la fermeture de la fenetre.
     BackendExit()
     try webEvent := 0
@@ -154,7 +159,11 @@ CloseClickFlow(*) {
 }
 
 ResizeClickFlow(gui, state, width, height) {
-    global controller
+    global controller, CF
+    if state = -1 && CF.minimizeToTray {
+        CFDesktopHide()
+        return
+    }
     if state != -1 && IsSet(controller) && controller
         try controller.Fill()
 }
