@@ -28,6 +28,8 @@ try {
     CF.overlaySize := "standard"
     CF.overlayShowProfile := true
     CF.overlayOpacity := 73
+    ; La sauvegarde doit restaurer une touche d'urgence explicitement vide.
+    CF.emergencyKey := ""
     CF.profiles[1].cfg.min := 17
     SaveSettings()
     if !CFBackupExport(archive) || !FileExist(archive)
@@ -39,6 +41,7 @@ try {
     CF.profiles[1].cfg.min := 5
     CF.overlaySize := "mini"
     CF.overlayOpacity := 40
+    CF.emergencyKey := "F12"
     CF.globalKeys["overlay"] := ""
     CF.profiles[1].favorite := false
     SaveSettings()
@@ -51,6 +54,10 @@ try {
         throw Error("Les options générales du ZIP ne sont pas restaurées.")
     if CF.globalKeys["overlay"] != "F9" || !CF.profiles[1].favorite
         throw Error("Les favoris ou raccourcis globaux ne sont pas restaurés.")
+    if CF.emergencyKey != ""
+        throw Error("La restauration a réactivé F12 alors que la sauvegarde contenait Aucun.")
+    if IniRead(CF.configFile, "General", "EmergencyKey", "MISSING") != ""
+        throw Error("La préférence Aucun n'a pas survécu à la restauration ZIP.")
     if IniRead(CF.configFile, "General", "GlobalOverlayKey", "") != "F9"
         throw Error("La restauration n'est pas persistée.")
     ; Un fichier arbitraire ne doit jamais remplacer la configuration.

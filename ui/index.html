@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.9.0 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.9.1 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.0 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.1 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -521,9 +521,11 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     </div>
     <div class="overlay-edit-row"><button type="button" class="btn primary sm" id="overlayEdit">Déplacer librement l'overlay</button><span id="overlayEditHint" class="subnote">Glisse l'overlay, puis clique sur Terminer pour réactiver la transparence aux clics.</span></div>
    </div></details>
-   <details class="settings-group"><summary>Raccourcis globaux <small>Tous facultatifs, sans touche par défaut</small></summary><div class="settings-group-body">
-    <p class="subnote">Chaque action est indépendante et peut rester sur <strong>Aucun</strong>. Appuie sur Échap pour annuler une capture. La touche d'arrêt d'urgence du tableau de bord reste toujours active.</p>
-    <div class="shortcut-settings">       <div class="shortcut-setting global-key-row"><div><strong>Profil suivant</strong><p class="subnote">Sélectionne le profil suivant sans démarrer les clics.</p></div><div class="global-key-actions"><button id="globalCaptureNext" class="btn sm quiet" type="button" data-global-capture="next"><span id="globalKeyNext" class="kbd">Aucun</span></button><button id="globalClearNext" class="btn sm quiet" type="button" data-global-clear="next" title="Désactiver ce raccourci">Aucun</button></div></div>
+   <details class="settings-group"><summary>Raccourcis globaux <small>Attribution ou désactivation de chaque touche</small></summary><div class="settings-group-body">
+    <p class="subnote">Tous les raccourcis peuvent être sur <strong>Aucun</strong>, y compris l'arrêt d'urgence (F12 par défaut). Échap annule une capture. Sans raccourci d'arrêt d'urgence, utilise le bouton Arrêter ou l'icône ClickFlow près de l'horloge.</p>
+    <div class="shortcut-settings">
+       <div class="shortcut-setting global-key-row"><div><strong>Arrêt d'urgence</strong><p class="subnote">Même touche que sur le tableau de bord. Facultative, F12 par défaut.</p></div><div class="global-key-actions"><button id="globalCaptureEmergency" class="btn sm quiet" type="button" title="Modifier la touche d'arrêt d'urgence"><span id="globalKeyEmergency" class="kbd">F12</span></button><button id="globalClearEmergency" class="btn sm quiet" type="button" title="Aucune touche d'arrêt d'urgence">Aucun</button></div></div>
+       <div class="shortcut-setting global-key-row"><div><strong>Profil suivant</strong><p class="subnote">Sélectionne le profil suivant sans démarrer les clics.</p></div><div class="global-key-actions"><button id="globalCaptureNext" class="btn sm quiet" type="button" data-global-capture="next"><span id="globalKeyNext" class="kbd">Aucun</span></button><button id="globalClearNext" class="btn sm quiet" type="button" data-global-clear="next" title="Désactiver ce raccourci">Aucun</button></div></div>
        <div class="shortcut-setting global-key-row"><div><strong>Profil précédent</strong><p class="subnote">Sélectionne le profil précédent sans démarrer les clics.</p></div><div class="global-key-actions"><button id="globalCapturePrevious" class="btn sm quiet" type="button" data-global-capture="previous"><span id="globalKeyPrevious" class="kbd">Aucun</span></button><button id="globalClearPrevious" class="btn sm quiet" type="button" data-global-clear="previous" title="Désactiver ce raccourci">Aucun</button></div></div>
        <div class="shortcut-setting global-key-row"><div><strong>Afficher / masquer l'overlay</strong><p class="subnote">Active ou désactive l'overlay.</p></div><div class="global-key-actions"><button id="globalCaptureOverlay" class="btn sm quiet" type="button" data-global-capture="overlay"><span id="globalKeyOverlay" class="kbd">Aucun</span></button><button id="globalClearOverlay" class="btn sm quiet" type="button" data-global-clear="overlay" title="Désactiver ce raccourci">Aucun</button></div></div>
        <div class="shortcut-setting global-key-row"><div><strong>Ouvrir le Test CPS</strong><p class="subnote">Ouvre la fenêtre complète sur le Test CPS, en arrêtant les clics.</p></div><div class="global-key-actions"><button id="globalCaptureTest" class="btn sm quiet" type="button" data-global-capture="test"><span id="globalKeyTest" class="kbd">Aucun</span></button><button id="globalClearTest" class="btn sm quiet" type="button" data-global-clear="test" title="Désactiver ce raccourci">Aucun</button></div></div>
@@ -612,7 +614,7 @@ function render() {
     $('viewToggle').textContent=model.compact?'Mode étendu':'Mode compact';
     $('viewToggle').setAttribute('aria-pressed',String(!!model.compact));
     document.body.classList.toggle('compact-chart',!!model.preferences.compactChart);
-    $('emergencyView').textContent=model.emergencyKey;
+    $('emergencyView').textContent=model.emergencyKey||'Aucun';
     selectedButtons('modeSeg','mode',c.mode);
     selectedButtons('intensitySeg','intensity',c.intensity);
     $('naturalIntensityHint').textContent=({low:'Variations sensibles, micro-irrégularités légères et rares hésitations.',medium:'Variations plus amples, clics irréguliers et hésitations occasionnelles.',high:'Variations marquées, petites accélérations et hésitations plus fréquentes.'})[c.intensity]||'';
@@ -652,8 +654,8 @@ function renderCompactPanel() {
     $('compactHotkey').textContent=model.capturing&&model.captureTarget==='activation'
         ?'...' : c.hotkey;
     $('compactEmergencyKey').textContent=model.capturing&&model.captureTarget==='emergency'
-        ?'...' : model.emergencyKey;
-    $('compactStopKey').textContent=model.emergencyKey;
+        ?'...' : (model.emergencyKey||'Aucun');
+    $('compactStopKey').textContent=model.emergencyKey||'';
     $('compactActivationInfo').textContent='Activation : '+c.hotkey;
     $('compactChartTile').classList.toggle('hidden',!model.preferences.compactChart);
     if(model.compact)setTimeout(drawLiveMonitor,0);
@@ -873,6 +875,7 @@ $('emergencyCapture').onclick=()=>{
     model.capturing=true;
     model.captureTarget='emergency';
     $('emergencyView').textContent='Appuyez...';
+    renderGlobalHotkeys();
     if(connected) send('captureStop');
     else toast("Appuyez sur la touche d'arrêt d'urgence, ou Échap pour annuler.");
 };
@@ -894,7 +897,9 @@ document.addEventListener('keydown',e=>{
                 toast('Cette touche est déjà utilisée.');
             else model.globalHotkeys[action]=picked;
         } else if(model.captureTarget==='emergency') {
-            if(picked===config().hotkey){toast("Cette touche sert déjà à l'activation.");}
+            if(model.profiles.some(p=>p.settings.hotkey===picked)
+                || Object.values(model.globalHotkeys).some(value=>value===picked))
+                toast('Cette touche est déjà utilisée.');
             else model.emergencyKey=picked;
         } else {
             if(picked===model.emergencyKey){toast("Cette touche sert déjà à l'arrêt d'urgence.");}
@@ -911,11 +916,13 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.0 · AutoHotkey v2';
-    document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.1 · AutoHotkey v2';
+    document.querySelector('.status-box .safe').textContent=model.emergencyKey
+        ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
+        :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
-    $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
+    $('demoToggle').textContent='Arrêter les clics'+(model.emergencyKey?' ('+model.emergencyKey+')':'');
     $('demoToggle').classList.remove('primary');
     $('demoToggle').classList.add('danger');
 }
@@ -1013,8 +1020,8 @@ function updateLiveStats(data) {
     if(counters.length>1){counters[0].textContent=String(data.cps||0);counters[1].textContent=String(data.total||0);}
     $('hotkeyView').textContent=data.capturing && model.captureTarget==='activation'?'Appuyez...':data.hotkey;
     $('compactHotkey').textContent=data.capturing && model.captureTarget==='activation'?'...':data.hotkey;
-    $('compactEmergencyKey').textContent=data.capturing && model.captureTarget==='emergency'?'...':model.emergencyKey;
-    $('emergencyView').textContent=data.capturing && model.captureTarget==='emergency'?'Appuyez...':model.emergencyKey;
+    $('compactEmergencyKey').textContent=data.capturing && model.captureTarget==='emergency'?'...':(model.emergencyKey||'Aucun');
+    $('emergencyView').textContent=data.capturing && model.captureTarget==='emergency'?'Appuyez...':(model.emergencyKey||'Aucun');
     $('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle. Les profils et les clics sont synchronisés.';
     updateLiveMonitor(data);
 }
@@ -1105,6 +1112,9 @@ $('floatQuick').onclick=()=>{
 };
 const globalKeySuffix={next:'Next',previous:'Previous',overlay:'Overlay',test:'Test',open:'Open'};
 function renderGlobalHotkeys() {
+    const emergencyCapture=model.capturing && model.captureTarget==='emergency';
+    $('globalKeyEmergency').textContent=emergencyCapture?'Appuyez...':(model.emergencyKey||'Aucun');
+    $('globalClearEmergency').disabled=!model.emergencyKey && !emergencyCapture;
     for(const [action,suffix] of Object.entries(globalKeySuffix)) {
         const value=model.globalHotkeys[action]||'';
         const captured=model.capturing && model.captureTarget==='global:'+action;
@@ -1112,6 +1122,16 @@ function renderGlobalHotkeys() {
         $('globalClear'+suffix).disabled=!value && !captured;
     }
 }
+$('globalCaptureEmergency').onclick=()=> $('emergencyCapture').click();
+$('globalClearEmergency').onclick=()=>{
+    if(connected)send('globalHotkey','clear','emergency');
+    else {
+        model.emergencyKey='';
+        model.capturing=false;
+        render();
+        renderGlobalHotkeys();
+    }
+};
 document.querySelectorAll('[data-global-capture]').forEach(button=>{
     button.onclick=()=>{
         const action=button.dataset.globalCapture;
@@ -1624,7 +1644,7 @@ if(bridge) {
             connected=true;
             model.profiles=msg.profiles;
             model.selected=msg.selected;
-            model.emergencyKey=msg.emergencyKey||'F12';
+            model.emergencyKey=msg.emergencyKey??'F12';
             model.compact=!!msg.compact;
             if(msg.preferences)model.preferences={
                 ...model.preferences,...msg.preferences
@@ -1637,7 +1657,7 @@ if(bridge) {
             setLiveAppearance();
             render();
             cpsSyncProfiles();
-            $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
+            $('demoToggle').textContent='Arrêter les clics'+(model.emergencyKey?' ('+model.emergencyKey+')':'');
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') {
             updateLiveStats(msg);
