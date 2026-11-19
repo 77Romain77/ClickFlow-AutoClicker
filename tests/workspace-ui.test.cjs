@@ -34,7 +34,7 @@ assert(html.includes('body.compact #page-settings{display:none!important}'),
 assert(ids.includes('compactTop')&&ids.includes('compactStatus'),
     'Compact mode must have its own status banner');
 for(const control of ['overlayOpacity','overlayMargin','overlayMonitor',
-    'overlayPosition','overlayEdit','overlayEditHint'])
+    'overlayPosition','overlayEdit','overlayEditHint','overlayAverageSeconds'])
     assert(ids.includes(control),'Missing overlay setting: '+control);
 assert(html.includes('id="intensityBlock"'),
     'Natural intensity controls must be available in compact mode');
@@ -46,7 +46,12 @@ assert(html.includes('profile-move-btn')&&html.includes('Monter le profil')
     &&html.includes('Descendre le profil'),
     'Up/down reorder arrows must have fixed-size accessible controls');
 assert(html.includes("overlaySetPreference(field,n)"),
-    'Free opacity/margin values must be validated and sent to backend');
+    'Overlay numeric values must be validated and sent to backend');
+assert(/id="overlayAverageSeconds"[^>]*min="1"[^>]*max="60"[^>]*step="1"/.test(html),
+    'Average duration must allow whole seconds from 1 to 60');
+assert(html.includes("field==='overlayAverageSeconds'?1:0") &&
+    html.includes("field==='overlayAverageSeconds'?60:100"),
+    'Average duration must use its own 1-60 range');
 assert(html.includes("'overlayDone':'overlayEdit'"),
     'Overlay positioning must allow entering and leaving drag mode');
 for(const pos of ['tl','tm','tr','bl','bm','br'])

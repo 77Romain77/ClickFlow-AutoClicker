@@ -22,6 +22,8 @@ try {
         throw Error("Les fenêtres auxiliaires doivent être désactivées par défaut.")
     if CF.overlayOpacity != 85 || CF.overlayPosition != "tm"
         throw Error("Mauvais réglages initiaux de l'overlay.")
+    if CF.overlayAverageSeconds != 5
+        throw Error("La moyenne CPS doit commencer sur 5 secondes.")
     if CF.overlayAlwaysVisible
         throw Error("L'overlay ne doit pas rester affiché par défaut.")
 
@@ -158,6 +160,39 @@ try {
         A_TickCount - 800, A_TickCount - 200]
     if Abs(CFOverlayAverage(A_TickCount) - 0.8) > 0.01
         throw Error("CPS moyens 5s incorrects.")
+
+    ; Tester plusieurs fenêtres glissantes et la validation stricte 1-60 s.
+    ; Reconstituer des clics plus anciens pour chaque durée comme le
+    ; ferait le moteur pendant une session prolongée.
+    CFDesktopSetPreference("overlayAverageSeconds", "10")
+    if CF.overlayAverageSeconds != 10
+        throw Error("La période CPS de 10 s n'est pas appliquée.")
+    CF.overlayStart := A_TickCount - 10000
+    CF.overlayRecent := [A_TickCount - 9100, A_TickCount - 4200,
+        A_TickCount - 1100, A_TickCount - 200]
+    if Abs(CFOverlayAverage(A_TickCount) - 0.4) > 0.01
+        throw Error("CPS moyens sur 10 s incorrects.")
+    CFDesktopSetPreference("overlayAverageSeconds", "1")
+    if Abs(CFOverlayAverage(A_TickCount) - 1.0) > 0.01
+        throw Error("La période 1 s ne filtre pas les clics trop anciens.")
+    CFDesktopSetPreference("overlayAverageSeconds", "60")
+    CF.overlayStart := A_TickCount - 60000
+    CF.overlayRecent := [A_TickCount - 59000, A_TickCount - 22000,
+        A_TickCount - 9500, A_TickCount - 800]
+    if CF.overlayAverageSeconds != 60
+        || Abs(CFOverlayAverage(A_TickCount) - 0.1) > 0.01
+        throw Error("La période CPS de 60 s est incorrecte.")
+    for invalid in ["0", "61", "1.5", "abc", "-1"] {
+        CFDesktopSetPreference("overlayAverageSeconds", invalid)
+        if CF.overlayAverageSeconds != 60
+            throw Error("Période invalide acceptée : " invalid)
+    }
+    CFDesktopSetPreference("overlayAverageSeconds", "5")
+    CF.overlayStart := A_TickCount - 5000
+    CF.overlayRecent := [A_TickCount - 4200, A_TickCount - 2100,
+        A_TickCount - 800, A_TickCount - 200]
+    if Abs(CFOverlayAverage(A_TickCount) - 0.8) > 0.01
+        throw Error("La moyenne de 5 secondes n'est pas restaurée.")
     CFDesktopUpdate()
     if !CF.overlayVisible
         throw Error("Overlay absent pendant les clics.")
@@ -174,13 +209,17 @@ try {
     ; Restaurer les options, réouvrir et vérifier la persistance.
     CFDesktopSetPreference("overlayAlwaysVisible", "1")
     CFDesktopSetPreference("overlayOpacity", "37")
+    CFDesktopSetPreference("overlayAverageSeconds", "17")
     CFDesktopSetPreference("overlayMonitor", "1")
     CFDesktopReleaseFloat()
     g.Destroy()
     CFDesktopReadPreferences()
     if CF.overlayOpacity != 37 || !CF.floatShown
         || !CF.overlayAlwaysVisible || CF.overlayMargin != 27
+        || CF.overlayAverageSeconds != 17
         throw Error("Les préférences overlay ne persistent pas.")
+    if IniRead(CF.configFile, "General", "OverlayAverageSeconds", "") != "17"
+        throw Error("La période de calcul CPS ne figure pas dans settings.ini.")
 
     FileDelete(CF.configFile)
     DirDelete(CF.profilesDir, true)

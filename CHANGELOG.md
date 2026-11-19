@@ -1,5 +1,12 @@
 # Historique des versions
 
+## 1.8.2 - 2026-11-19
+
+- Ajout du réglage "Période CPS moyens" dans Paramètres > Overlay : durée personnalisée de 1 à 60 secondes, valeur par défaut 5 secondes.
+- Calcul de la moyenne glissante et nettoyage des clics en mémoire adaptés à la durée sélectionnée, sans modifier le rythme du profil.
+- Préférence sauvegardée dans settings.ini et rechargée automatiquement au démarrage.
+- Tests AutoHotkey pour 1, 5, 10 et 60 secondes, valeurs invalides et persistance ; contrôle JavaScript du champ et de ses limites.
+
 ## 1.8.1 - 2026-11-19
 
 - Correction du texte coupé dans l'overlay sur certains écrans Windows et DPI élevés : statut et CPS moyens tiennent maintenant sur une seule ligne.
