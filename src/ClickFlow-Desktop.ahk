@@ -221,10 +221,10 @@ CFOverlayCreate() {
     overlay.MarginY := 0
     overlay.BackColor := "121F32"
     overlay.SetFont("s9 bold c9AE4D4", "Segoe UI")
-    CF.overlayStatusText := gui.Add("Text",
+    CF.overlayStatusText := overlay.Add("Text",
         "x12 y11 w98 h25 +0x100 0x200", "ARRÊTÉ")
     overlay.SetFont("s11 bold cEDF6FF", "Segoe UI")
-    CF.overlayCpsText := gui.Add("Text",
+    CF.overlayCpsText := overlay.Add("Text",
         "x111 y7 w105 h31 Right 0x200 +0x100", "0,0 CPS")
     CF.overlayGui := overlay
     overlay.Show("NA Hide w226 h48")
