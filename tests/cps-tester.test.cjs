@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'..','ui','index.html'),'utf8');
 const start=html.indexOf('// Test CPS : profil ClickFlow ou souris manuelle');
-const end=html.indexOf("document.querySelectorAll('.nav-item').forEach",start);
+const end=html.indexOf('function navigatePage(page) {',start);
 assert(start>=0&&end>start,'CPS JavaScript section must exist');
 const script=html.slice(start,end);
 let time=0, timerId=0, sounds=0;
@@ -51,7 +51,7 @@ class MockAudioContext {
 }
 const ctx={
     $:get,
-    model:{profiles:[{id:1,name:'Principal'},{id:2,name:'Gaming'}],selected:1},
+    model:{profiles:[{id:1,name:'Principal',settings:{mode:'natural',min:8,max:14,intensity:'medium'}},{id:2,name:'Gaming',settings:{mode:'fixed',min:10,max:10,intensity:'low'}}],selected:1},
     document:{
         getElementById:get,createElement:()=>node(),
         querySelector:s=>{
@@ -74,6 +74,27 @@ vm.runInNewContext(script+
     '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage};',
     ctx,{timeout:3000,filename:'ui/index.html CPS test'});
 const api=ctx.exports,st=api.cpsTest;
+const quickMode=get('cpsQuickMode');
+assert.equal(quickMode.value,'natural','Quick editor starts with selected profile mode');
+get('cpsQuickMin').value='9';
+get('cpsQuickMin').events.input();
+assert.equal(get('cpsQuickApply').disabled,false,'Draft should allow apply');
+assert.equal(get('cpsStartProfile').disabled,true,'Unsaved draft must block tests');
+get('cpsQuickRevert').onclick();
+assert.equal(get('cpsQuickMin').value,8,'Cancel restores saved settings');
+assert.equal(get('cpsStartProfile').disabled,false);
+get('cpsQuickMax').value='5';
+get('cpsQuickMax').events.input();
+assert.equal(get('cpsQuickApply').disabled,true,'Invalid min/max must not apply');
+get('cpsQuickRevert').onclick();
+get('cpsQuickMode').value='random';
+get('cpsQuickMode').events.change();
+get('cpsQuickApply').onclick();
+assert.equal(sent.at(-1)[0],'quickSettings','Apply must send atomic config update');
+assert.equal(sent.at(-1)[1],1,'Apply must target selected profile');
+assert.equal(sent.at(-1)[2],'random');
+sent.pop();
+
 assert.equal(st.source,'profile','A saved profile is the default mode');
 assert.equal(get('cpsClickArea').disabled,true);
 assert.equal(get('cpsProfileSelect').children.length,2,'Profiles must be selectable');
