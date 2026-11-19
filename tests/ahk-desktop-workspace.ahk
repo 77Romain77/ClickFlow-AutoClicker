@@ -117,6 +117,25 @@ try {
     }
 
     ; Transparence libre : les valeurs intermédiaires ne sont pas des presets.
+    ; Tailles et nom du profil facultatifs, mini préservé par défaut.
+    if CF.overlaySize != "mini" || CF.overlayShowProfile
+        throw Error("La taille mini et le nom masqué doivent rester par défaut.")
+    for size in ["standard", "large", "mini"] {
+        CFDesktopSetPreference("overlaySize", size)
+        if CF.overlaySize != size
+            throw Error("Taille overlay non appliquée : " size)
+        metrics := CFOverlayMetrics()
+        WinGetClientPos(, , &wClient, &hClient,
+            "ahk_id " CF.overlayGui.Hwnd)
+        if Abs(wClient - metrics.w) > 3 || Abs(hClient - metrics.h) > 3
+            throw Error("Taille overlay incohérente : " size)
+    }
+    CFDesktopSetPreference("overlayShowProfile", "1")
+    if !CF.overlayShowProfile || !CF.overlayNameText.Visible
+        throw Error("Nom de profil non affiché en option.")
+    CFDesktopSetPreference("overlayShowProfile", "0")
+    if CF.overlayShowProfile || CF.overlayNameText.Visible
+        throw Error("Le nom de profil n'est pas masqué.")
     CFDesktopSetPreference("overlayOpacity", "37")
     if CF.overlayOpacity != 37
         throw Error("Transparence personnalisée 37% refusée.")
