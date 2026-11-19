@@ -66,8 +66,7 @@ CFGlobalJson() {
     global CF
     pairs := ""
     for action in CFGlobalKeys()
-        pairs .= (pairs = "" ? "" : ",") JsonQuote(action) ":"
-            JsonQuote(DisplayKey(CF.globalKeys.Get(action, "")))
+        pairs .= (pairs = "" ? "" : ",") JsonQuote(action) ":" JsonQuote(DisplayKey(CF.globalKeys.Get(action, "")))
     return "{" pairs "}"
 }
 
