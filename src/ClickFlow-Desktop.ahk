@@ -48,6 +48,7 @@ CFDesktopReadPreferences() {
     CF.floatStopBrush := 0
     CF.floatGraphBrush := 0
     CF.floatGraphOffBrush := 0
+    CF.floatChartPaintCount := 0
 }
 
 CFDesktopPreferencesJson() {
@@ -461,31 +462,49 @@ CFDesktopDrawFloatChart() {
     if !CF.floatShown || !CF.floatGraph || !CF.floatReady
         || !IsObject(CF.floatChart) || !CF.floatChart.Visible
         return
-    CF.floatChart.GetPos(, , &width, &height)
-    width := Round(width), height := Round(height)
-    if width < 40 || height < 40
-        return
+    ; Windows redessine le contrôle à chaque WM_PAINT avec SES dimensions
+    ; courantes, et non avec la taille fixe d'un bitmap SS_BITMAP.
     hwnd := CF.floatChart.Hwnd
-    screenDC := DllCall("User32\GetDC", "Ptr", hwnd, "Ptr")
-    if !screenDC
+    DllCall("User32\InvalidateRect", "Ptr", hwnd, "Ptr", 0, "Int", 0)
+    DllCall("User32\UpdateWindow", "Ptr", hwnd)
+}
+
+CFDesktopChartPaint(wParam, lParam, msg, hwnd) {
+    global CF
+    if !IsObject(CF.floatChart) || hwnd != CF.floatChart.Hwnd
         return
-    memDC := DllCall("gdi32\CreateCompatibleDC", "Ptr", screenDC, "Ptr")
-    bitmap := DllCall("gdi32\CreateCompatibleBitmap", "Ptr", screenDC,
+    paint := Buffer(128, 0)
+    dc := DllCall("User32\BeginPaint", "Ptr", hwnd, "Ptr", paint, "Ptr")
+    if dc {
+        try CFDesktopPaintChartDC(dc, hwnd)
+        DllCall("User32\EndPaint", "Ptr", hwnd, "Ptr", paint)
+    }
+    return 0
+}
+
+CFDesktopPaintChartDC(destination, hwnd) {
+    global CF
+    bounds := Buffer(16, 0)
+    if !DllCall("User32\GetClientRect", "Ptr", hwnd, "Ptr", bounds)
+        return
+    width := NumGet(bounds, 8, "Int")
+    height := NumGet(bounds, 12, "Int")
+    if width < 10 || height < 10
+        return
+    memDC := DllCall("gdi32\CreateCompatibleDC", "Ptr", destination, "Ptr")
+    if !memDC
+        return
+    bitmap := DllCall("gdi32\CreateCompatibleBitmap", "Ptr", destination,
         "Int", width, "Int", height, "Ptr")
-    if !memDC || !bitmap {
-        if bitmap
-            DllCall("gdi32\DeleteObject", "Ptr", bitmap)
-        if memDC
-            DllCall("gdi32\DeleteDC", "Ptr", memDC)
-        DllCall("User32\ReleaseDC", "Ptr", hwnd, "Ptr", screenDC)
+    if !bitmap {
+        DllCall("gdi32\DeleteDC", "Ptr", memDC)
         return
     }
     original := DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", bitmap, "Ptr")
     brush := DllCall("gdi32\CreateSolidBrush", "UInt", 0x0023190D, "Ptr")
-    rect := Buffer(16, 0)
-    NumPut("Int", 0, "Int", 0, "Int", width, "Int", height, rect)
-    DllCall("User32\FillRect", "Ptr", memDC, "Ptr", rect, "Ptr", brush)
+    DllCall("User32\FillRect", "Ptr", memDC, "Ptr", bounds, "Ptr", brush)
     DllCall("gdi32\DeleteObject", "Ptr", brush)
+
     grid := CFDesktopChartPen(memDC, 0x00433527)
     Loop 3 {
         y := Round(height * A_Index / 4)
@@ -494,39 +513,38 @@ CFDesktopDrawFloatChart() {
     }
     DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", grid.old)
     DllCall("gdi32\DeleteObject", "Ptr", grid.pen)
-    samples := CF.floatPoints
-    if samples.Length {
-        lastTick := A_TickCount
-        peak := 5
-        for sample in samples
+
+    now := A_TickCount
+    peak := 5
+    for sample in CF.floatPoints
+        if sample.t >= now - 30000
             peak := Max(peak, sample.cps)
-        pen := CFDesktopChartPen(memDC, 0x00FFB775, 2)
-        first := true
-        for sample in samples {
-            x := Round(3 + (width - 6) * (1 - (lastTick - sample.t) / 30000))
-            x := Max(2, Min(width - 3, x))
-            y := Round(height - 4 - (height - 8) * sample.cps / (peak + 2))
-            if first {
-                DllCall("gdi32\MoveToEx", "Ptr", memDC,
-                    "Int", x, "Int", y, "Ptr", 0)
-                first := false
-            } else
-                DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
+    pen := CFDesktopChartPen(memDC, 0x00FFB775, 2)
+    first := true
+    for sample in CF.floatPoints {
+        if sample.t < now - 30000
+            continue
+        x := Max(2, Min(width - 3, Round(3 + (width - 6)
+            * (1 - (now - sample.t) / 30000))))
+        y := Max(3, Min(height - 4, Round(height - 4
+            - (height - 8) * sample.cps / (peak + 2))))
+        if first {
+            DllCall("gdi32\MoveToEx", "Ptr", memDC,
+                "Int", x, "Int", y, "Ptr", 0)
+            first := false
+        } else {
+            DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
         }
-        DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", pen.old)
-        DllCall("gdi32\DeleteObject", "Ptr", pen.pen)
     }
+    DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", pen.old)
+    DllCall("gdi32\DeleteObject", "Ptr", pen.pen)
+    DllCall("gdi32\BitBlt", "Ptr", destination,
+        "Int", 0, "Int", 0, "Int", width, "Int", height,
+        "Ptr", memDC, "Int", 0, "Int", 0, "UInt", 0x00CC0020)
     DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", original)
+    DllCall("gdi32\DeleteObject", "Ptr", bitmap)
     DllCall("gdi32\DeleteDC", "Ptr", memDC)
-    DllCall("User32\ReleaseDC", "Ptr", hwnd, "Ptr", screenDC)
-    try {
-        previous := SendMessage(0x172, 0, bitmap, , "ahk_id " hwnd)
-        if previous && previous != bitmap
-            DllCall("gdi32\DeleteObject", "Ptr", previous)
-        CF.floatBitmap := bitmap
-    } catch {
-        DllCall("gdi32\DeleteObject", "Ptr", bitmap)
-    }
+    CF.floatChartPaintCount := CF.floatChartPaintCount + 1
 }
 
 CFDesktopUpdate() {
@@ -564,15 +582,13 @@ CFDesktopReleaseFloat() {
     if !IsObject(CF.floatGui)
         return
     CFDesktopSaveFloatBounds()
-    if CF.floatBitmap {
-        try {
-            old := SendMessage(0x172, 0, 0, ,
-                "ahk_id " CF.floatChart.Hwnd)
-            if old
-                DllCall("gdi32\DeleteObject", "Ptr", old)
+    CF.floatReady := false
+    for name in ["floatStopBrush", "floatGraphBrush", "floatGraphOffBrush"] {
+        if CF.%name% {
+            DllCall("gdi32\DeleteObject", "Ptr", CF.%name%)
+            CF.%name% := 0
         }
-        CF.floatBitmap := 0
     }
     try CF.floatGui.Destroy()
-    CF.floatReady := false
+    CF.floatGui := 0
 }
