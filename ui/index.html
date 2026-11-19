@@ -725,6 +725,83 @@ const cpsTest = {
     profileName:'', lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
 };
 const cpsDurations=[2,5,10,30,60];
+// Édition non destructive : les modifications restent un brouillon jusqu'à Appliquer.
+let cpsQuickProfileId=0,cpsQuickSaved=null,cpsQuickDraft=null;
+function cpsQuickLoad() {
+    const id=Number($('cpsProfileSelect').value);
+    const profile=model.profiles.find(p=>p.id===id);
+    cpsQuickProfileId=id;
+    const c=(profile&&profile.settings)||{mode:'natural',min:8,max:14,intensity:'medium'};
+    cpsQuickSaved={mode:c.mode||'natural',min:Number(c.min)||8,
+        max:Number(c.max)||14,intensity:c.intensity||'medium'};
+    cpsQuickDraft={...cpsQuickSaved};
+    cpsQuickRender(true);
+}
+function cpsQuickValid() {
+    if(!cpsQuickDraft)return false;
+    const d=cpsQuickDraft;
+    return ['fixed','random','natural'].includes(d.mode)
+        &&['low','medium','high'].includes(d.intensity)
+        &&Number.isInteger(d.min)&&Number.isInteger(d.max)
+        &&d.min>=1&&d.max<=100&&d.max>=d.min;
+}
+function cpsQuickDirty() {
+    if(!cpsQuickDraft||!cpsQuickSaved)return false;
+    return ['mode','min','max','intensity']
+        .some(key=>cpsQuickDraft[key]!==cpsQuickSaved[key]);
+}
+function cpsQuickRender(loadInputs=false) {
+    if(!cpsQuickDraft)return;
+    const d=cpsQuickDraft;
+    if(loadInputs) {
+        $('cpsQuickMode').value=d.mode;
+        $('cpsQuickMin').value=d.min;
+        $('cpsQuickMax').value=d.max;
+        $('cpsQuickIntensity').value=d.intensity;
+    }
+    const blocked=cpsTest.phase==='running'||cpsTest.phase==='pending';
+    const dirty=cpsQuickDirty(),valid=cpsQuickValid();
+    $('cpsQuickSettings').hidden=cpsTest.source!=='profile';
+    for(const field of ['Mode','Min','Max','Intensity'])
+        $('cpsQuick'+field).disabled=blocked||(field==='Intensity'&&d.mode!=='natural');
+    $('cpsQuickApply').disabled=blocked||!dirty||!valid;
+    $('cpsQuickRevert').disabled=blocked||!dirty;
+    $('cpsStartProfile').disabled=blocked||dirty||cpsTest.source!=='profile';
+    $('cpsQuickNotice').textContent=!valid?'CPS invalides : min 1, max 100 et maximum >= minimum.'
+        :dirty?'Modifications non appliquées - valide pour tester ce profil.'
+        :'Réglages du profil enregistré';
+}
+for(const field of ['Mode','Min','Max','Intensity']) {
+    const el=$('cpsQuick'+field);
+    const handler=()=>{
+        if(!cpsQuickDraft)return;
+        const key=field[0].toLowerCase()+field.slice(1);
+        cpsQuickDraft[key]=field==='Min'||field==='Max'?Number(el.value):el.value;
+        cpsQuickRender();
+    };
+    el.addEventListener(field==='Min'||field==='Max'?'input':'change',handler);
+}
+$('cpsQuickRevert').onclick=()=>cpsQuickLoad();
+$('cpsQuickApply').onclick=()=>{
+    if(!cpsQuickValid()||!cpsQuickDirty()
+        ||cpsTest.phase==='running'||cpsTest.phase==='pending')return;
+    const id=cpsQuickProfileId,d={...cpsQuickDraft};
+    if(connected){
+        send('quickSettings',id,d.mode,d.min,d.max,d.intensity);
+    } else {
+        const p=model.profiles.find(p=>p.id===id);
+        if(p&&p.settings)Object.assign(p.settings,d);
+        if(p)render();
+        toast('Aperçu navigateur : aucun profil sauvegardé.');
+    }
+    cpsQuickSaved={...d};
+    cpsQuickRender();
+};
+$('cpsProfileSelect').addEventListener('change',()=>{
+    if(cpsTest.phase==='running'||cpsTest.phase==='pending')return;
+    cpsQuickLoad();
+});
+
 const cpsNow=()=>performance.now();
 const cpsElapsed=now=>cpsTest.phase==='ready'||cpsTest.phase==='pending'?0:
     Math.max(0,Math.min(cpsTest.seconds,(now-cpsTest.startedAt)/1000));
@@ -836,6 +913,7 @@ function cpsSyncProfiles() {
     });
     const exists=model.profiles.some(profile=>String(profile.id)===previous);
     selector.value=exists?previous:String(model.selected);
+    cpsQuickLoad();
 }
 function cpsStartProfile() {
     if(cpsTest.source!=='profile'||cpsTest.phase==='running'||cpsTest.phase==='pending')return;
@@ -843,6 +921,7 @@ function cpsStartProfile() {
     const profileId=Number($('cpsProfileSelect').value);
     const profile=model.profiles.find(p=>p.id===profileId);
     if(!profile){toast('Sélectionne un profil valide.');return;}
+    if(cpsQuickDirty()){toast('Applique ou annule tes réglages avant le test.');return;}
     cpsPrepareAudio();
     cpsResetTest();
     cpsTest.phase='pending';cpsTest.profileName=profile.name;
@@ -1031,6 +1110,7 @@ function cpsRender(now) {
     $('cpsProfileControls').hidden=cpsTest.source!=='profile';
     $('cpsSound').textContent=cpsTest.audioEnabled?'Son activé':'Son désactivé';
     $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
+    cpsQuickRender();
     $('cpsDescription').textContent=cpsTest.source==='profile'
         ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire ou naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
         :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
@@ -1060,19 +1140,25 @@ window.addEventListener('resize',()=>{
 });
 cpsSyncProfiles();cpsLastRender();cpsRender(cpsNow());
 
-document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
-    const page=btn.dataset.page;
-    document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));
-    ['dashboard','profiles','cps','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));
-    if(page!=='cps' && (cpsTest.phase==='running'||cpsTest.phase==='pending'))cpsResetTest();
-    if(page==='cps'){
+function navigatePage(page) {
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
+    ['dashboard','profiles','cps','settings','about'].forEach(id=>
+        $('page-'+id).classList.toggle('hidden',id!==page));
+    if(page!=='cps' && (cpsTest.phase==='running'||cpsTest.phase==='pending'))
+        cpsResetTest();
+    if(page==='cps') {
         cpsSyncProfiles();
         if(connected)send('cpsTest','open');
         setTimeout(()=>cpsRender(cpsNow()),0);
     }
-    if(page==='about' && connected)send('shortcuts','status');
-    $('crumb').textContent='VOTRE ESPACE / '+(page==='dashboard'?'TABLEAU DE BORD':page==='profiles'?'PROFILS':page==='cps'?'TEST CPS':'À PROPOS');
-});
+    if(page==='dashboard')setTimeout(drawLiveMonitor,0);
+    if(page==='settings' && connected)send('shortcuts','status');
+    const labels={dashboard:'TABLEAU DE BORD',profiles:'PROFILS',cps:'TEST CPS',
+        settings:'PARAMÈTRES',about:'À PROPOS'};
+    $('crumb').textContent='VOTRE ESPACE / '+labels[page];
+}
+document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>
+    navigatePage(btn.dataset.page));
 if(bridge) {
     window.chrome.webview.addEventListener('message',event=>{
         let msg=event.data;
@@ -1087,6 +1173,9 @@ if(bridge) {
             model.selected=msg.selected;
             model.emergencyKey=msg.emergencyKey||'F12';
             model.compact=!!msg.compact;
+            if(msg.preferences)model.preferences={
+                ...model.preferences,...msg.preferences
+            };
             model.nextId=Math.max(...model.profiles.map(p=>p.id))+1;
             model.capturing=false;
             setLiveAppearance();
