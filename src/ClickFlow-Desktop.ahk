@@ -2,6 +2,8 @@
 ; La courbe est un bitmap GDI natif en mémoire, sans WebView2 secondaire.
 ; Aucun historique de CPS n'est conservé après la fermeture.
 CFDesktopInt(value, fallback, minimum, maximum) {
+    if String(value) = "-99999"
+        return fallback
     return RegExMatch(String(value), "^-?\d{1,7}$")
         ? Max(minimum, Min(maximum, value + 0)) : fallback
 }
