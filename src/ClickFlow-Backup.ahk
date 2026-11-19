@@ -12,7 +12,7 @@ CFBackupScript() {
 }
 
 CFBackupWorkFolder() {
-    folder := A_Temp "\ClickFlow-Backup-" A_Pid "-" A_TickCount
+    folder := A_Temp "\ClickFlow-Backup-" DllCall("GetCurrentProcessId", "UInt") "-" A_TickCount
     Loop 12 {
         candidate := folder "-" A_Index
         if !DirExist(candidate) {
