@@ -195,18 +195,17 @@ CFDesktopFloatPositionValid(x, y, width, height) {
 }
 
 CFOverlayMetrics(dpi := 0) {
-    ; Convertir UNE SEULE FOIS les mesures de référence en pixels réels.
-    ; Gui -DPIScale et WinMove utilisent alors exactement la même unité.
-    ; Les polices Segoe UI restent proportionnelles au DPI système.
-    ; Le paramètre DPI sert aussi à tester les calculs à 125/150/200 %.
+    ; Mini-overlay : UNE LIGNE, 216x34 pixels physiques, même à 200% DPI.
+    ; La police est réduite en points à haut DPI pour conserver cette taille.
     if !dpi
         dpi := A_ScreenDPI
-    scale := Max(1, Min(3, dpi / 96))
+    font := Max(4, Round(8 * 96 / dpi))
     return {
-        w: Round(252 * scale), h: Round(76 * scale),
-        left: Round(13 * scale), top: Round(9 * scale),
-        statusW: Round(226 * scale), statusH: Round(26 * scale),
-        cpsTop: Round(39 * scale), cpsH: Round(29 * scale)
+        w: 216, h: 34,
+        left: 9, top: 5,
+        statusW: 88, statusH: 24,
+        cpsX: 102, cpsTop: 5, cpsW: 105, cpsH: 24,
+        font: font, radius: 12
     }
 }
 
@@ -232,26 +231,35 @@ CFOverlayCreate() {
     global CF
     if IsObject(CF.overlayGui)
         return
-    ; Sans -DPIScale, Gui.Add agrandit les contrôles alors que WinMove
-    ; impose des tailles en pixels, les coupant à 125/150/200 %.
-    ; Ici les positions et le rectangle parent sont tous en pixels.
+    ; Pixel-for-pixel, sans mise à l'échelle automatique des contrôles.
+    ; Le status et les CPS moyens restent sur UNE ligne très compacte.
     m := CFOverlayMetrics()
     overlay := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20 -DPIScale",
         "ClickFlow - Overlay")
     overlay.MarginX := 0
     overlay.MarginY := 0
     overlay.BackColor := "121F32"
-    overlay.SetFont("s9 bold c9AE4D4", "Segoe UI")
+    overlay.SetFont("s" m.font " bold c9AE4D4", "Segoe UI")
     CF.overlayStatusText := overlay.Add("Text",
         "x" m.left " y" m.top " w" m.statusW " h" m.statusH
-        " +0x100", "ARRÊTÉ")
-    overlay.SetFont("s11 bold cEDF6FF", "Segoe UI")
+        " +0x100 0x200", "ARRÊTÉ")
+    overlay.SetFont("s" m.font " bold cEDF6FF", "Segoe UI")
     CF.overlayCpsText := overlay.Add("Text",
-        "x" m.left " y" m.cpsTop " w" m.statusW " h" m.cpsH
-        " +0x100", "0,0 CPS moy.")
+        "x" m.cpsX " y" m.cpsTop " w" m.cpsW " h" m.cpsH
+        " +0x100 0x200 Right", "0,0 CPS moy.")
     CF.overlayGui := overlay
     overlay.Show("NA Hide w" m.w " h" m.h)
     CFOverlayApplyTransparency()
+}
+
+CFOverlayApplyCorners() {
+    global CF
+    if !IsObject(CF.overlayGui)
+        return
+    ; Coins très légèrement arrondis : rayon apparent de 6 px.
+    m := CFOverlayMetrics()
+    try WinSetRegion("0-0 w" m.w " h" m.h " r" m.radius "-"
+        m.radius, "ahk_id " CF.overlayGui.Hwnd)
 }
 
 CFOverlayApplyTransparency() {
@@ -289,6 +297,7 @@ CFOverlayShow(visible) {
     if visible {
         CFOverlayPlace()
         CF.overlayGui.Show("NA")
+        CFOverlayApplyCorners()
         CFOverlayApplyTransparency()
     } else if IsObject(CF.overlayGui)
         CF.overlayGui.Hide()
