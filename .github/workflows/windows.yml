@@ -77,10 +77,17 @@ jobs:
           if (-not $p.WaitForExit(15000)) {
             $p.Refresh()
             $title = $p.MainWindowTitle
+            $uiText = ''
+            try {
+              Add-Type -AssemblyName UIAutomationClient
+              $root = [System.Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
+              $items = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+              $uiText = ($items | ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Select-Object -First 25) -join ' | '
+            } catch { $uiText = $_.Exception.Message }
             $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
             $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
             Stop-Process -Id $p.Id -Force
-            throw "Global settings test timed out. Window=$title stdout=$out stderr=$err"
+            throw "Global settings test timed out. Window=$title dialog=$uiText stdout=$out stderr=$err"
           }
           $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
           $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
