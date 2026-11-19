@@ -320,6 +320,21 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 .overlay-edit-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0}
 .overlay-edit-row .subnote{flex:1;min-width:220px}
 @media(max-width:620px){.overlay-settings-grid{grid-template-columns:1fr}}
+
+.settings-outer{padding:12px}
+.settings-group{border:1px solid #2b405e;border-radius:12px;margin:9px 0;background:#101c2f}
+.settings-group>summary{cursor:pointer;list-style:none;padding:15px 18px;font-size:14px;font-weight:700;color:#d9eaff;display:flex;align-items:center;gap:12px}
+.settings-group>summary::-webkit-details-marker{display:none}
+.settings-group>summary:before{content:'▸';color:#7db7ff;font-size:17px;transition:transform .14s}
+.settings-group[open]>summary:before{transform:rotate(90deg)}
+.settings-group>summary small{font-size:11px;color:#8ca9ca;font-weight:400}
+.settings-group[open]>summary{border-bottom:1px solid #293d58}
+.settings-group-body{padding:12px 16px 18px}
+.global-key-row{gap:14px}
+.global-key-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.global-key-actions .btn:first-child{min-width:100px}
+.global-key-actions .kbd{font-size:11px}
+@media(max-width:540px){.settings-group>summary{flex-wrap:wrap}.global-key-row{align-items:start;flex-direction:column}.global-key-actions{width:100%}}
 </style>
 </head>
 <body>
@@ -484,45 +499,54 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
   </div>
  </section>
  <section id="page-settings" class="hidden">
-  <div class="hero"><div><h2>Paramètres.</h2><p>Adapte ClickFlow à ton utilisation sous Windows.</p></div></div>
-  <div class="card" style="max-width:820px">
-   <div class="card-title">Comportement et affichage</div><div class="card-description">Ces réglages sont conservés indépendamment des profils.</div>
-   <div class="settings-preferences">
-    <div class="shortcut-setting"><div><strong>Overlay ClickFlow</strong><p class="subnote">Indique l'état du moteur et les CPS moyens sur une période personnalisable, sans courbe ni boutons sur l'overlay.</p></div><button class="switch" data-preference="floatShown" aria-label="Activer l'overlay" aria-pressed="false"></button></div>
-    <div class="shortcut-setting"><div><strong>Toujours afficher l'overlay</strong><p class="subnote">Sinon, il apparaît pendant les clics et disparaît 2 secondes après l'arrêt.</p></div><button class="switch" data-preference="overlayAlwaysVisible" aria-label="Toujours afficher l'overlay" aria-pressed="false"></button></div>
+  <div class="hero"><div><h2>Paramètres.</h2><p>Des réglages regroupés par usage. Ouvre uniquement les sections utiles.</p></div></div>
+  <div class="card settings-outer" style="max-width:850px">
+   <details class="settings-group" open><summary>Général <small>Fenêtre, moniteur CPS et notification</small></summary><div class="settings-group-body">
+    <div class="shortcut-setting"><div><strong>Moniteur CPS sur le tableau de bord</strong><p class="subnote">Courbe uniquement pendant les clics de la session.</p></div><button class="switch on" data-preference="liveMonitor" aria-label="Afficher le moniteur CPS" aria-pressed="true"></button></div>
+    <div class="shortcut-setting"><div><strong>Courbe CPS en mode compact</strong><p class="subnote">Petit moniteur facultatif dans le panneau compact.</p></div><button class="switch on" data-preference="compactChart" aria-label="Afficher la courbe CPS en mode compact" aria-pressed="true"></button></div>
+    <div class="shortcut-setting"><div><strong>Réduire dans la zone de notification</strong><p class="subnote">Masquer la fenêtre au lieu de la laisser dans la barre des tâches.</p></div><button class="switch" data-preference="minimizeToTray" aria-label="Réduire dans la zone de notification" aria-pressed="false"></button></div>
+    <div class="shortcut-setting"><div><strong>Fermer vers la zone de notification</strong><p class="subnote">Le X masque ClickFlow. Quitter complètement depuis l'icône près de l'horloge.</p></div><button class="switch" data-preference="closeToTray" aria-label="Fermer vers la zone de notification" aria-pressed="false"></button></div>
+   </div></details>
+   <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
+    <div class="shortcut-setting"><div><strong>Overlay ClickFlow</strong><p class="subnote">Statut et CPS moyens calculés sur une durée personnalisable.</p></div><button class="switch" data-preference="floatShown" aria-label="Activer l'overlay" aria-pressed="false"></button></div>
+    <div class="shortcut-setting"><div><strong>Toujours afficher l'overlay</strong><p class="subnote">Sinon, il disparaît environ 2 secondes après l'arrêt.</p></div><button class="switch" data-preference="overlayAlwaysVisible" aria-label="Toujours afficher l'overlay" aria-pressed="false"></button></div>
+    <div class="shortcut-setting"><div><strong>Afficher le nom du profil</strong><p class="subnote">Ajoute une petite ligne sous les informations. Désactivé par défaut.</p></div><button class="switch" data-preference="overlayShowProfile" aria-label="Afficher le nom du profil sur l'overlay" aria-pressed="false"></button></div>
     <div class="overlay-settings-grid">
-     <label>Position<select id="overlayPosition" class="select"><option value="tl">Haut gauche</option><option value="tm">Haut milieu</option><option value="tr">Haut droite</option><option value="bl">Bas gauche</option><option value="bm">Bas milieu</option><option value="br">Bas droite</option><option value="custom">Personnalisée (déplacement)</option></select></label>
+     <label>Taille<select id="overlaySize" class="select"><option value="mini">Mini (par défaut)</option><option value="standard">Standard</option><option value="large">Grande</option></select></label>
+     <label>Position<select id="overlayPosition" class="select"><option value="tl">Haut gauche</option><option value="tm">Haut milieu</option><option value="tr">Haut droite</option><option value="bl">Bas gauche</option><option value="bm">Bas milieu</option><option value="br">Bas droite</option><option value="custom">Personnalisée</option></select></label>
      <label>Écran<select id="overlayMonitor" class="select"></select></label>
      <label>Opacité (0 invisible, 100 opaque)<div class="overlay-numeric"><input id="overlayOpacity" class="input" type="number" min="0" max="100" step="1"><span>%</span></div></label>
      <label>Marge (0 à 100 px)<div class="overlay-numeric"><input id="overlayMargin" class="input" type="number" min="0" max="100" step="1"><span>px</span></div></label>
-     <label>Période CPS moyens (1 à 60 secondes)<div class="overlay-numeric"><input id="overlayAverageSeconds" class="input" type="number" min="1" max="60" step="1" aria-label="Période des CPS moyens dans l'overlay"><span>s</span></div></label>
+     <label>Période CPS moyens (1 à 60 secondes)<div class="overlay-numeric"><input id="overlayAverageSeconds" class="input" type="number" min="1" max="60" step="1"><span>s</span></div></label>
     </div>
-    <div class="overlay-edit-row"><button type="button" class="btn primary sm" id="overlayEdit">Déplacer librement l'overlay</button><span id="overlayEditHint" class="subnote">Placement libre : glisse l'overlay puis clique sur Terminer. Il redevient transparent aux clics.</span></div>
-    <div class="shortcut-setting"><div><strong>Moniteur CPS sur le tableau de bord</strong><p class="subnote">Courbe en direct, uniquement pendant cette session.</p></div><button class="switch on" data-preference="liveMonitor" aria-label="Afficher le moniteur CPS" aria-pressed="true"></button></div>
-    <div class="shortcut-setting"><div><strong>Courbe CPS en mode compact</strong><p class="subnote">Garde une petite courbe au-dessous des commandes essentielles.</p></div><button class="switch on" data-preference="compactChart" aria-label="Afficher la courbe CPS en mode compact" aria-pressed="true"></button></div>
-    <div class="shortcut-setting"><div><strong>Réduire dans la zone de notification</strong><p class="subnote">Un clic sur Réduire masque la fenêtre sans quitter.</p></div><button class="switch" data-preference="minimizeToTray" aria-label="Réduire dans la zone de notification" aria-pressed="false"></button></div>
-    <div class="shortcut-setting"><div><strong>Fermer vers la zone de notification</strong><p class="subnote">Le bouton X masque ClickFlow au lieu de le quitter. Pour quitter, utilise le menu de l'icône près de l'horloge.</p></div><button class="switch" data-preference="closeToTray" aria-label="Fermer vers la zone de notification" aria-pressed="false"></button></div>
-   </div>
-   <h3 class="settings-title">Raccourcis Windows</h3>
-     <div class="shortcut-settings">
-       <div class="shortcut-setting"><div><strong>Raccourci sur le bureau</strong><p class="subnote" id="desktopShortcutStatus">Vérification...</p></div><button id="desktopShortcutButton" class="btn primary" type="button">Ajouter au bureau</button></div>
-       <div class="shortcut-setting"><div><strong>Raccourci dans le menu Démarrer</strong><p class="subnote" id="startShortcutStatus">Vérification...</p></div><button id="startShortcutButton" class="btn primary" type="button">Ajouter au menu Démarrer</button></div>
-     </div>
-     <p class="subnote">Les deux raccourcis sont indépendants. Si tu en supprimes un depuis Windows, ClickFlow ne le recréera pas automatiquement. Tu pourras toujours le réinstaller ici.</p>
-     <div class="maintenance-section">
-       <h3>Stockage et désinstallation</h3>
-       <p class="subnote">Ouvre les dossiers de ClickFlow ou désinstalle le programme depuis cette fenêtre.</p>
-       <div class="maintenance-actions">
-         <button class="btn quiet" id="openAppFolder" type="button">Ouvrir les fichiers du programme</button>
-         <button class="btn quiet" id="openProfilesFolder" type="button">Ouvrir les profils et paramètres</button>
-       </div>
-       <div class="maintenance-actions" style="margin-top:12px">
-         <button class="btn quiet" id="uninstallKeep" type="button">Désinstaller - conserver les données</button>
-         <button class="btn danger" id="uninstallAll" type="button">Tout désinstaller et effacer</button>
-       </div>
-       <p class="subnote" style="margin-top:12px">Une confirmation sera demandée. L'effacement complet nécessitera aussi de saisir SUPPRIMER. Le fichier .ahk téléchargé ailleurs sur le disque n'est pas effacé automatiquement.</p>
-     </div>
-
+    <div class="overlay-edit-row"><button type="button" class="btn primary sm" id="overlayEdit">Déplacer librement l'overlay</button><span id="overlayEditHint" class="subnote">Glisse l'overlay, puis clique sur Terminer pour réactiver la transparence aux clics.</span></div>
+   </div></details>
+   <details class="settings-group"><summary>Raccourcis globaux <small>Tous facultatifs, sans touche par défaut</small></summary><div class="settings-group-body">
+    <p class="subnote">Chaque action est indépendante et peut rester sur <strong>Aucun</strong>. Appuie sur Échap pour annuler une capture. La touche d'arrêt d'urgence du tableau de bord reste toujours active.</p>
+    <div class="shortcut-settings">       <div class="shortcut-setting global-key-row"><div><strong>Profil suivant</strong><p class="subnote">Sélectionne le profil suivant sans démarrer les clics.</p></div><div class="global-key-actions"><button id="globalCaptureNext" class="btn sm quiet" type="button" data-global-capture="next"><span id="globalKeyNext" class="kbd">Aucun</span></button><button id="globalClearNext" class="btn sm quiet" type="button" data-global-clear="next" title="Désactiver ce raccourci">Aucun</button></div></div>
+       <div class="shortcut-setting global-key-row"><div><strong>Profil précédent</strong><p class="subnote">Sélectionne le profil précédent sans démarrer les clics.</p></div><div class="global-key-actions"><button id="globalCapturePrevious" class="btn sm quiet" type="button" data-global-capture="previous"><span id="globalKeyPrevious" class="kbd">Aucun</span></button><button id="globalClearPrevious" class="btn sm quiet" type="button" data-global-clear="previous" title="Désactiver ce raccourci">Aucun</button></div></div>
+       <div class="shortcut-setting global-key-row"><div><strong>Afficher / masquer l'overlay</strong><p class="subnote">Active ou désactive l'overlay.</p></div><div class="global-key-actions"><button id="globalCaptureOverlay" class="btn sm quiet" type="button" data-global-capture="overlay"><span id="globalKeyOverlay" class="kbd">Aucun</span></button><button id="globalClearOverlay" class="btn sm quiet" type="button" data-global-clear="overlay" title="Désactiver ce raccourci">Aucun</button></div></div>
+       <div class="shortcut-setting global-key-row"><div><strong>Ouvrir le Test CPS</strong><p class="subnote">Ouvre la fenêtre complète sur le Test CPS, en arrêtant les clics.</p></div><div class="global-key-actions"><button id="globalCaptureTest" class="btn sm quiet" type="button" data-global-capture="test"><span id="globalKeyTest" class="kbd">Aucun</span></button><button id="globalClearTest" class="btn sm quiet" type="button" data-global-clear="test" title="Désactiver ce raccourci">Aucun</button></div></div>
+       <div class="shortcut-setting global-key-row"><div><strong>Ouvrir ClickFlow</strong><p class="subnote">Restaure la fenêtre principale depuis toute application.</p></div><div class="global-key-actions"><button id="globalCaptureOpen" class="btn sm quiet" type="button" data-global-capture="open"><span id="globalKeyOpen" class="kbd">Aucun</span></button><button id="globalClearOpen" class="btn sm quiet" type="button" data-global-clear="open" title="Désactiver ce raccourci">Aucun</button></div></div>
+    </div>
+   </div></details>
+   <details class="settings-group"><summary>Raccourcis Windows <small>Bureau et menu Démarrer</small></summary><div class="settings-group-body">
+    <div class="shortcut-settings">
+     <div class="shortcut-setting"><div><strong>Raccourci sur le bureau</strong><p class="subnote" id="desktopShortcutStatus">Vérification...</p></div><button id="desktopShortcutButton" class="btn primary" type="button">Ajouter au bureau</button></div>
+     <div class="shortcut-setting"><div><strong>Raccourci dans le menu Démarrer</strong><p class="subnote" id="startShortcutStatus">Vérification...</p></div><button id="startShortcutButton" class="btn primary" type="button">Ajouter au menu Démarrer</button></div>
+    </div><p class="subnote">La suppression manuelle d'un raccourci Windows est respectée.</p>
+   </div></details>
+   <details class="settings-group"><summary>Sauvegarde complète <small>Tous les profils et paramètres</small></summary><div class="settings-group-body">
+    <p class="subnote">Crée un fichier ZIP contenant settings.ini et tous les profils individuels. Restaure ton espace de travail sur ce PC ou un autre. Le logiciel et ses fichiers temporaires ne sont pas inclus.</p>
+    <div class="maintenance-actions"><button id="backupExport" class="btn primary" type="button">Sauvegarder tout (.zip)</button><button id="backupRestore" class="btn quiet" type="button">Restaurer une sauvegarde</button></div>
+    <p class="subnote">Avant la restauration, ClickFlow vérifie l'archive et demande confirmation. Les clics sont arrêtés pendant le remplacement des données.</p>
+   </div></details>
+   <details class="settings-group"><summary>Maintenance <small>Stockage et désinstallation</small></summary><div class="settings-group-body">
+    <p class="subnote">Ouvre les dossiers de ClickFlow, ou supprime l'application en conservant ou non les données.</p>
+    <div class="maintenance-actions"><button class="btn quiet" id="openAppFolder" type="button">Ouvrir les fichiers du programme</button><button class="btn quiet" id="openProfilesFolder" type="button">Ouvrir les profils et paramètres</button></div>
+    <div class="maintenance-actions" style="margin-top:12px"><button class="btn quiet" id="uninstallKeep" type="button">Désinstaller - conserver les données</button><button class="btn danger" id="uninstallAll" type="button">Tout désinstaller et effacer</button></div>
+    <p class="subnote">Une confirmation sera demandée avant la suppression. Le fichier .ahk téléchargé hors des dossiers ClickFlow n'est pas supprimé.</p>
+   </div></details>
   </div>
  </section>
  <section id="page-about" class="hidden">
