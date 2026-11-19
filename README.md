@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.0.2 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.0.3 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.0.2.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.0.2)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.0.3.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.0.3)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.0.2.ahk`.
+2. Télécharger `ClickFlow-v1.0.3.ahk`.
 3. Double-cliquer sur ce fichier.
-4. Accepter, si souhaité, la création des raccourcis Bureau et menu Démarrer.
+4. Dans **À propos**, ajouter les raccourcis Bureau et menu Démarrer si souhaité.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.0.2`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.0.3`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -31,6 +31,8 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Profils locaux : création, duplication, renommage, suppression et sauvegarde.
 - Statistiques de CPS et de clics générés.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+- Boutons pour ouvrir les dossiers du logiciel et des profils.
+- Désinstallation depuis **À propos**, avec conservation des profils ou suppression complète des données ClickFlow.
 
 ## Lancer ClickFlow plusieurs fois et nettoyer les caches
 
@@ -55,12 +57,28 @@ Les réglages se trouvent dans `%APPDATA%\ClickFlow\settings.ini`, séparément 
 
 Chaque version publiée possède un numéro et son cache de composants. Télécharger et lancer un nouveau fichier `.ahk` met à jour la copie locale utilisée par les raccourcis, sans supprimer les profils.
 
+## Emplacements et désinstallation
+
+Dans l'onglet **À propos**, tu peux ouvrir directement les deux emplacements :
+
+- **Profils et réglages** : `%APPDATA%\ClickFlow` (`settings.ini` et `settings.ini.backup-webview2`).
+- **Fichiers du logiciel** : `%LOCALAPPDATA%\ClickFlow` (fichier unique local, icône, runtimes et cache WebView2).
+
+Deux modes de désinstallation sont proposés, avec confirmation en tapant **SUPPRIMER** :
+
+- **Désinstaller en gardant mes profils** : fermeture de ClickFlow, suppression des raccourcis qui lui appartiennent et du dossier local du programme, tout en préservant `%APPDATA%\ClickFlow`.
+- **Tout supprimer, y compris mes profils** : mêmes opérations, puis suppression de `%APPDATA%\ClickFlow` et de ses sauvegardes.
+
+Le nettoyage se fait après la fermeture du moteur, pour permettre la libération de WebView2. Les raccourcis d'autres logiciels ne sont jamais supprimés. AutoHotkey v2 et le runtime Microsoft WebView2 sont des prérequis partagés, ils ne sont pas désinstallés.
+
+Un fichier `ClickFlow-vX.Y.Z.ahk` téléchargé dans **Téléchargements** ou dans un dossier externe reste présent après l'opération. Il doit être supprimé manuellement si nécessaire.
 ## Code source
 
 | Chemin | Rôle |
 | --- | --- |
 | `src/ClickFlow-WebView2.ahk` | Lanceur de fenêtre Windows |
-| `src/ClickFlow-Backend.ahk` | Moteur CPS, raccourcis, profils, sauvegarde |
+| `src/ClickFlow-Backend.ahk` | Moteur CPS, raccourcis, profils, sauvegarde et outils de maintenance |
+| `src/ClickFlow-Uninstall.ahk` | Désinstallation après fermeture, avec ou sans sauvegardes |
 | `src/lib/` | Dépendances WebView2/AutoHotkey et licence de thqby |
 | `ui/index.html` | Interface HTML/CSS/JavaScript |
 | `tools/build_single_ahk.py` | Création du fichier `.ahk` unique |
