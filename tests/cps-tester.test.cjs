@@ -1,136 +1,156 @@
-// Node.js regression tests for the real CPS tester JavaScript embedded in ui/index.html.
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const path = require('node:path');
-
-const html = fs.readFileSync(path.join(__dirname, '..', 'ui', 'index.html'), 'utf8');
-const marker = '// Test CPS : clics manuels uniquement';
-const start = html.indexOf(marker);
-const end = html.indexOf("document.querySelectorAll('.nav-item').forEach", start);
-assert(start >= 0 && end > start, 'CPS tester script must exist in the HTML');
-const js = html.slice(start, end);
-
-let time = 0;
-let nextTimerId = 0;
-const timers = new Map();
-const messages = [];
-const elements = new Map();
-const durations = [2,5,10,30,60];
-function element(id = '') {
-    const events = {};
-    const classes = new Set();
-    const el = {
-        id, events, className:'', style:{}, dataset:{}, disabled:false,
-        textContent:'', children:[], width:900, height:250,
+// Regression tests for CPS test UI (profile engine + manual mode + sound).
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'..','ui','index.html'),'utf8');
+const start=html.indexOf('// Test CPS : profil ClickFlow ou souris manuelle');
+const end=html.indexOf("document.querySelectorAll('.nav-item').forEach",start);
+assert(start>=0&&end>start,'CPS JavaScript section must exist');
+const script=html.slice(start,end);
+let time=0, timerId=0, sounds=0;
+const timers=new Map(),sent=[],nodes=new Map();
+const durations=[2,5,10,30,60];
+function node(id='') {
+    const events={},classes=new Set();
+    const el={
+        id,style:{},dataset:{},value:'',textContent:'',disabled:false,hidden:false,
+        children:[],events,className:'',onclick:null,
         classList:{
-            add:v=>classes.add(v),
-            remove:v=>classes.delete(v),
-            contains:v=>classes.has(v),
-            toggle(v,on) {
-                if(on === undefined)on=!classes.has(v);
-                if(on)classes.add(v);else classes.delete(v);
-            }
+            add:x=>classes.add(x),remove:x=>classes.delete(x),
+            contains:x=>classes.has(x),
+            toggle(x,on){if(on===undefined)on=!classes.has(x);on?classes.add(x):classes.delete(x);}
         },
-        addEventListener(name,callback){events[name]=callback;},
-        setAttribute(){},
-        appendChild(child){this.children.push(child);},
-        replaceChildren(){this.children=[];},
-        getBoundingClientRect(){return {left:0,top:0,width:850,height:250};},
-        getContext(){
-            return {
-                setTransform(){},clearRect(){},beginPath(){},moveTo(){},lineTo(){},
-                stroke(){},fill(){},fillText(){},closePath(){},
-                createLinearGradient(){return {addColorStop(){}};}
-            };
+        addEventListener(n,f){events[n]=f;},
+        setAttribute(){},append(...children){this.children.push(...children);
+            if(this.id==='cpsProfileSelect'&&children.length&&this.value==='')this.value=children[0].value;
         },
-        remove(){}
+        appendChild(child){this.children.push(child);return child;},
+        replaceChildren(){this.children=[];this.value='';},
+        remove(){},getBoundingClientRect(){return{left:0,top:0,width:900,height:250};},
+        getContext(){return{
+            setTransform(){},clearRect(){},beginPath(){},moveTo(){},lineTo(){},
+            stroke(){},fill(){},fillText(){},closePath(){},
+            createLinearGradient(){return{addColorStop(){}};}
+        };}
     };
     return el;
 }
-function get(id){
-    if(!elements.has(id))elements.set(id,element(id));
-    return elements.get(id);
-}
-const durationButtons = durations.map(n=>{
-    const e=element('duration-'+n);
-    e.dataset.cpsDuration=String(n);
-    return e;
+const get=id=>{
+    if(!nodes.has(id))nodes.set(id,node(id));
+    return nodes.get(id);
+};
+const durationButtons=durations.map(d=>{
+    const n=node();n.dataset.cpsDuration=String(d);return n;
 });
+class MockAudioContext {
+    constructor(){this.sampleRate=48000;this.currentTime=0;this.state='running';this.destination={};}
+    createBuffer(channels,count){return{getChannelData:()=>new Float32Array(count)};}
+    createBufferSource(){return{connect(){},start(){sounds++;},disconnect(){},onended:null};}
+    resume(){return Promise.resolve();}
+}
 const ctx={
-    performance:{now:()=>time},
     $:get,
+    model:{profiles:[{id:1,name:'Principal'},{id:2,name:'Gaming'}],selected:1},
     document:{
-        getElementById:get,
-        createElement:()=>element(),
-        querySelectorAll:selector=>selector==='[data-cps-duration]'?durationButtons:[]
+        getElementById:get,createElement:()=>node(),
+        querySelector:s=>{
+            const match=s.match(/^\[data-cps-duration="(\d+)"\]$/);
+            return match?durationButtons.find(x=>x.dataset.cpsDuration===match[1]):null;
+        },
+        querySelectorAll:s=>s==='[data-cps-duration]'?durationButtons:[]
     },
     window:{
-        devicePixelRatio:1,
-        matchMedia:()=>({matches:false}),
-        addEventListener(){}
+        devicePixelRatio:1,AudioContext:MockAudioContext,
+        matchMedia:()=>({matches:false}),addEventListener(){}
     },
-    connected:true,
-    send:(...parts)=>messages.push(parts),
-    setInterval:fn=>{const id=++nextTimerId;timers.set(id,fn);return id;},
+    performance:{now:()=>time},connected:true,send:(...args)=>sent.push(args),
+    toast:()=>{},setTimeout:()=>{},
+    setInterval:f=>{let id=++timerId;timers.set(id,f);return id;},
     clearInterval:id=>timers.delete(id),
-    setTimeout:()=>{},
-    Date, Math, Number, String, Array, Set, console
+    Math,Number,String,Array,console
 };
-vm.runInNewContext(js + '\n;globalThis.__cpsTestExports={cpsTest,cpsRender,cpsResetTest,cpsFinish};',ctx,
-    {timeout:3000,filename:'ui/index.html CPS tester'});
-const state=ctx.__cpsTestExports.cpsTest;
-const clickArea=get('cpsClickArea');
-assert.equal(state.seconds,5);
-assert.equal(state.phase,'ready');
-assert.equal(state.clicks.length,0);
-function press(at, overrides={}) {
+vm.runInNewContext(script+
+    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage};',
+    ctx,{timeout:3000,filename:'ui/index.html CPS test'});
+const api=ctx.exports,st=api.cpsTest;
+assert.equal(st.source,'profile','A saved profile is the default mode');
+assert.equal(get('cpsClickArea').disabled,true);
+assert.equal(get('cpsProfileSelect').children.length,2,'Profiles must be selectable');
+assert.equal(st.audioEnabled,true,'Gentle sound should be enabled by default');
+get('cpsStartProfile').onclick();
+assert.equal(st.phase,'pending');
+const begin=sent.at(-1);
+assert.equal(begin[0],'cpsTest');assert.equal(begin[1],'start');
+assert.equal(begin[2],5);assert.equal(begin[4],1);
+let run=begin[3];
+time=10;
+api.cpsHandleEngineMessage({type:'cpsTest',state:'started',run,profile:'Principal'});
+assert.equal(st.phase,'running');
+time=510;
+api.cpsHandleEngineMessage({state:'ticks',run,ticks:[0,50,100,150,200]});
+assert.equal(st.clicks.length,5,'Engine ticks should drive the graph and count');
+assert.equal(st.peak,5);
+assert.equal(sounds,5,'Every generated click should play its subtle sound');
+time=5110;
+api.cpsHandleEngineMessage({state:'finished',run,ticks:[0,50,100,150,200]});
+assert.equal(st.phase,'done');
+assert.equal(st.last.clicks,5);
+assert.equal(st.last.profile,'Principal');
+assert.equal(st.last.average,1);
+assert.equal(get('cpsLast').textContent.includes('Principal'),true);
+assert.equal(sent.length,1,'Results must never be sent to disk storage');
+const last=st.last;
+get('cpsReset').onclick();
+assert.equal(st.phase,'ready');
+assert.equal(st.last,last,'Reset should preserve the last finished result');
+get('cpsSound').onclick();
+assert.equal(st.audioEnabled,false);
+get('cpsSound').onclick();
+assert.equal(st.audioEnabled,true);
+get('cpsProfileSelect').value='2';
+durationButtons[0].onclick();
+assert.equal(st.seconds,2);
+get('cpsStartProfile').onclick();
+const secondRun=sent.at(-1)[3];
+assert.equal(sent.at(-1)[4],2,'Selected profile id should reach the engine');
+time=5200;
+api.cpsHandleEngineMessage({state:'started',run:secondRun,profile:'Gaming'});
+api.cpsHandleEngineMessage({state:'ticks',run:secondRun,ticks:[0,100]});
+const previousCount=st.clicks.length;
+api.cpsHandleEngineMessage({state:'ticks',run,ticks:[100,200]});
+assert.equal(st.clicks.length,previousCount,'Messages from an old run must be ignored');
+get('cpsReset').onclick();
+assert.equal(sent.at(-1)[1],'stop','Reset must stop the engine');
+assert.equal(st.phase,'ready');
+assert.equal(st.last,last,'Aborting a run must preserve the last completed one');
+api.cpsHandleEngineMessage({state:'finished',run:secondRun,ticks:[0,100]});
+assert.equal(st.phase,'ready','A late finish must not revive a cancelled test');
+api.cpsSetSource('manual');
+assert.equal(st.source,'manual');
+assert.equal(get('cpsClickArea').disabled,false);
+function press(at,overrides={}){
     time=at;
     let prevented=false;
-    clickArea.events.pointerdown({
-        pointerType:'mouse',button:0,isPrimary:true,clientX:50,clientY:50,
+    get('cpsClickArea').events.pointerdown({
+        pointerType:'mouse',button:0,isPrimary:true,clientX:80,clientY:80,
         preventDefault(){prevented=true;},...overrides
     });
     return prevented;
 }
-assert.equal(press(0,{button:2}),false,'Right-click should be ignored');
-assert.equal(press(0,{pointerType:'touch'}),false,'Touch should be ignored');
-assert.equal(press(0),true,'Left mouse press should be handled');
-assert.equal(state.phase,'running');
-assert.equal(state.clicks.length,1,'First click must count');
-for(const t of [100,200,300,400])press(t);
-assert.equal(state.clicks.length,5);
-assert.equal(state.peak,5);
-time=1000;
-for(const callback of timers.values())callback();
-assert.equal(get('cpsInstant').textContent,'4.0','Rolling CPS must drop oldest click after 1s');
-time=5100;
-for(const callback of [...timers.values()])callback();
-assert.equal(state.phase,'done','Test must finish after chosen duration');
-assert.equal(state.last.average,1);
-assert.equal(state.last.clicks,5);
-assert.equal(state.last.seconds,5);
-assert.equal(get('cpsAverage').textContent,'1.0');
-assert.equal(get('cpsRemaining').textContent,'0.0 s restantes');
-assert.equal(get('cpsLast').textContent.includes('5 clics'),true);
-assert.equal(messages.length,0,'Test results must not be sent for storage');
-press(5300);
-assert.equal(state.clicks.length,5,'Clicks after finish must be ignored');
-durationButtons[0].onclick();
-assert.equal(state.seconds,2);
-assert.equal(state.phase,'ready');
-press(6000);
-press(6500);
+assert.equal(press(6000,{button:2}),false);
+assert.equal(press(6000,{pointerType:'touch'}),false);
+assert.equal(press(6000),true);
+assert.equal(st.phase,'running');
+assert.equal(st.clicks.length,1,'First manual click must count');
+press(6200);press(6400);
 time=8001;
-for(const callback of [...timers.values()])callback();
-assert.equal(state.phase,'done');
-assert.equal(state.last.seconds,2);
-assert.equal(state.last.clicks,2);
-assert.equal(state.last.average,1);
-assert.equal(get('cpsLast').textContent.includes('2 clics'),true);
-assert.equal(messages.length,0,'Latest result must stay in memory only');
-get('cpsReset').onclick();
-assert.equal(state.phase,'ready');
-assert.equal(state.clicks.length,0);
-assert.equal(state.last.clicks,2,'Restart must preserve the latest completed result');
-console.log('CPS test durations, left-only input, 1s rolling CPS, last result and chart passed.');
+for(const tick of [...timers.values()])tick();
+assert.equal(st.phase,'done');
+assert.equal(st.last.profile,'Clics manuels');
+assert.equal(st.last.clicks,3);
+assert.equal(st.last.average,1.5);
+assert.equal(get('cpsAverage').textContent,'1.5');
+assert.equal(get('cpsLast').textContent.includes('3 clics'),true);
+assert.equal(sent.filter(x=>x[1]==='result').length,0,'No scores should be persisted');
+console.log('CPS profile scheduling UI, audio, manual mode, last result and stale message tests passed.');

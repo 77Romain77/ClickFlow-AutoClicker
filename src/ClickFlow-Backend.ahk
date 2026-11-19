@@ -3,10 +3,12 @@
 ; Les clics sont envoyés uniquement lorsque l'utilisateur active un raccourci.
 #Include ClickFlow-Maintenance.ahk
 #Include ClickFlow-ProfileStore.ahk
+#Include ClickFlow-CpsTest.ahk
 
 global CF := {
     hwnd: 0, web: 0, event: 0,
     capture: false, inputHook: 0, pressed: false, armed: false,
+    test: {active: false},
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, total: 0, recent: [],
     lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
@@ -64,6 +66,7 @@ BackendExit(*) {
     CF.shuttingDown := true
 
     ; Aucun nouveau clic, timer ou message WebView2 pendant la fermeture.
+    CFTestStop("fermeture")
     CF.armed := false
     CF.pressed := false
     try SetTimer(EngineTick, 0)
@@ -391,8 +394,22 @@ BackendMessage(sender, args) {
             return
         }
         if cmd = "cpsTest" && parts.Length >= 2 {
-            if parts[2] = "open"
-                StopAll("Test CPS : clics automatiques arrêtés.")
+            switch parts[2] {
+                case "open":
+                    StopAll("Test CPS : clics automatiques arrêtés.")
+                case "start":
+                    try {
+                        if parts.Length < 5
+                            throw Error("Commande de test incomplète.")
+                        CFTestStart(parts[3], parts[4], parts[5])
+                    } catch as err {
+                        CFTestPost('{"type":"cpsTest","state":"error","run":'
+                            (parts.Length >= 4 && RegExMatch(parts[4], "^[1-9]\d{0,8}$") ? parts[4] : "0")
+                            ',"message":' JsonQuote(err.Message) '}')
+                    }
+                case "stop":
+                    CFTestStop("annulé")
+            }
             return
         }
         if cmd = "storage" && parts.Length >= 2 {
@@ -526,7 +543,7 @@ UnregisterActivation() {
 
 ActivationDown(*) {
     global CF
-    if CF.capture || CF.pressed
+    if CF.capture || CF.pressed || CF.test.active
         return
     CF.pressed := true
     if CF.armed {
@@ -566,6 +583,7 @@ EmergencyStop(*) {
 
 StopAll(message) {
     global CF
+    CFTestStop(message)
     CF.armed := false
     CF.target := 0
     CF.nextAt := 0
@@ -581,6 +599,10 @@ SetNotice(message) {
 
 EngineTick() {
     global CF
+    if CF.test.active {
+        CFTestTick()
+        return
+    }
     if !CF.armed || CF.capture
         return
 
@@ -618,18 +640,20 @@ EngineTick() {
     CF.nextAt := now + Max(10, Round(1000 / cps))
 }
 
-GetNextCps() {
+GetNextCps(cfg := 0) {
     global CF
-    minimum := CF.cfg.min
-    maximum := CF.cfg.max
-    if CF.cfg.mode = 1
+    if !IsObject(cfg)
+        cfg := CF.cfg
+    minimum := cfg.min
+    maximum := cfg.max
+    if cfg.mode = 1
         return minimum
-    if CF.cfg.mode = 2
+    if cfg.mode = 2
         return Random(minimum, maximum)
 
     now := A_TickCount
     if now >= CF.nextVariation {
-        intensity := CF.cfg.variation
+        intensity := cfg.variation
         radius := (maximum - minimum) * (intensity = 1 ? 0.22 : intensity = 2 ? 0.38 : 0.5)
         center := (minimum + maximum) / 2
         low := Max(minimum, Round(center - radius))
