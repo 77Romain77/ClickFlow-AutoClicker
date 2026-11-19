@@ -29,10 +29,7 @@ CFBackupPowerShell(mode, archive, work) {
     powerShell := A_WinDir "\System32\WindowsPowerShell\v1.0\powershell.exe"
     if !FileExist(powerShell)
         throw Error("Windows PowerShell est requis pour les archives ZIP.")
-    args := '"' powerShell '" -NoProfile -NonInteractive -ExecutionPolicy Bypass'
-        ' -File "' script '" -Mode ' mode
-        ' -Archive "' archive '" -Settings "' CF.configFile
-        '" -Profiles "' CF.profilesDir '" -Work "' work '"'
+    args := '"' powerShell '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' script '" -Mode ' mode ' -Archive "' archive '" -Settings "' CF.configFile '" -Profiles "' CF.profilesDir '" -Work "' work '"'
     exitCode := RunWait(args, , "Hide")
     if exitCode != 0
         throw Error("Archive ClickFlow non valide ou accès impossible (code " exitCode ").")
@@ -145,12 +142,11 @@ CFBackupRestore(source := "", confirm := true) {
         UnregisterActivation()
         UnregisterEmergency()
         CF.loading := true
-        if DirExist(CF.profilesDir) {
+        changed := true
+        if DirExist(CF.profilesDir)
             DirMove(CF.profilesDir, oldProfiles)
-        }
         if FileExist(CF.configFile)
             FileMove(CF.configFile, oldSettings)
-        changed := true
         DirMove(freshProfiles, CF.profilesDir)
         FileMove(freshSettings, CF.configFile)
         CFBackupReloadState()
