@@ -60,7 +60,9 @@ BackendInit(hwnd, web) {
     }
     CF.emergencyKey := IniRead(CF.configFile, "General", "EmergencyKey", "F12")
     CF.compactMode := IniRead(CF.configFile, "General", "CompactMode", "0") = "1"
-    if CF.emergencyKey = "" || CF.emergencyKey = "!" || CF.emergencyKey = "Escape"
+    ; Une chaîne vide est un choix explicite "Aucun", pas une erreur.
+    ; F12 ne sert que de valeur initiale si la préférence n'existe pas.
+    if CF.emergencyKey = "!" || CF.emergencyKey = "Escape"
         CF.emergencyKey := "F12"
     LoadSettings()
     CFDesktopReadPreferences()
@@ -461,8 +463,12 @@ BackendMessage(sender, args) {
                 if HasValue(CFGlobalKeys(), parts[3])
                     StartCapture("global:" parts[3])
             } else if parts[2] = "clear" && parts.Length >= 4 {
-                try CFGlobalSet(parts[3], "")
-                catch as err
+                try {
+                    if parts[3] = "emergency"
+                        CFSetEmergencyKey("")
+                    else
+                        CFGlobalSet(parts[3], "")
+                } catch as err
                     CFProfileMessage("Raccourci refusé : " err.Message, true)
             }
             return
@@ -641,12 +647,46 @@ SameKey(a, b) {
 
 RegisterEmergency() {
     global CF
-    Hotkey("~*" CF.emergencyKey, EmergencyStop, "On")
+    if CF.emergencyKey != ""
+        Hotkey("~*" CF.emergencyKey, EmergencyStop, "On")
 }
 
 UnregisterEmergency() {
     global CF
-    try Hotkey("~*" CF.emergencyKey, "Off")
+    if CF.emergencyKey != ""
+        try Hotkey("~*" CF.emergencyKey, "Off")
+}
+
+CFSetEmergencyKey(key) {
+    global CF
+    if key = CF.emergencyKey
+        return
+    if key != "" {
+        if key = "Escape" || key = "Esc" || key = "!" || !GetKeyVK(key)
+            throw Error("Touche d'arrêt non prise en charge.")
+        for profile in CF.profiles
+            if SameKey(key, profile.cfg.activation)
+                throw Error("Cette touche sert déjà à l'activation d'un profil.")
+        for action in CFGlobalKeys()
+            if CF.globalKeys.Get(action, "") != ""
+                && SameKey(key, CF.globalKeys[action])
+                throw Error("Cette touche sert déjà à un autre raccourci global.")
+    }
+    ; Un changement de raccourci n'est jamais appliqué en pleine rafale.
+    StopAll("Modification de l'arrêt d'urgence.")
+    previous := CF.emergencyKey
+    UnregisterEmergency()
+    CF.emergencyKey := key
+    try RegisterEmergency()
+    catch as err {
+        CF.emergencyKey := previous
+        try RegisterEmergency()
+        throw err
+    }
+    SaveSettings()
+    SendState()
+    SetNotice(key = "" ? "Raccourci d'arrêt d'urgence désactivé."
+        : "Arrêt d'urgence : " DisplayKey(key) ".")
 }
 
 ApplyWindowMode() {
@@ -694,7 +734,9 @@ ActivationDown(*) {
     CF.nextAt := A_TickCount
     CFNaturalReset(CF.cfg)
     CFDesktopUpdate()
-    SetNotice("Clics actifs dans la fenêtre choisie. " DisplayKey(CF.emergencyKey) " pour arrêter.")
+    SetNotice(CF.emergencyKey != ""
+        ? "Clics actifs. " DisplayKey(CF.emergencyKey) " pour arrêter."
+        : "Clics actifs. Pour arrêter, utilise ClickFlow ou la zone de notification.")
 }
 
 ActivationUp(*) {
@@ -708,7 +750,9 @@ EmergencyStop(*) {
     global CF
     if CF.capture
         FinishCapture("")
-    StopAll("Arrêt d'urgence (" DisplayKey(CF.emergencyKey) ").")
+    StopAll(CF.emergencyKey != ""
+        ? "Arrêt d'urgence (" DisplayKey(CF.emergencyKey) ")."
+        : "Arrêt demandé depuis l'interface.")
 }
 
 StopAll(message) {
