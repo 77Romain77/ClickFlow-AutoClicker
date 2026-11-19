@@ -57,31 +57,49 @@ try {
     if !(WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("L'overlay n'est pas transparent aux clics.")
 
-    ; Régression 1.8.0 : WinMove imposait 226x48 pixels alors que
-    ; Gui.Add multipliait les contrôles avec le DPI. À 150 %, le texte
-    ; était coupé. Vérifier le layout réel, plus les DPI simulés.
+    ; Régression 1.8.0 : sous DPI élevé, les contrôles débordaient.
+    ; Nouvelle exigence : overlay minuscule, une SEULE ligne et coins doux.
     m := CFOverlayMetrics()
     WinGetClientPos(, , &clientW, &clientH, "ahk_id " hwnd)
-    if clientW < m.w - 3 || clientH < m.h - 3
-        throw Error("La zone intérieure coupe le contenu overlay : "
+    if clientW != m.w || clientH != m.h
+        throw Error("La taille réelle diffère du layout compact : "
             clientW "x" clientH " vs " m.w "x" m.h)
-    for ctrl in [CF.overlayStatusText, CF.overlayCpsText] {
-        ctrl.GetPos(&tx, &ty, &tw, &th)
-        if tx < 0 || ty < 0 || tw <= 0 || th <= 0
-            || tx + tw > clientW - 2 || ty + th > clientH - 2
-            throw Error("Un texte overlay sort de la zone visible : "
-                tx "," ty " " tw "x" th " dans " clientW "x" clientH)
-    }
+    if m.w > 225 || m.h > 36
+        throw Error("L'overlay est trop grand pour un affichage discret.")
+    CF.overlayStatusText.GetPos(&sx, &sy, &sw, &sh)
+    CF.overlayCpsText.GetPos(&cx, &cy, &cw, &ch)
+    if sx < 0 || cx <= sx + sw || cx + cw >= clientW
+        || sy != cy || sy + sh > clientH || cy + ch > clientH
+        throw Error("Les informations ne tiennent pas sur une seule ligne.")
     if !InStr(CF.overlayStatusText.Text, "ARR")
         || !InStr(CF.overlayCpsText.Text, "CPS")
-        throw Error("Les deux informations ne sont pas renseignées.")
+        throw Error("Le statut ou les CPS ne s'affichent pas.")
     for dpi in [96, 120, 144, 192] {
         dims := CFOverlayMetrics(dpi)
-        if dims.left + dims.statusW >= dims.w
-            || dims.cpsTop + dims.cpsH >= dims.h
-            || dims.top + dims.statusH >= dims.cpsTop
-            throw Error("Mise en page coupée ou chevauchée à " dpi " DPI.")
+        if dims.w != m.w || dims.h != m.h
+            throw Error("Le DPI a agrandi l'overlay à " dpi ".")
+        if dims.font < 4 || dims.font > 8
+            throw Error("Police non adaptée au DPI " dpi ".")
+        if dims.left + dims.statusW >= dims.cpsX
+            || dims.cpsX + dims.cpsW >= dims.w
+            || dims.top + dims.statusH >= dims.h
+            || dims.top != dims.cpsTop
+            throw Error("Chevauchement des deux textes à " dpi " DPI.")
     }
+    ; Les coins doivent être légèrement arrondis, sans découper les textes.
+    region := DllCall("gdi32\CreateRectRgn",
+        "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
+    statusRegion := DllCall("User32\GetWindowRgn",
+        "Ptr", hwnd, "Ptr", region, "Int")
+    if statusRegion = 0 || statusRegion = -1
+        throw Error("La forme arrondie de l'overlay n'est pas appliquée.")
+    if DllCall("gdi32\PtInRegion", "Ptr", region,
+        "Int", 0, "Int", 0, "Int")
+        throw Error("Le coin supérieur gauche n'est pas arrondi.")
+    if !DllCall("gdi32\PtInRegion", "Ptr", region,
+        "Int", 15, "Int", 15, "Int")
+        throw Error("La forme arrondie masque le texte.")
+    DllCall("gdi32\DeleteObject", "Ptr", region)
     if !CFDesktopStyleTitlebar(g.Hwnd)
         FileAppend("DWM titlebar unavailable; ", "*", "UTF-8")
 
