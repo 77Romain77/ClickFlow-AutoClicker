@@ -56,6 +56,32 @@ try {
     hwnd := CF.overlayGui.Hwnd
     if !(WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("L'overlay n'est pas transparent aux clics.")
+
+    ; Régression 1.8.0 : WinMove imposait 226x48 pixels alors que
+    ; Gui.Add multipliait les contrôles avec le DPI. À 150 %, le texte
+    ; était coupé. Vérifier le layout réel, plus les DPI simulés.
+    m := CFOverlayMetrics()
+    WinGetClientPos(, , &clientW, &clientH, "ahk_id " hwnd)
+    if clientW < m.w - 3 || clientH < m.h - 3
+        throw Error("La zone intérieure coupe le contenu overlay : "
+            clientW "x" clientH " vs " m.w "x" m.h)
+    for ctrl in [CF.overlayStatusText, CF.overlayCpsText] {
+        ctrl.GetPos(&tx, &ty, &tw, &th)
+        if tx < 0 || ty < 0 || tw <= 0 || th <= 0
+            || tx + tw > clientW - 2 || ty + th > clientH - 2
+            throw Error("Un texte overlay sort de la zone visible : "
+                tx "," ty " " tw "x" th " dans " clientW "x" clientH)
+    }
+    if !InStr(CF.overlayStatusText.Text, "ARR")
+        || !InStr(CF.overlayCpsText.Text, "CPS")
+        throw Error("Les deux informations ne sont pas renseignées.")
+    for dpi in [96, 120, 144, 192] {
+        dims := CFOverlayMetrics(dpi)
+        if dims.left + dims.statusW >= dims.w
+            || dims.cpsTop + dims.cpsH >= dims.h
+            || dims.top + dims.statusH >= dims.cpsTop
+            throw Error("Mise en page coupée ou chevauchée à " dpi " DPI.")
+    }
     if !CFDesktopStyleTitlebar(g.Hwnd)
         FileAppend("DWM titlebar unavailable; ", "*", "UTF-8")
 
@@ -66,8 +92,8 @@ try {
         WinGetPos(&actualX, &actualY, &w, &h, "ahk_id " hwnd)
         if Abs(actualX - expected.x) > 3 || Abs(actualY - expected.y) > 3
             throw Error("Mauvaise position " position)
-        if Abs(w - 226) > 3 || Abs(h - 48) > 3
-            throw Error("L'overlay ne doit pas grandir : " w "x" h)
+        if Abs(w - m.w) > 3 || Abs(h - m.h) > 3
+            throw Error("L'overlay ne doit pas changer de taille : " w "x" h)
     }
 
     ; Transparence libre : les valeurs intermédiaires ne sont pas des presets.
@@ -98,7 +124,7 @@ try {
     if !CF.overlayEditing || (WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("Le déplacement libre n'active pas les clics souris.")
     CFDesktopMonitorArea(CF.overlayMonitor, &left, &top, &right, &bottom)
-    WinMove(left + 65, top + 65, 226, 48, "ahk_id " hwnd)
+    WinMove(left + 65, top + 65, m.w, m.h, "ahk_id " hwnd)
     CFOverlaySetEdit(false)
     if CF.overlayEditing || !(WinGetExStyle("ahk_id " hwnd) & 0x20)
         throw Error("L'overlay reste interactif après placement.")
@@ -117,6 +143,9 @@ try {
     CFDesktopUpdate()
     if !CF.overlayVisible
         throw Error("Overlay absent pendant les clics.")
+    if !InStr(CF.overlayStatusText.Text, "ACTIF")
+        || !InStr(CF.overlayCpsText.Text, "0,8 CPS moy.")
+        throw Error("Les statistiques réelles ne s'affichent pas dans l'overlay.")
     CF.armed := false
     CF.overlayAlwaysVisible := false
     CF.overlayUntil := 0
