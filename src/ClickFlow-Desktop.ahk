@@ -61,11 +61,12 @@ CFDesktopQuit(*) {
     global CF
     CF.forceExit := true
     ; Le gestionnaire de fermeture libère WebView2 proprement.
-    if CF.hwnd
+    if CF.hwnd {
         try DllCall("User32\PostMessageW", "Ptr", CF.hwnd,
             "UInt", 0x10, "Ptr", 0, "Ptr", 0)
-    else
+    } else {
         ExitApp()
+    }
 }
 
 CFDesktopSelectProfile(id, *) {
@@ -122,10 +123,11 @@ CFDesktopSetFloat(visible, persist := true) {
             CFDesktopUpdate()
         } else if IsObject(CF.floatGui)
             CF.floatGui.Hide()
-        if CF.floatShown
+        if CF.floatShown {
             try A_TrayMenu.Check("Afficher la mini-fenêtre")
-        else
+        } else {
             try A_TrayMenu.Uncheck("Afficher la mini-fenêtre")
+        }
     }
     if persist {
         SaveSettings()
