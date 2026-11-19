@@ -79,22 +79,37 @@ try {
     CF.floatGui.Show("NA w420 h340")
     WinGetClientPos(, , &clientW, &clientH, "ahk_id " CF.floatGui.Hwnd)
     CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
-    if !CF.floatChart.Visible
-        throw Error("La courbe ne s'affiche pas lors de l'agrandissement.")
-    ; Le bitmap GDI utilise les CPS de l'unique moteur et reste en mémoire.
-    CF.floatPoints := [{t: A_TickCount - 600, cps: 10},
-        {t: A_TickCount - 400, cps: 12},
-        {t: A_TickCount - 200, cps: 8}]
-    ; Le graphique doit réellement se repeindre via WM_PAINT, même à 0 CPS.
+    ; Au repos, l'utilisateur ne veut pas d'une courbe vide et animée.
+    CF.recent := []
+    CFDesktopUpdate()
+    if CF.floatChart.Visible || CF.floatGraphActive
+        throw Error("La courbe doit rester inactive sans clic envoyé.")
+    ; Simulation de la même liste CF.recent alimentée par EngineTick.
+    CF.recent := [A_TickCount - 180, A_TickCount - 90, A_TickCount - 10]
+    CFDesktopUpdate()
+    if !CF.floatGraphActive || !CF.floatChart.Visible
+        throw Error("La courbe ne se déclenche pas sur les clics du moteur.")
+    if CF.floatPoints.Length = 0 || CF.floatPoints[1].cps != 3
+        throw Error("Les CPS réels ne sont pas transmis au graphique.")
     beforePaint := CF.floatChartPaintCount
+    Sleep(220)
+    CF.recent.Push(A_TickCount)
+    CFDesktopUpdate()
+    if CF.floatPoints.Length < 2 || CF.floatChartPaintCount <= beforePaint
+        throw Error("La courbe ne réagit pas au changement de CPS.")
+    ; Un clic envoyé doit être visible même sur une fenêtre très large.
     CFDesktopDrawFloatChart()
     if CF.floatChartPaintCount <= beforePaint
-        throw Error("Le graphique CPS n'a déclenché aucun dessin WM_PAINT.")
+        throw Error("La courbe native ne se repeint pas.")
     WinGetClientPos(, , &chartWidth, &chartHeight,
         "ahk_id " CF.floatChart.Hwnd)
     if chartWidth < 380 || chartHeight < 180
         throw Error("La courbe n'utilise pas l'espace disponible : "
             chartWidth " x " chartHeight)
+    CF.recent := []
+    CFDesktopUpdate()
+    if CF.floatChart.Visible
+        throw Error("La courbe reste visible après l'arrêt de l'activité.")
     ; Contrôles colorés réels, sans faux boutons Progress superposés.
     if !CF.floatStopBrush || !CF.floatGraphBrush
         throw Error("Les contrôles colorés n'ont pas été créés.")
