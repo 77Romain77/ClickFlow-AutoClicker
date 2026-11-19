@@ -872,6 +872,7 @@ SaveSettings(*) {
             ids .= (ids = "" ? "" : ",") p.id
         }
         IniWrite(ids, CF.configFile, "Profiles", "Ids")
+        IniWrite("2", CF.configFile, "Profiles", "StorageVersion")
         IniWrite(CF.selectedId, CF.configFile, "Profiles", "Selected")
         IniWrite(CF.nextId, CF.configFile, "Profiles", "NextId")
         IniWrite(CF.emergencyKey, CF.configFile, "General", "EmergencyKey")
