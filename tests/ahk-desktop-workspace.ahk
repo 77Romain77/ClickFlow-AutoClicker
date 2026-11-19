@@ -24,6 +24,15 @@ try {
     if !CF.liveMonitor
         throw Error("Le moniteur CPS doit être activé par défaut.")
 
+    ; Régression v1.7.2 : WM_PAINT arrive avant CF.floatChart.
+    ; Les callbacks doivent accepter les fenêtres principales/inconnues.
+    if CF.HasOwnProp("floatChart")
+        throw Error("Le test de démarrage doit précéder la mini-fenêtre.")
+    CFDesktopChartPaint(0, 0, 0xF, 1234)
+    CFDesktopDrawFloatChart()
+    if CF.HasOwnProp("floatChart")
+        throw Error("Le callback WM_PAINT ne doit pas créer un contrôle.")
+
     SaveSettings()
     CFToggleProfileFavorite(7)
     if !CF.profiles[2].favorite
@@ -140,6 +149,8 @@ try {
     if Abs(restoredW - savedW) > 5 || Abs(restoredH - savedH) > 5
         throw Error("Les dimensions flottantes ne sont pas restaurées.")
     CFDesktopSetFloat(false)
+    ; Un WM_PAINT pendant le masquage doit aussi rester sans erreur.
+    CFDesktopChartPaint(0, 0, 0xF, CF.floatChart.Hwnd)
     ; Vérifier que fermer/réouvrir plusieurs fois NE gonfle JAMAIS la fenêtre.
     Loop 5 {
         CFDesktopSetFloat(true)

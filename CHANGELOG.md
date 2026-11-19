@@ -1,5 +1,12 @@
 # Historique des versions
 
+## 1.7.3 - 2026-11-19
+
+- Corrige le crash au lancement "Object has no property named floatChart" : les messages Windows WM_PAINT peuvent arriver avant la création de la mini-fenêtre. Les callbacks ignorent les contrôles non initialisés.
+- Optimise le moniteur CPS du tableau de bord (étendu et compact) : aucun échantillonnage ni redessin Canvas lorsqu'aucun clic n'est envoyé. Le graphique s'active aux premiers clics, s'arrête au retour à 0 CPS et conserve le total des clics affiché.
+- Des indicateurs "En veille" remplacent les courbes vides. Aucun nouvel enregistrement de données CPS.
+- Tests de régression AutoHotkey pour le dessin Windows avant initialisation, et tests JavaScript des phases repos / activité / arrêt / graphique désactivé.
+
 ## 1.7.2 - 2026-11-19
 
 - Correction de l'agrandissement involontaire de la mini-fenêtre après fermeture et réouverture : sauvegarde/restauration d'un seul rectangle extérieur, avec migration de la taille enregistrée par les versions précédentes.
