@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.6.0 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.7.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.6.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.6.0)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.7.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.7.0)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.6.0.ahk`.
+2. Télécharger `ClickFlow-v1.7.0.ahk`.
 3. Double-cliquer sur ce fichier.
-4. Dans l'onglet **À propos**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
+4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.6.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.7.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -44,7 +44,19 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
-## Espace de travail et zone de notification (v1.6.0)
+## Ergonomie de la mini-fenêtre et du mode compact (v1.7.0)
+
+La **mini-fenêtre** peut être redimensionnée en tirant ses bords ou ses coins (minimum 280 x 180 pixels). Sa largeur, sa hauteur et sa position sont conservées dans les paramètres généraux de ClickFlow. Si l'écran change et que sa position n'est plus accessible, elle est recentrée automatiquement. Le nom du profil a maintenant une zone prévue pour deux lignes.
+
+Le bouton **Interface** restaure la fenêtre principale de ClickFlow. Le bouton **STOP** arrête les clics. En haut à droite, le bouton **Courbe** active ou désactive une représentation graphique des CPS réels des 30 dernières secondes, calculée dans le processus AutoHotkey existant. Quand la fenêtre est trop petite, un message indique de l'agrandir. Aucun graphique ni score n'est conservé sur le disque.
+
+Dans **Paramètres**, tu peux aussi activer la courbe de la mini-fenêtre, régler son opacité (70, 80, 90 ou 100 %) et décider si elle reste au premier plan. La fermeture vers la zone de notification reste désactivée par défaut.
+
+Le **mode compact** n'est plus un tableau de bord simplement raccourci : c'est un panneau de commande qui donne directement accès au profil, à l'état du moteur, aux CPS en direct, aux CPS min/max, aux trois modes, à l'intensité du mode Naturel, au raccourci d'activation, à la touche d'arrêt d'urgence et au bouton STOP. La courbe compacte peut être masquée séparément dans Paramètres. Les options avancées, les imports, les exports et les profils détaillés restent dans le mode étendu.
+
+Les cartes de profils présentent désormais la réorganisation dans une zone dédiée avec deux flèches de taille stable. Le menu Windows utilise exclusivement les noms de profils enregistrés, sans préfixe numérique interne.
+
+## Espace de travail et zone de notification (v1.7.0)
 
 Le tableau de bord peut montrer une courbe des CPS envoyés sur les **30 dernières secondes**. Cette courbe est locale à la session et ne sauvegarde ni score ni historique. L'affichage est désactivable dans **Paramètres**. La fenêtre flottante, accessible depuis le tableau de bord, Paramètres ou le menu de notification, affiche le profil courant, son état et le nombre de clics. Elle possède un bouton STOP et un bouton pour ouvrir l'interface principale.
 
@@ -87,7 +99,7 @@ Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow
 
 ## Profils et mises à jour
 
-Depuis v1.6.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
+Depuis v1.7.0, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
 
 **Migration automatique :** les profils de la v1.1.0 et des anciennes versions sont lus une seule fois depuis `settings.ini`, puis enregistrés dans des fichiers indépendants. Les anciennes sections et les sauvegardes restent disponibles par précaution. Les fichiers exportés se réimportent individuellement, sans écraser les profils déjà présents. Si un nom existe déjà, ClickFlow ajoute un suffixe numérique.
 
