@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.9.1 - 2026-11-20
+
+- Arrêt d'urgence déplacé dans la liste des raccourcis globaux avec un bouton pour modifier la touche et un bouton "Aucun".
+- F12 reste le réglage initial et les anciens raccourcis sont conservés ; l'utilisateur peut volontairement désactiver la touche d'urgence.
+- L'absence de raccourci d'urgence est correctement persistée dans settings.ini et dans les sauvegardes ZIP, sans réactivation forcée au démarrage.
+- Les commandes d'arrêt depuis l'interface et la zone de notification restent accessibles, même sans raccourci clavier.
+- Tests Windows de désactivation, réaffectation, détection des conflits, persistance et restauration ZIP.
+
 ## 1.9.0 - 2026-11-19
 
 - Raccourcis globaux entièrement facultatifs et sans affectation par défaut : profil suivant/précédent, afficher/masquer l'overlay, ouvrir ClickFlow, accéder au Test CPS. Chaque action possède son bouton "Aucun" ; touche d'arrêt d'urgence conservée.
