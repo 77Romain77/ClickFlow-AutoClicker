@@ -29,7 +29,7 @@ jobs:
       - name: Obtain official Microsoft WebView2Loader x64
         shell: pwsh
         run: |
-          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.2903.40' -OutFile webview2-sdk.zip
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.3903.40' -OutFile webview2-sdk.zip
           Expand-Archive webview2-sdk.zip -DestinationPath webview2-sdk
           $dll = Get-ChildItem webview2-sdk -Recurse -Filter WebView2Loader.dll |
             Where-Object { $_.FullName -match '[\\/]win-x64[\\/]' } |
@@ -54,7 +54,7 @@ jobs:
           New-Item -ItemType Directory -Force 'stage/ui' | Out-Null
           Copy-Item 'src/*' 'stage/' -Recurse -Force
           Copy-Item 'ui/index.html' 'stage/ui/index.html'
-          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
+          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-Uninstall.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
             if (!(Test-Path (Join-Path 'stage' $required))) { throw "Stage missing: $required" }
           }
 
@@ -150,9 +150,9 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.2.ahk
-          if (!(Test-Path 'ClickFlow-v1.0.2.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v1.0.2.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.0.3.ahk
+          if (!(Test-Path 'ClickFlow-v1.0.3.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.0.3.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
       - name: Verify independent shortcut management and manual deletion
         shell: pwsh
@@ -180,6 +180,68 @@ jobs:
             throw 'Independent shortcut controls missing from UI.'
           }
           Write-Host 'Desktop and Start menu shortcuts are separately controllable.'
+
+      - name: Verify safe uninstall (keep data / remove all)
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:TEMP ("ClickFlowUninstallCI-" + [guid]::NewGuid().ToString('N'))
+          $originalLocal = $env:LOCALAPPDATA
+          $originalRoaming = $env:APPDATA
+          try {
+            $env:LOCALAPPDATA = Join-Path $root 'Local'
+            $env:APPDATA = Join-Path $root 'Roaming'
+            $env:CLICKFLOW_UNINSTALL_CI = '1'
+            $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP = Join-Path $root 'Desktop'
+            $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU = Join-Path $root 'StartMenu'
+            $app = Join-Path $env:LOCALAPPDATA 'ClickFlow'
+            $data = Join-Path $env:APPDATA 'ClickFlow'
+            $other = Join-Path $root 'unrelated.txt'
+            New-Item -ItemType Directory -Force $app, $data, $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP, $env:CLICKFLOW_SHORTCUT_TEST_STARTMENU | Out-Null
+            Set-Content $other 'must survive'
+            $helper = (Resolve-Path 'stage/ClickFlow-Uninstall.ahk').Path
+            $shell = New-Object -ComObject WScript.Shell
+            foreach ($mode in @('keep','all')) {
+              New-Item -ItemType Directory -Force $app, $data | Out-Null
+              Set-Content (Join-Path $app 'ClickFlow.ahk') 'installed'
+              Set-Content (Join-Path $data 'settings.ini') '[Profiles]'
+              $owned = Join-Path $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP 'ClickFlow - AutoCliker.lnk'
+              $otherLink = Join-Path $env:CLICKFLOW_SHORTCUT_TEST_DESKTOP 'ClickFlow.lnk'
+              $shortcut = $shell.CreateShortcut($owned)
+              $shortcut.TargetPath = $env:AHK_EXE
+              $shortcut.Arguments = '"' + (Join-Path $app 'ClickFlow.ahk') + '"'
+              $shortcut.Save()
+              $unrelated = $shell.CreateShortcut($otherLink)
+              $unrelated.TargetPath = Join-Path $env:WINDIR 'System32/notepad.exe'
+              $unrelated.Save()
+              $quotedHelper = '"' + $helper + '"'
+              $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $quotedHelper, $mode, '0' -PassThru -RedirectStandardError uninstall.err -RedirectStandardOutput uninstall.out
+              if (-not $p.WaitForExit(20000)) {
+                Stop-Process -Id $p.Id -Force
+                throw "Uninstall helper timed out in mode $mode"
+              }
+              if ($p.ExitCode -ne 0) {
+                throw "Uninstall helper failed in mode $mode (exit=$($p.ExitCode), stderr=$(Get-Content uninstall.err -Raw))"
+              }
+              if (Test-Path $app) { throw "Application directory survived uninstall $mode" }
+              if (Test-Path $owned) { throw 'Owned Desktop shortcut survived uninstall' }
+              if (!(Test-Path $otherLink)) { throw 'Unrelated shortcut was deleted' }
+              if (!(Test-Path $other)) { throw 'Unrelated file was deleted' }
+              if ($mode -eq 'keep' -and !(Test-Path (Join-Path $data 'settings.ini'))) {
+                throw 'Profile settings were lost during keep mode'
+              }
+              if ($mode -eq 'all' -and (Test-Path $data)) {
+                throw 'Profiles survived full uninstall'
+              }
+              Write-Host "Uninstall mode $mode passed."
+            }
+          } finally {
+            $env:LOCALAPPDATA = $originalLocal
+            $env:APPDATA = $originalRoaming
+            Remove-Item Env:CLICKFLOW_UNINSTALL_CI -ErrorAction SilentlyContinue
+            Remove-Item Env:CLICKFLOW_SHORTCUT_TEST_DESKTOP -ErrorAction SilentlyContinue
+            Remove-Item Env:CLICKFLOW_SHORTCUT_TEST_STARTMENU -ErrorAction SilentlyContinue
+            Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Smoke-test self-extracting AHK script
         shell: pwsh
@@ -214,7 +276,7 @@ jobs:
           $legacyIni = Join-Path $appDir 'shortcuts.ini'
           Set-Content -Path $legacyIni -Value ('[Shortcuts]' + [Environment]::NewLine + 'Enabled=1') -Encoding ascii
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v1.0.2.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.0.3.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -228,7 +290,7 @@ jobs:
           if (Test-Path $desktopLink) { throw 'Desktop shortcut recreated despite user deletion.' }
           if (!(Test-Path $startLink)) { throw 'Start menu shortcut vanished unexpectedly.' }
           Write-Host 'Legacy Enabled=1 did not recreate a manually deleted Desktop shortcut.'
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.2'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.0.3'
           # Le nettoyage a lieu après la connexion, via un timer AHK.
           for ($i = 0; $i -lt 40; $i++) {
             $remaining = @($legacyDirs | Where-Object { Test-Path (Join-Path $appRoot $_) })
@@ -239,7 +301,7 @@ jobs:
             if (Test-Path (Join-Path $appRoot $legacy)) { throw "Old runtime not deleted: $legacy" }
           }
           if (!(Test-Path $dataSentinel)) { throw 'Unrelated WebView2 user data was deleted!' }
-          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
+          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-Uninstall.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
             if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
           }
           Add-Type -TypeDefinition @'
@@ -288,17 +350,17 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.2-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.0.3-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v1.0.2-win-x64
-          path: ClickFlow-WebView2-v1.0.2-win-x64.zip
+          name: ClickFlow-WebView2-v1.0.3-win-x64
+          path: ClickFlow-WebView2-v1.0.3-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v1.0.2-single-file
-          path: ClickFlow-v1.0.2.ahk
+          name: ClickFlow-v1.0.3-single-file
+          path: ClickFlow-v1.0.3.ahk
 
       - name: Publish stable release
         if: >-
@@ -325,5 +387,5 @@ jobs:
           if (gh release view $tag 2>$null) {
             gh release upload $tag $single $zip --clobber
           } else {
-            gh release create $tag $single $zip --target "$env:GITHUB_SHA" --title "ClickFlow - AutoCliker v$version" --notes "Version stable de ClickFlow - AutoCliker. Telecharger le fichier unique $single et le lancer avec AutoHotkey v2 64 bits. Un seul fichier AHK, sans nouvel EXE. Profils conserves, CPS, mode compact et etendu, touche d'arret d'urgence configurable, icone et raccourcis Windows. Ancienne tentative .exe conservee dans archive/dotnet-wpf." --latest
+            gh release create $tag $single $zip --target "$env:GITHUB_SHA" --title "ClickFlow - AutoCliker v$version" --notes "Version stable de ClickFlow - AutoCliker. Telecharger le fichier unique $single et le lancer avec AutoHotkey v2 64 bits. Un seul fichier AHK, sans nouvel EXE. Profils conserves, CPS, mode compact et etendu, touche d'arret d'urgence configurable, icone et raccourcis Windows. Desinstallation integree avec ou sans conservation des profils, ouverture des dossiers de donnees, raccourcis independants. Ancienne tentative .exe conservee dans archive/dotnet-wpf." --latest
           }
