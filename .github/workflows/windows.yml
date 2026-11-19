@@ -54,7 +54,7 @@ jobs:
           New-Item -ItemType Directory -Force 'stage/ui' | Out-Null
           Copy-Item 'src/*' 'stage/' -Recurse -Force
           Copy-Item 'ui/index.html' 'stage/ui/index.html'
-          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-Desktop.ahk','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
+          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-Desktop.ahk','ClickFlow-GlobalHotkeys.ahk','ClickFlow-Backup.ahk','ClickFlow-Backup.ps1','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
             if (!(Test-Path (Join-Path 'stage' $required))) { throw "Stage missing: $required" }
           }
 
@@ -75,8 +75,27 @@ jobs:
           $script = (Resolve-Path 'tests/ahk-global-settings.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError settings-test.err -RedirectStandardOutput settings-test.out
           if (-not $p.WaitForExit(15000)) {
+            $p.Refresh()
+            $title = $p.MainWindowTitle
+            $uiText = ''
+            try {
+              Add-Type -AssemblyName UIAutomationClient
+              $root = [System.Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
+              $items = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+              $uiText = ($items | ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Select-Object -First 25) -join ' | '
+              foreach ($item in $items) {
+                if ($item.Current.Name -eq 'RichEdit Control') {
+                  try {
+                    $pattern = $item.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
+                    $uiText += ' AHK ERROR: ' + $pattern.DocumentRange.GetText(3000)
+                  } catch { $uiText += ' UIAutomation text error: ' + $_.Exception.Message }
+                }
+              }
+            } catch { $uiText = $_.Exception.Message }
+            $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
+            $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
             Stop-Process -Id $p.Id -Force
-            throw 'Global settings test timed out'
+            throw "Global settings test timed out. Window=$title dialog=$uiText stdout=$out stderr=$err"
           }
           $out = if (Test-Path settings-test.out) { Get-Content settings-test.out -Raw } else { '' }
           $err = if (Test-Path settings-test.err) { Get-Content settings-test.err -Raw } else { '' }
@@ -140,6 +159,33 @@ jobs:
           if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
             throw "Centering test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
+
+      - name: Verify v1.9 settings and optional shortcut UI
+        shell: pwsh
+        run: |
+          node tests/v1.9-workspace.test.cjs
+
+      - name: Verify optional global shortcuts and conflict protections
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-global-hotkeys.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError global-keys.err -RedirectStandardOutput global-keys.out
+          if (-not $p.WaitForExit(20000)) { Stop-Process -Id $p.Id -Force; throw 'Global shortcut test timed out.' }
+          $out = if (Test-Path global-keys.out) { Get-Content global-keys.out -Raw } else { '' }
+          $err = if (Test-Path global-keys.err) { Get-Content global-keys.err -Raw } else { '' }
+          Write-Host "Optional global hotkeys: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') { throw "Global hotkeys failed exit=$($p.ExitCode) stdout=$out stderr=$err" }
+
+      - name: Verify complete ZIP backup and restoration on Windows
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-full-backup.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError full-backup.err -RedirectStandardOutput full-backup.out
+          if (-not $p.WaitForExit(45000)) { Stop-Process -Id $p.Id -Force; throw 'Full ZIP backup test timed out.' }
+          $out = if (Test-Path full-backup.out) { Get-Content full-backup.out -Raw } else { '' }
+          $err = if (Test-Path full-backup.err) { Get-Content full-backup.err -Raw } else { '' }
+          Write-Host "ZIP full backup: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') { throw "ZIP backup test failed exit=$($p.ExitCode) stdout=$out stderr=$err" }
 
       - name: Verify Windows desktop workspace and profile controls (AutoHotkey)
         shell: pwsh
@@ -296,9 +342,9 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.8.2.ahk
-          if (!(Test-Path 'ClickFlow-v1.8.2.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v1.8.2.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.9.0.ahk
+          if (!(Test-Path 'ClickFlow-v1.9.0.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.9.0.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
       - name: Verify independent shortcut management and manual deletion
         shell: pwsh
@@ -360,7 +406,7 @@ jobs:
           $legacyIni = Join-Path $appDir 'shortcuts.ini'
           Set-Content -Path $legacyIni -Value ('[Shortcuts]' + [Environment]::NewLine + 'Enabled=1') -Encoding ascii
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v1.8.2.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.9.0.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -374,7 +420,7 @@ jobs:
           if (Test-Path $desktopLink) { throw 'Desktop shortcut recreated despite user deletion.' }
           if (!(Test-Path $startLink)) { throw 'Start menu shortcut vanished unexpectedly.' }
           Write-Host 'Legacy Enabled=1 did not recreate a manually deleted Desktop shortcut.'
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.8.2'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.9.0'
           # Le nettoyage a lieu après la connexion, via un timer AHK.
           for ($i = 0; $i -lt 40; $i++) {
             $remaining = @($legacyDirs | Where-Object { Test-Path (Join-Path $appRoot $_) })
@@ -385,7 +431,7 @@ jobs:
             if (Test-Path (Join-Path $appRoot $legacy)) { throw "Old runtime not deleted: $legacy" }
           }
           if (!(Test-Path $dataSentinel)) { throw 'Unrelated WebView2 user data was deleted!' }
-          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-Desktop.ahk','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
+          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-Desktop.ahk','ClickFlow-GlobalHotkeys.ahk','ClickFlow-Backup.ahk','ClickFlow-Backup.ps1','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
             if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
           }
           Add-Type -TypeDefinition @'
@@ -434,17 +480,17 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.8.2-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.9.0-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v1.8.2-win-x64
-          path: ClickFlow-WebView2-v1.8.2-win-x64.zip
+          name: ClickFlow-WebView2-v1.9.0-win-x64
+          path: ClickFlow-WebView2-v1.9.0-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v1.8.2-single-file
-          path: ClickFlow-v1.8.2.ahk
+          name: ClickFlow-v1.9.0-single-file
+          path: ClickFlow-v1.9.0.ahk
 
       - name: Publish stable release
         if: >-

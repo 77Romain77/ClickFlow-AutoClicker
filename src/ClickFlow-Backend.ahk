@@ -5,6 +5,8 @@
 #Include ClickFlow-ProfileStore.ahk
 #Include ClickFlow-CpsTest.ahk
 #Include ClickFlow-Desktop.ahk
+#Include ClickFlow-GlobalHotkeys.ahk
+#Include ClickFlow-Backup.ahk
 
 global CF := {
     hwnd: 0, web: 0, event: 0,
@@ -20,6 +22,7 @@ global CF := {
     floatChartPaintCount: 0, floatGraphActive: false,
     overlayGui: 0, overlayVisible: false, overlayEditing: false,
     overlayAlwaysVisible: false, overlayOpacity: 85, overlayMargin: 20,
+    overlaySize: "mini", overlayShowProfile: false,
     overlayAverageSeconds: 5,
     overlayMonitor: 1, overlayPosition: "tm",
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
@@ -31,6 +34,7 @@ global CF := {
     naturalBurstLeft: 0, total: 0, recent: [],
     lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
+    globalKeys: Map(),
     profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
     profilesDir: A_AppData "\ClickFlow\profiles",
@@ -68,9 +72,11 @@ BackendInit(hwnd, web) {
     }
     if SameKey(CF.cfg.activation, CF.emergencyKey)
         CF.cfg.activation := SameKey(CF.emergencyKey, "F6") ? "F7" : "F6"
+    CFGlobalReadKeys()
     CF.loading := false
     RegisterEmergency()
     RegisterActivation()
+    CFGlobalRegister()
     SetTimer(EngineTick, 10)
     SetTimer(UpdateStats, 200)
     OnExit(BackendExit)
@@ -102,6 +108,7 @@ BackendExit(*) {
     }
     try UnregisterActivation()
     try UnregisterEmergency()
+    try CFGlobalUnregister()
 
     ; Sauvegarde AVANT la destruction de WebView2.
     CF.web := 0
@@ -137,7 +144,7 @@ SendState() {
         profiles .= (profiles = "" ? "" : ",") '{"id":' p.id ',"name":' JsonQuote(p.name) ',"favorite":' fav ',"settings":' ToUiCfg(p.cfg) '}'
     }
     CFDesktopRebuildProfiles()
-    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey)) ',"compact":' (CF.compactMode ? "true" : "false") ',"preferences":' CFDesktopPreferencesJson() '}')
+    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey)) ',"compact":' (CF.compactMode ? "true" : "false") ',"preferences":' CFDesktopPreferencesJson() ',"globalHotkeys":' CFGlobalJson() '}')
 }
 
 ; Gestion indépendante des raccourcis Windows. L'état affiché est celui
@@ -449,6 +456,17 @@ BackendMessage(sender, args) {
             StartCapture("emergency")
             return
         }
+        if cmd = "globalHotkey" && parts.Length >= 3 {
+            if parts[2] = "capture" && parts.Length >= 4 {
+                if HasValue(CFGlobalKeys(), parts[3])
+                    StartCapture("global:" parts[3])
+            } else if parts[2] = "clear" && parts.Length >= 4 {
+                try CFGlobalSet(parts[3], "")
+                catch as err
+                    CFProfileMessage("Raccourci refusé : " err.Message, true)
+            }
+            return
+        }
         if cmd = "export" && parts.Length >= 2 {
             try {
                 if RegExMatch(parts[2], "^\d{1,9}$")
@@ -462,6 +480,17 @@ BackendMessage(sender, args) {
             try CFImportProfile()
             catch as err
                 CFProfileMessage("Import impossible : " err.Message, true)
+            return
+        }
+        if cmd = "backup" && parts.Length >= 2 {
+            try {
+                if parts[2] = "export"
+                    CFBackupExport()
+                else if parts[2] = "restore"
+                    CFBackupRestore()
+            } catch as err {
+                CFProfileMessage("Sauvegarde impossible : " err.Message, true)
+            }
             return
         }
         if cmd = "cpsTest" && parts.Length >= 2 {
@@ -860,9 +889,10 @@ StartCapture(kind := "activation") {
         FinishCapture("")
     CF.capture := true
     CF.captureKind := kind
-    ; Suspendre les deux raccourcis pendant la capture, puis les restaurer.
+    ; Suspendre tous les raccourcis pendant la capture, puis les restaurer.
     UnregisterActivation()
     UnregisterEmergency()
+    CFGlobalUnregister()
     SendStats()
     ih := InputHook("V")
     ih.KeyOpt("{All}", "N")
@@ -907,24 +937,36 @@ FinishCapture(key) {
     for mouseKey in ["LButton", "RButton", "MButton", "XButton1", "XButton2"]
         try Hotkey("~*" mouseKey, "Off")
 
+    isGlobal := SubStr(kind, 1, 7) = "global:"
+    action := isGlobal ? SubStr(kind, 8) : ""
+    if isGlobal && !HasValue(CFGlobalKeys(), action)
+        key := ""
+    previous := isGlobal ? CF.globalKeys.Get(action, "")
+        : kind = "emergency" ? CF.emergencyKey : CF.cfg.activation
     rejected := false
     if key != "" {
-        if kind = "emergency" {
-            for p in CF.profiles {
-                if SameKey(key, p.cfg.activation) {
+        if isGlobal
+            rejected := CFGlobalConflicts(key, action)
+        else if kind = "emergency" {
+            for p in CF.profiles
+                if SameKey(key, p.cfg.activation)
                     rejected := true
-                    break
-                }
-            }
-        } else if SameKey(key, CF.emergencyKey) {
-            rejected := true
+            for globalAction in CFGlobalKeys()
+                if CF.globalKeys[globalAction] != "" && SameKey(key, CF.globalKeys[globalAction])
+                    rejected := true
+        } else {
+            rejected := SameKey(key, CF.emergencyKey)
+            for globalAction in CFGlobalKeys()
+                if CF.globalKeys[globalAction] != "" && SameKey(key, CF.globalKeys[globalAction])
+                    rejected := true
         }
     }
-    previous := kind = "emergency" ? CF.emergencyKey : CF.cfg.activation
     if rejected
         key := ""
     if key != "" {
-        if kind = "emergency"
+        if isGlobal
+            CF.globalKeys[action] := key
+        else if kind = "emergency"
             CF.emergencyKey := key
         else
             CF.cfg.activation := key
@@ -932,15 +974,20 @@ FinishCapture(key) {
     try {
         RegisterEmergency()
         RegisterActivation()
+        CFGlobalRegister()
     } catch as err {
         try UnregisterActivation()
         try UnregisterEmergency()
-        if kind = "emergency"
+        CFGlobalUnregister()
+        if isGlobal
+            CF.globalKeys[action] := previous
+        else if kind = "emergency"
             CF.emergencyKey := previous
         else
             CF.cfg.activation := previous
         try RegisterEmergency()
         try RegisterActivation()
+        try CFGlobalRegister()
         SetNotice("Touche non prise en charge : " err.Message)
         key := ""
     }
@@ -948,12 +995,13 @@ FinishCapture(key) {
     SendState()
     SaveSettings()
     if rejected
-        SetNotice("Cette touche est déjà utilisée par l'activation. Choisis-en une autre.")
+        SetNotice("Touche déjà utilisée : choisis un autre raccourci.")
     else if key != ""
-        SetNotice((kind = "emergency" ? "Arrêt d'urgence : " : "Activation : ")
-            DisplayKey(key) ".")
+        SetNotice((isGlobal ? CFGlobalKeyLabel(action)
+            : kind = "emergency" ? "Arrêt d'urgence" : "Activation")
+            " : " DisplayKey(key) ".")
     else
-        SetNotice("Capture annulée. Touche conservée : " DisplayKey(previous) ".")
+        SetNotice("Capture annulée. Raccourci conservé.")
 }
 
 DefaultConfig() {
@@ -1086,6 +1134,9 @@ SaveSettings(*) {
         IniWrite(CF.selectedId, CF.configFile, "Profiles", "Selected")
         IniWrite(CF.nextId, CF.configFile, "Profiles", "NextId")
         IniWrite(CF.emergencyKey, CF.configFile, "General", "EmergencyKey")
+        for action in CFGlobalKeys()
+            IniWrite(CF.globalKeys.Get(action, ""), CF.configFile,
+                "General", CFGlobalIniKey(action))
         IniWrite(CF.compactMode ? 1 : 0, CF.configFile, "General", "CompactMode")
         IniWrite(CF.closeToTray ? 1 : 0, CF.configFile, "General", "CloseToTray")
         IniWrite(CF.minimizeToTray ? 1 : 0, CF.configFile, "General", "MinimizeToTray")
@@ -1097,6 +1148,8 @@ SaveSettings(*) {
         IniWrite(CF.overlayOpacity, CF.configFile, "General", "OverlayOpacity")
         IniWrite(CF.overlayMargin, CF.configFile, "General", "OverlayMargin")
         IniWrite(CF.overlayAverageSeconds, CF.configFile, "General", "OverlayAverageSeconds")
+        IniWrite(CF.overlaySize, CF.configFile, "General", "OverlaySize")
+        IniWrite(CF.overlayShowProfile ? 1 : 0, CF.configFile, "General", "OverlayShowProfile")
         IniWrite(CF.overlayMonitor, CF.configFile, "General", "OverlayMonitor")
         IniWrite(CF.overlayPosition, CF.configFile, "General", "OverlayPosition")
         IniWrite(CF.overlayX, CF.configFile, "General", "OverlayX")
