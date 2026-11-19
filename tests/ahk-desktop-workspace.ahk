@@ -158,6 +158,10 @@ try {
         if CF.overlayMonitor != 2
             throw Error("La sélection d'un second écran est impossible.")
     }
+    ; Les changements de taille reconstruisent l'overlay. Les anciens HWND
+    ; ne sont plus valides : reprendre le contrôle Windows courant.
+    hwnd := CF.overlayGui.Hwnd
+    m := CFOverlayMetrics()
     ; Déplacement manuel : clics traversants suspendus uniquement en édition.
     CFOverlaySetEdit(true)
     if !CF.overlayEditing || (WinGetExStyle("ahk_id " hwnd) & 0x20)
