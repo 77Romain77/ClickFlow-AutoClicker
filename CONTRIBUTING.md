@@ -17,7 +17,7 @@ python tools/make_icon.py --output src/assets/ClickFlow.ico
 New-Item -ItemType Directory -Force stage/ui | Out-Null
 Copy-Item src/* stage/ -Recurse -Force
 Copy-Item ui/index.html stage/ui/index.html
-python tools/build_single_ahk.py --root stage --output ClickFlow-v1.8.0.ahk
+python tools/build_single_ahk.py --root stage --output ClickFlow-v1.8.1.ahk
 ```
 
 La sortie unique intègre les fichiers du dossier `stage` et les extrait localement à la première exécution.
