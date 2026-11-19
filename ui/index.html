@@ -506,6 +506,14 @@ const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activati
 const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,floatGraph:false,floatTopMost:true,floatOpacity:100}};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
+if(bridge) {
+    window.addEventListener('error',event=>{
+        try {window.chrome.webview.postMessage('uiError\t'+String(event.message||'Erreur JavaScript'));} catch {}
+    });
+    window.addEventListener('unhandledrejection',event=>{
+        try {window.chrome.webview.postMessage('uiError\t'+String(event.reason||'Promesse rejetée'));} catch {}
+    });
+}
 const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
 const config = () => active().settings;
 const send = (cmd,...args) => {
