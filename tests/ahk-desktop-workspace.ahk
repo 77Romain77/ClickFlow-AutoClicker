@@ -85,20 +85,24 @@ try {
     CF.floatPoints := [{t: A_TickCount - 600, cps: 10},
         {t: A_TickCount - 400, cps: 12},
         {t: A_TickCount - 200, cps: 8}]
+    ; Le graphique doit réellement se repeindre via WM_PAINT, même à 0 CPS.
+    beforePaint := CF.floatChartPaintCount
     CFDesktopDrawFloatChart()
-    if !CF.floatBitmap
-        throw Error("La courbe CPS native n'a pas été dessinée.")
-    ; Vérifier que le contrôle expose vraiment SS_BITMAP et affiche le bitmap.
-    chartStyle := DllCall("User32\GetWindowLongPtrW",
-        "Ptr", CF.floatChart.Hwnd, "Int", -16, "Ptr")
-    if (chartStyle & 0xF) != 0xE
-        throw Error("La courbe n'a pas le style Windows SS_BITMAP.")
-    attached := SendMessage(0x173, 0, 0, ,
+    if CF.floatChartPaintCount <= beforePaint
+        throw Error("Le graphique CPS n'a déclenché aucun dessin WM_PAINT.")
+    WinGetClientPos(, , &chartWidth, &chartHeight,
         "ahk_id " CF.floatChart.Hwnd)
-    if !attached || attached != CF.floatBitmap
-        throw Error("Le bitmap dessiné n'est pas réellement affiché dans la mini-fenêtre.")
-    if !CF.floatStopBg || !CF.floatGraphBg
-        throw Error("Les boutons colorés de la mini-fenêtre sont absents.")
+    if chartWidth < 380 || chartHeight < 180
+        throw Error("La courbe n'utilise pas l'espace disponible : "
+            chartWidth " x " chartHeight)
+    ; Contrôles colorés réels, sans faux boutons Progress superposés.
+    if !CF.floatStopBrush || !CF.floatGraphBrush
+        throw Error("Les contrôles colorés n'ont pas été créés.")
+    if CF.floatGraphButton.Hwnd = CF.floatStop.Hwnd
+        throw Error("Les deux boutons partagent le même HWND.")
+    CFDesktopStop()
+    if CF.armed
+        throw Error("Le bouton STOP n'a pas arrêté les clics.")
     CFDesktopSetPreference("floatOpacity", "80")
     CFDesktopSetPreference("floatTopMost", "0")
     if CF.floatOpacity != 80 || CF.floatTopMost
@@ -106,7 +110,7 @@ try {
     CFDesktopSaveFloatBounds()
     savedW := CF.floatWidth
     savedH := CF.floatHeight
-    if savedW < 415 || savedH < 330
+    if savedW < 415 || savedH < 335
         throw Error("Les dimensions redimensionnées ne sont pas mémorisées.")
     CFDesktopSetFloat(false)
     if CF.floatShown
@@ -117,10 +121,19 @@ try {
         throw Error("La hauteur flottante n'est pas sauvegardée.")
     CFDesktopSetPreference("compactChart", "0")
     CFDesktopSetFloat(true)
-    WinGetClientPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
+    WinGetPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
     if Abs(restoredW - savedW) > 5 || Abs(restoredH - savedH) > 5
         throw Error("Les dimensions flottantes ne sont pas restaurées.")
     CFDesktopSetFloat(false)
+    ; Vérifier que fermer/réouvrir plusieurs fois NE gonfle JAMAIS la fenêtre.
+    Loop 5 {
+        CFDesktopSetFloat(true)
+        WinGetPos(, , &loopW, &loopH, "ahk_id " CF.floatGui.Hwnd)
+        if Abs(loopW - savedW) > 3 || Abs(loopH - savedH) > 3
+            throw Error("La fenêtre gonfle à la réouverture " A_Index
+                " : " loopW "x" loopH " vs " savedW "x" savedH)
+        CFDesktopSetFloat(false)
+    }
     if CF.total != 0 || CF.armed
         throw Error("Le panneau de bureau a déclenché le moteur.")
     CF.desktopReady := false
