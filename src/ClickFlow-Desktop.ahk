@@ -194,9 +194,23 @@ CFDesktopFloatPositionValid(x, y, width, height) {
     return false
 }
 
+CFOverlayMetrics() {
+    ; Convertir UNE SEULE FOIS les mesures de référence en pixels réels.
+    ; Gui -DPIScale et WinMove utilisent alors exactement la même unité.
+    ; Les polices Segoe UI restent proportionnelles au DPI système.
+    scale := Max(1, Min(3, A_ScreenDPI / 96))
+    return {
+        w: Round(252 * scale), h: Round(76 * scale),
+        left: Round(13 * scale), top: Round(9 * scale),
+        statusW: Round(226 * scale), statusH: Round(26 * scale),
+        cpsTop: Round(39 * scale), cpsH: Round(29 * scale)
+    }
+}
+
 CFOverlayPositionCoords() {
     global CF
-    width := 226, height := 48
+    size := CFOverlayMetrics()
+    width := size.w, height := size.h
     if CF.overlayPosition = "custom"
         && CFDesktopFloatPositionValid(CF.overlayX, CF.overlayY, width, height)
         return {x: CF.overlayX, y: CF.overlayY}
@@ -215,19 +229,25 @@ CFOverlayCreate() {
     global CF
     if IsObject(CF.overlayGui)
         return
-    overlay := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20",
+    ; Sans -DPIScale, Gui.Add agrandit les contrôles alors que WinMove
+    ; impose des tailles en pixels, les coupant à 125/150/200 %.
+    ; Ici les positions et le rectangle parent sont tous en pixels.
+    m := CFOverlayMetrics()
+    overlay := Gui("-Caption +ToolWindow +AlwaysOnTop +E0x20 -DPIScale",
         "ClickFlow - Overlay")
     overlay.MarginX := 0
     overlay.MarginY := 0
     overlay.BackColor := "121F32"
     overlay.SetFont("s9 bold c9AE4D4", "Segoe UI")
     CF.overlayStatusText := overlay.Add("Text",
-        "x12 y11 w98 h25 +0x100 0x200", "ARRÊTÉ")
+        "x" m.left " y" m.top " w" m.statusW " h" m.statusH
+        " +0x100", "ARRÊTÉ")
     overlay.SetFont("s11 bold cEDF6FF", "Segoe UI")
     CF.overlayCpsText := overlay.Add("Text",
-        "x111 y7 w105 h31 Right 0x200 +0x100", "0,0 CPS")
+        "x" m.left " y" m.cpsTop " w" m.statusW " h" m.cpsH
+        " +0x100", "0,0 CPS moy.")
     CF.overlayGui := overlay
-    overlay.Show("NA Hide w226 h48")
+    overlay.Show("NA Hide w" m.w " h" m.h)
     CFOverlayApplyTransparency()
 }
 
@@ -248,9 +268,11 @@ CFOverlayPlace() {
     if !IsObject(CF.overlayGui)
         return
     pt := CFOverlayPositionCoords()
+    m := CFOverlayMetrics()
+    ; Largeur/hauteur en pixels comme les contrôles (-DPIScale).
     ; Une fenêtre overlay peut être encore masquée lors de son placement.
     DetectHiddenWindows(true)
-    try WinMove(pt.x, pt.y, 226, 48, "ahk_id " CF.overlayGui.Hwnd)
+    try WinMove(pt.x, pt.y, m.w, m.h, "ahk_id " CF.overlayGui.Hwnd)
     finally DetectHiddenWindows(false)
 }
 
@@ -306,7 +328,7 @@ CFDesktopUpdate() {
         : status = "EN ATTENTE" ? "cF2D097"
         : status = "PLACEMENT" ? "c87BAFF" : "cABB9CE")
     CF.overlayCpsText.Text := StrReplace(
-        Format("{:.1f}", CFOverlayAverage(now)), ".", ",") " CPS"
+        Format("{:.1f}", CFOverlayAverage(now)), ".", ",") " CPS moy."
 }
 
 CFOverlaySaveLocation() {
@@ -414,7 +436,8 @@ CFDesktopSetPreference(field, value) {
             if !HasValue(["tl", "tm", "tr", "bl", "bm", "br", "custom"], value)
                 return
             if value = "custom" && !CFDesktopFloatPositionValid(
-                CF.overlayX, CF.overlayY, 226, 48)
+                CF.overlayX, CF.overlayY, CFOverlayMetrics().w,
+                CFOverlayMetrics().h)
                 return
             CF.overlayPosition := value
             CFOverlayPlace()
