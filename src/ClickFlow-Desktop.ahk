@@ -248,6 +248,7 @@ CFDesktopColorControls(wParam, lParam, msg, hwnd) {
 CFDesktopResizeFloat(guiObj, state, width, height) {
     global CF
     if state = -1 || !CF.floatReady
+        || !CF.HasOwnProp("floatChart")
         return
     width := Max(245, width)
     height := Max(98, height)
@@ -460,6 +461,8 @@ CFDesktopChartPen(dc, color, thickness := 1) {
 
 CFDesktopDrawFloatChart() {
     global CF
+    if !CF.HasOwnProp("floatChart")
+        return
     if !CF.floatShown || !CF.floatGraph || !CF.floatGraphActive
         || !CF.floatReady || !IsObject(CF.floatChart)
         || !CF.floatChart.Visible
@@ -477,6 +480,10 @@ CFDesktopDrawFloatChart() {
 
 CFDesktopChartPaint(wParam, lParam, msg, hwnd) {
     global CF
+    ; WM_PAINT concerne aussi la fenêtre principale, parfois avant
+    ; la création de la mini-fenêtre. Ne jamais lire un contrôle absent.
+    if !CF.HasOwnProp("floatChart") || !CF.floatReady
+        return
     if !IsObject(CF.floatChart) || hwnd != CF.floatChart.Hwnd
         return
     paint := Buffer(128, 0)
