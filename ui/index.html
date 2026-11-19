@@ -228,6 +228,68 @@ body.compact #page-dashboard{display:block!important}
 }
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
+
+/* v1.7.1 : panneau compact autonome, plus petit et sans grandes cartes. */
+.compact-panel{display:none}
+body.compact{font-size:11px}
+body.compact main{max-width:520px;padding:9px 11px 14px}
+body.compact .topline{margin-bottom:7px;gap:6px}
+body.compact .breadcrumb{font-size:9px;letter-spacing:.6px}
+body.compact .view-button{min-height:27px;padding:4px 8px;font-size:10px;border-radius:7px}
+body.compact .compact-top{margin:5px 0 9px}
+body.compact .compact-top strong{font-size:13px}
+body.compact .compact-top small{display:none}
+body.compact .compact-status{padding:4px 7px;font-size:9px}
+body.compact .dashboard{display:none!important}
+body.compact .compact-panel{display:grid;gap:8px}
+.compact-tile{min-width:0;border-radius:10px;border:1px solid #29405f;background:#111d30;padding:10px 11px}
+.compact-caption{color:#94afd1;letter-spacing:.8px;font-size:9px;font-weight:800;line-height:1.2}
+.compact-profile-tile{display:flex;align-items:center;gap:10px;padding:7px 10px}
+.compact-profile-tile .compact-caption{flex:0 0 90px}
+.compact-profile-tile .select{min-height:29px;font-size:11px;padding:5px 29px 5px 9px;border-radius:7px}
+.compact-session-tile{padding:7px 9px}
+.compact-state-strip{display:flex;justify-content:space-between;align-items:center;gap:7px;color:#b1c6e0;font-size:10px;margin-bottom:7px}
+.compact-state-strip>span:first-child{font-weight:750;color:#aee6d5}
+.compact-state-strip>span:last-child{color:#86a1c5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compact-stat-row{display:grid;grid-template-columns:1fr 1fr minmax(95px,1fr);gap:6px;align-items:stretch}
+.compact-stat{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;background:#0b1829;border:1px solid #233957;border-radius:7px;padding:6px 8px}
+.compact-stat small{font-size:9px;color:#90a9cc;letter-spacing:.7px}
+.compact-stat strong{font-size:16px;font-variant-numeric:tabular-nums;color:#edf6ff;overflow:hidden;text-overflow:ellipsis}
+.compact-stop{border:1px solid #85475d;background:#582838;color:#ffe1e9;border-radius:7px;font-size:11px;font-weight:850;padding:5px;min-height:32px;white-space:nowrap}
+.compact-stop:hover{background:#733247}
+.compact-stop span{font-size:9px;color:#f5b3c1;margin-left:4px}
+.compact-cadence-tile{padding:9px 10px}
+.compact-cadence-tile>.compact-caption{display:flex;justify-content:space-between;gap:8px}
+#compactModeLabel{font-size:9px;color:#74baff;letter-spacing:0}
+.compact-segment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:6px}
+.compact-segment button{background:#1c2a41;border:1px solid #2a4366;color:#b2c8e7;font-size:10px;font-weight:650;border-radius:6px;min-height:27px;padding:4px 3px}
+.compact-segment button.active{background:#295aaa;border-color:#4e8be8;color:#fff}
+.compact-segment button:hover:not(.active){background:#2a3b57}
+.compact-numbers{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
+.compact-numbers label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:#b6c9e3}
+.compact-numbers .input{width:65px;min-height:27px;height:27px;text-align:center;padding:3px;font-size:11px;border-radius:6px}
+.compact-intensity{display:flex;align-items:center;gap:8px;margin-top:6px}
+.compact-intensity .compact-caption{flex:0 0 77px}
+.compact-intensity .compact-segment{flex:1;margin:0}
+.compact-intensity .compact-segment button{min-height:25px}
+.compact-shortcuts-tile{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px}
+.compact-shortcut-hint{font-size:9px;color:#7894b9;margin:2px 0 0}
+.compact-shortcut-buttons{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.compact-key-button{border:1px solid #2d476b;background:#1c2e47;color:#a9c9ed;border-radius:7px;padding:6px 8px;font-size:10px;white-space:nowrap;min-height:27px}
+.compact-key-button strong{font-size:10px;color:#ecf5ff}
+.compact-key-button:hover{background:#294b73}
+.compact-chart-tile{padding:8px 10px 6px}
+.compact-chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#7e9cc3;font-size:9px}
+#compactCpsChart{width:100%;height:65px;display:block;margin-top:3px}
+@media(max-width:385px){
+ .compact-profile-tile .compact-caption{flex-basis:65px}
+ .compact-stat-row{grid-template-columns:1fr 1fr 75px}
+ .compact-stop span{display:none}
+ .compact-shortcuts-tile{align-items:flex-start;flex-direction:column;gap:5px}
+ .compact-shortcut-buttons{width:100%;justify-content:stretch}
+ .compact-key-button{flex:1}
+ .compact-numbers .input{width:53px}
+}
 </style>
 </head>
 <body>
@@ -253,6 +315,51 @@ body.compact #page-dashboard{display:block!important}
  <section id="page-dashboard">
   <div id="compactTop" class="compact-top"><div><strong>Contrôle rapide</strong><small>Réglages essentiels du profil actif</small></div><span id="compactStatus" class="compact-status">PRÊT</span></div>
   <div class="hero"><div><h2>Personnalisez votre rythme.</h2><p>Une interface simple, précise et pensée pour votre quotidien.</p></div><div class="save"><span class="dot"></span> Connexion au moteur AutoHotkey...</div></div>
+  <div id="compactPanel" class="compact-panel">
+   <section class="compact-tile compact-profile-tile">
+    <label class="compact-caption" for="compactProfileSelect">PROFIL ACTIF</label>
+    <select id="compactProfileSelect" class="select" aria-label="Profil actif en mode compact"></select>
+   </section>
+   <section class="compact-tile compact-session-tile">
+    <div class="compact-state-strip"><span id="compactSessionState">Prêt</span><span id="compactActivationInfo">Activation : F6</span></div>
+    <div class="compact-stat-row">
+     <div class="compact-stat"><small>CPS</small><strong id="compactCps">0</strong></div>
+     <div class="compact-stat"><small>CLICS</small><strong id="compactClicks">0</strong></div>
+     <button id="compactStop" class="compact-stop" type="button" title="Arrêter immédiatement les clics">STOP <span id="compactStopKey">F12</span></button>
+    </div>
+   </section>
+   <section class="compact-tile compact-cadence-tile">
+    <div class="compact-caption">CADENCE <span id="compactModeLabel"></span></div>
+    <div class="compact-segment" id="compactModeSeg">
+     <button type="button" data-compact-mode="fixed">Fixe</button>
+     <button type="button" data-compact-mode="random">Aléatoire</button>
+     <button type="button" data-compact-mode="natural">Naturel</button>
+    </div>
+    <div class="compact-numbers">
+     <label>CPS min<input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
+     <label id="compactMaxWrap">CPS max<input id="compactMax" class="input" type="number" min="1" max="100" aria-label="CPS maximum compact"></label>
+    </div>
+    <div id="compactIntensity" class="compact-intensity">
+     <span class="compact-caption">VARIATIONS</span>
+     <div class="compact-segment" id="compactIntensitySeg">
+      <button type="button" data-compact-intensity="low">Faible</button>
+      <button type="button" data-compact-intensity="medium">Moyenne</button>
+      <button type="button" data-compact-intensity="high">Élevée</button>
+     </div>
+    </div>
+   </section>
+   <section class="compact-tile compact-shortcuts-tile">
+    <div><span class="compact-caption">RACCOURCIS</span><p class="compact-shortcut-hint">Cliquer pour modifier</p></div>
+    <div class="compact-shortcut-buttons">
+     <button id="compactCapture" class="compact-key-button" type="button" title="Modifier la touche d'activation">Activer : <strong id="compactHotkey">F6</strong></button>
+     <button id="compactCaptureStop" class="compact-key-button" type="button" title="Modifier la touche d'arrêt">Arrêt : <strong id="compactEmergencyKey">F12</strong></button>
+    </div>
+   </section>
+   <section id="compactChartTile" class="compact-tile compact-chart-tile">
+    <div class="compact-chart-head"><span class="compact-caption">CPS EN DIRECT</span><span>30 s</span></div>
+    <canvas id="compactCpsChart" width="420" height="76" aria-label="Courbe CPS compact"></canvas>
+   </section>
+  </div>
   <div class="dashboard">
    <div class="stack">
     <div class="card">
