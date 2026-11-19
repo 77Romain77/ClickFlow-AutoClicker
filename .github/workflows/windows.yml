@@ -109,6 +109,22 @@ jobs:
             if ($html -notmatch $id) { throw "Maintenance UI control missing: $id" }
           }
 
+      - name: Smoke-test detached uninstaller after application exit
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-uninstall-helper.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError uninstall-helper.err -RedirectStandardOutput uninstall-helper.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Detached uninstaller test timed out.'
+          }
+          $out = if (Test-Path uninstall-helper.out) { Get-Content uninstall-helper.out -Raw } else { '' }
+          $err = if (Test-Path uninstall-helper.err) { Get-Content uninstall-helper.err -Raw } else { '' }
+          Write-Host "Detached uninstaller: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Detached uninstaller failure: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
       - name: Probe WebView2 initialization (experimental)
         shell: pwsh
         run: |
