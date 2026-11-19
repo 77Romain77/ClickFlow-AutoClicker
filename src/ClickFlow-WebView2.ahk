@@ -59,8 +59,8 @@ settingsPath := A_AppData "\ClickFlow\settings.ini"
 compactAtStart := IniRead(settingsPath, "General", "CompactMode", "0") = "1"
 ; Les tailles sont des rectangles EXTERIEURS, identiques à WinMove.
 startW := compactAtStart
-    ? CFDesktopInt(IniRead(settingsPath, "General", "MainCompactWidth", "465"),
-        465, 460, 1200)
+    ? CFDesktopInt(IniRead(settingsPath, "General", "MainCompactWidth", "480"),
+        480, 480, 1200)
     : CFDesktopInt(IniRead(settingsPath, "General", "MainExpandedWidth", "1120"),
         1120, 600, 2400)
 startH := compactAtStart
