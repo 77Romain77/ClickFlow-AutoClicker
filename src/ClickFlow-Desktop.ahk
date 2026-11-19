@@ -40,9 +40,11 @@ CFDesktopOpen(*) {
     global CF
     if !CF.hwnd
         return
+    DetectHiddenWindows(true)
     try WinShow("ahk_id " CF.hwnd)
     try WinRestore("ahk_id " CF.hwnd)
     try WinActivate("ahk_id " CF.hwnd)
+    DetectHiddenWindows(false)
 }
 
 CFDesktopHide(*) {
