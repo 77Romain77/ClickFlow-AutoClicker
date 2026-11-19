@@ -141,6 +141,33 @@ jobs:
             throw "Centering test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
+      - name: Verify v1.9 settings and optional shortcut UI
+        shell: pwsh
+        run: |
+          node tests/v1.9-workspace.test.cjs
+
+      - name: Verify optional global shortcuts and conflict protections
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-global-hotkeys.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError global-keys.err -RedirectStandardOutput global-keys.out
+          if (-not $p.WaitForExit(20000)) { Stop-Process -Id $p.Id -Force; throw 'Global shortcut test timed out.' }
+          $out = if (Test-Path global-keys.out) { Get-Content global-keys.out -Raw } else { '' }
+          $err = if (Test-Path global-keys.err) { Get-Content global-keys.err -Raw } else { '' }
+          Write-Host "Optional global hotkeys: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') { throw "Global hotkeys failed exit=$($p.ExitCode) stdout=$out stderr=$err" }
+
+      - name: Verify complete ZIP backup and restoration on Windows
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-full-backup.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError full-backup.err -RedirectStandardOutput full-backup.out
+          if (-not $p.WaitForExit(45000)) { Stop-Process -Id $p.Id -Force; throw 'Full ZIP backup test timed out.' }
+          $out = if (Test-Path full-backup.out) { Get-Content full-backup.out -Raw } else { '' }
+          $err = if (Test-Path full-backup.err) { Get-Content full-backup.err -Raw } else { '' }
+          Write-Host "ZIP full backup: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') { throw "ZIP backup test failed exit=$($p.ExitCode) stdout=$out stderr=$err" }
+
       - name: Verify Windows desktop workspace and profile controls (AutoHotkey)
         shell: pwsh
         run: |
