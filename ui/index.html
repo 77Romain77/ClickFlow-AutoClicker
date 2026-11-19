@@ -308,7 +308,7 @@ body.compact .compact-panel{display:grid;gap:8px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.7.0 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.7.1 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -555,7 +555,61 @@ function render() {
     $('gateChoose').style.display=c.gate?'flex':'none';
     renderProfiles();
     renderSettings();
+    renderCompactPanel();
 }
+// Contrôle compact : composants indépendants du dashboard étendu,
+// mais toujours reliés au même profil et aux commandes du moteur.
+function renderCompactPanel() {
+    const p=active(),c=p.settings,sel=$('compactProfileSelect');
+    const previous=sel.value;
+    sel.replaceChildren();
+    for(const item of model.profiles) {
+        const opt=document.createElement('option');
+        opt.value=String(item.id);
+        opt.textContent=(item.favorite?'★ ':'')+item.name;
+        sel.append(opt);
+    }
+    sel.value=String(model.selected);
+    selectedButtons('compactModeSeg','compactMode',c.mode);
+    selectedButtons('compactIntensitySeg','compactIntensity',c.intensity);
+    $('compactMin').value=c.min;
+    $('compactMax').value=c.max;
+    $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed');
+    $('compactIntensity').classList.toggle('hidden',c.mode!=='natural');
+    $('compactModeLabel').textContent=c.mode==='fixed'?'Fixe':
+        c.mode==='random'?'Aléatoire':'Naturel';
+    $('compactHotkey').textContent=model.capturing&&model.captureTarget==='activation'
+        ?'...' : c.hotkey;
+    $('compactEmergencyKey').textContent=model.capturing&&model.captureTarget==='emergency'
+        ?'...' : model.emergencyKey;
+    $('compactStopKey').textContent=model.emergencyKey;
+    $('compactActivationInfo').textContent='Activation : '+c.hotkey;
+    $('compactChartTile').classList.toggle('hidden',!model.preferences.compactChart);
+    if(model.compact)setTimeout(drawLiveMonitor,0);
+}
+$('compactProfileSelect').onchange=e=>chooseProfile(Number(e.target.value));
+document.querySelectorAll('[data-compact-mode]').forEach(btn=>{
+    btn.onclick=()=>{
+        const value=btn.dataset.compactMode;
+        config().mode=value;render();send('set','mode',value);
+    };
+});
+document.querySelectorAll('[data-compact-intensity]').forEach(btn=>{
+    btn.onclick=()=>{
+        const value=btn.dataset.compactIntensity;
+        config().intensity=value;render();send('set','intensity',value);
+    };
+});
+for(const field of ['min','max']){
+    $('compact'+field[0].toUpperCase()+field.slice(1)).onchange=e=>{
+        changeCps(field,e.target.value);
+        render();
+    };
+}
+$('compactStop').onclick=()=> $('demoToggle').click();
+$('compactCapture').onclick=()=> $('captureButton').click();
+$('compactCaptureStop').onclick=()=> $('emergencyCapture').click();
+
 function renderProfiles() {
     const sel=$('profileSelect');
     sel.replaceChildren();
@@ -583,10 +637,10 @@ function renderProfiles() {
         head.append(name,fav);
         const mode=document.createElement('div');mode.className='profile-card-meta';
         mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel'})[p.settings.mode]
-            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS';
-        const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
-        shortcut.textContent='Activation : '+(p.settings.hotkey||'F6')
+            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS'
             +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'');
+        const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
+        shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');
         const actions=document.createElement('div');actions.className='profile-card-actions';
         function action(label,cls,fn,disabled=false) {
             const button=document.createElement('button');
@@ -779,7 +833,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.7.0 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.7.1 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
@@ -788,33 +842,38 @@ function setLiveAppearance() {
     $('demoToggle').classList.add('danger');
 }
 const liveMonitor={samples:[],lastStamp:0};
-function drawLiveMonitor() {
-    if(!(model.compact?model.preferences.compactChart:model.preferences.liveMonitor)
-        ||$('page-dashboard').classList.contains('hidden'))return;
-    const canvas=$('liveCpsChart');
+function drawMonitorCanvas(canvas, height) {
     const bounds=canvas.getBoundingClientRect();
     if(!bounds.width)return;
-    const w=Math.max(260,Math.round(bounds.width)),h=115;
+    const w=Math.max(200,Math.round(bounds.width)),h=height;
     const dpr=Math.min(2,window.devicePixelRatio||1);
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
     const ctx=canvas.getContext('2d');if(!ctx)return;
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
     const pts=liveMonitor.samples;
-    const max=Math.max(5,...pts.map(p=>p.cps));
-    const yMax=Math.ceil((max+2)/5)*5;
-    ctx.strokeStyle='#2a3d58';ctx.lineWidth=1;
+    const yMax=Math.ceil((Math.max(5,...pts.map(p=>p.cps))+2)/5)*5;
+    ctx.strokeStyle='#263b57';ctx.lineWidth=1;
     for(let i=1;i<=3;i++){
-        ctx.beginPath();ctx.moveTo(8,i*h/4);ctx.lineTo(w-8,i*h/4);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(6,i*h/4);ctx.lineTo(w-6,i*h/4);ctx.stroke();
     }
     if(!pts.length)return;
-    const last=pts[pts.length-1].t;
-    ctx.beginPath();ctx.strokeStyle='#63b2ff';ctx.lineWidth=2.2;ctx.lineJoin='round';
+    const now=pts[pts.length-1].t;
+    ctx.beginPath();ctx.strokeStyle='#6cbaff';ctx.lineWidth=2;ctx.lineJoin='round';
     pts.forEach((p,i)=>{
-        const px=8+(w-16)*(1-(last-p.t)/30000);
-        const py=8+(h-16)*(1-p.cps/yMax);
+        const px=Math.max(6,6+(w-12)*(1-(now-p.t)/30000));
+        const py=6+(h-12)*(1-p.cps/yMax);
         if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
     });
     ctx.stroke();
+}
+function drawLiveMonitor() {
+    if($('page-dashboard').classList.contains('hidden'))return;
+    if(model.compact){
+        if(model.preferences.compactChart)
+            drawMonitorCanvas($('compactCpsChart'),65);
+    } else if(model.preferences.liveMonitor) {
+        drawMonitorCanvas($('liveCpsChart'),115);
+    }
 }
 function updateLiveMonitor(data) {
     const now=performance.now();
@@ -823,6 +882,10 @@ function updateLiveMonitor(data) {
         data.armed?'Clics en cours':'Prêt';
     $('liveMonitorStatus').textContent=status;
     $('liveMonitorValue').textContent=cps+' CPS';
+    $('compactCps').textContent=String(data.cps||0);
+    $('compactClicks').textContent=String(data.total||0);
+    $('compactSessionState').textContent=status;
+    $('compactActivationInfo').textContent='Activation : '+(data.hotkey||config().hotkey);
     const compact=$('compactStatus');
     compact.textContent=data.waiting?'EN ATTENTE':data.armed?'ACTIF':'PRÊT';
     compact.classList.toggle('is-active',!!data.armed&&!data.waiting);
@@ -848,6 +911,8 @@ function updateLiveStats(data) {
     const counters=document.querySelectorAll('.status-box .stat b');
     if(counters.length>1){counters[0].textContent=String(data.cps||0);counters[1].textContent=String(data.total||0);}
     $('hotkeyView').textContent=data.capturing && model.captureTarget==='activation'?'Appuyez...':data.hotkey;
+    $('compactHotkey').textContent=data.capturing && model.captureTarget==='activation'?'...':data.hotkey;
+    $('compactEmergencyKey').textContent=data.capturing && model.captureTarget==='emergency'?'...':model.emergencyKey;
     $('emergencyView').textContent=data.capturing && model.captureTarget==='emergency'?'Appuyez...':model.emergencyKey;
     $('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle. Les profils et les clics sont synchronisés.';
     updateLiveMonitor(data);
