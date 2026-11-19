@@ -381,9 +381,9 @@ BackendMessage(sender, args) {
             EditConfig(parts[2], parts[3])
             return
         }
-        if cmd = "quickSettings" && parts.Length >= 7 {
+        if cmd = "quickSettings" && parts.Length >= 6 {
             try CFApplyQuickSettings(parts[2], parts[3], parts[4],
-                parts[5], parts[6], parts[7])
+                parts[5], parts[6])
             catch as err
                 CFProfileMessage("Réglages rapides refusés : " err.Message, true)
             return
