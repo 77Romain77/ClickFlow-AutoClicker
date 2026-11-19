@@ -55,8 +55,18 @@ CFLoadSeparatedProfiles() {
             cfg: ReadConfig(path, "Settings", DefaultConfig())})
         maxId := Max(maxId, id)
     }
-    if loaded.Length = 0
-        return false
+    if loaded.Length = 0 {
+        ; Après migration, une suppression manuelle des fichiers ne doit pas
+        ; restaurer des profils historiques cachés dans settings.ini.
+        if IniRead(CF.configFile, "Profiles", "StorageVersion", "") != "2"
+            return false
+        defaults := DefaultConfig()
+        CF.profiles := [{id: 1, name: "Principal", cfg: defaults}]
+        CF.selectedId := 1
+        CF.nextId := Max(2, IniRead(CF.configFile, "Profiles", "NextId", 2) + 0)
+        CF.cfg := defaults
+        return true
+    }
     CF.profiles := loaded
     file := CF.configFile
     CF.selectedId := IniRead(file, "Profiles", "Selected", loaded[1].id) + 0
