@@ -7,7 +7,7 @@ global CF := {
     capture: false, inputHook: 0, pressed: false, armed: false,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, total: 0, recent: [],
-    lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
+    lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false, uninstalling: false,
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
     profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
@@ -76,7 +76,8 @@ BackendExit(*) {
 
     ; Sauvegarde AVANT la destruction de WebView2.
     CF.web := 0
-    SaveSettings()
+    if !CF.uninstalling
+        SaveSettings()
 }
 
 JsonQuote(str) {
@@ -186,6 +187,63 @@ CFSendShortcutStatus(errorMessage := "") {
     m := CFShortcutHas("start") ? "true" : "false"
     try CF.web.PostWebMessageAsString('{"type":"shortcuts","desktop":' d
         ',"start":' m ',"error":' JsonQuote(errorMessage) '}')
+}
+
+
+; Ouvre uniquement les deux répertoires ClickFlow, jamais un chemin fourni par la page.
+CFOpenStorage(kind) {
+    if kind = "profiles"
+        folder := EnvGet("APPDATA") "\ClickFlow"
+    else if kind = "program"
+        folder := EnvGet("LOCALAPPDATA") "\ClickFlow"
+    else
+        throw Error("Dossier inconnu.")
+    if kind = "profiles" && !DirExist(folder)
+        DirCreate(folder)
+    if !DirExist(folder)
+        throw Error("Le dossier ClickFlow n'existe pas encore.")
+    Run('"' A_WinDir '\explorer.exe" "' folder '"')
+}
+
+CFSendUtilityError(message) {
+    global CF
+    if CF.web
+        try CF.web.PostWebMessageAsString('{"type":"utilityError","message":' JsonQuote(message) '}')
+}
+
+; Le nettoyage doit commencer après la fermeture de WebView2 et du moteur.
+CFStartUninstall(mode) {
+    global CF
+    if mode != "keep" && mode != "all"
+        throw Error("Mode de désinstallation inconnu.")
+    if CF.uninstalling || CF.shuttingDown
+        return
+    root := EnvGet("LOCALAPPDATA")
+    appRoot := root "\ClickFlow"
+    if root = "" || EnvGet("APPDATA") = ""
+        throw Error("Les dossiers Windows de ClickFlow sont introuvables.")
+    if StrLower(SubStr(A_ScriptDir, 1, StrLen(appRoot) + 1)) != StrLower(appRoot "\")
+        throw Error("Lance le fichier unique ClickFlow installé avant de le désinstaller.")
+    if !RegExMatch(SubStr(A_ScriptDir, StrLen(appRoot) + 2), "^Runtime-\d+\.\d+\.\d+$")
+        throw Error("Le dossier de lancement n'est pas un runtime ClickFlow.")
+    helper := A_ScriptDir "\ClickFlow-Uninstall.ahk"
+    if !FileExist(helper)
+        throw Error("Le module de désinstallation est absent. Réinstalle ClickFlow.")
+    if mode = "keep"
+        SaveSettings()
+    tempScript := A_Temp "\ClickFlow-Uninstall-" Format("{:08X}", Random(0, 0xFFFFFFFF)) ".ahk"
+    FileCopy(helper, tempScript)
+    try {
+        pid := DllCall("Kernel32\GetCurrentProcessId", "UInt")
+        Run('"' A_AhkPath '" "' tempScript '" ' mode ' ' pid, , "Hide")
+    } catch as err {
+        try FileDelete(tempScript)
+        throw Error("Impossible de lancer la désinstallation : " err.Message)
+    }
+    CF.uninstalling := true
+    CF.armed := false
+    try CF.web.PostWebMessageAsString('{"type":"uninstalling"}')
+    SetTimer(CloseClickFlow, -150)
 }
 
 SendStats() {
@@ -314,6 +372,22 @@ BackendMessage(sender, args) {
             } catch as err {
                 CFSendShortcutStatus(err.Message)
             }
+            return
+        }
+        if cmd = "storage" && parts.Length >= 2 {
+            try CFOpenStorage(parts[2])
+            catch as err
+                CFSendUtilityError(err.Message)
+            return
+        }
+        if cmd = "uninstall" && parts.Length >= 3 {
+            if parts[3] != "SUPPRIMER" {
+                CFSendUtilityError("Confirmation de suppression invalide.")
+                return
+            }
+            try CFStartUninstall(parts[2])
+            catch as err
+                CFSendUtilityError(err.Message)
             return
         }
         if cmd = "view" && parts.Length >= 2 {
@@ -761,7 +835,7 @@ LoadSettings() {
 
 SaveSettings(*) {
     global CF
-    if CF.loading
+    if CF.loading || CF.uninstalling
         return
     try {
         DirCreate(A_AppData "\ClickFlow")
