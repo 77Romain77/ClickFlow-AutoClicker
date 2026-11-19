@@ -145,7 +145,7 @@ CFDesktopCreateFloat() {
     mini.SetFont("s11 cFFFFFF bold", "Segoe UI")
     CF.floatCps := mini.Add("Text", "x12 y73 w260 h27", "0 CPS - 0 clics")
     mini.SetFont("s9 norm cECF5FF", "Segoe UI")
-    CF.floatGraphButton := mini.Add("Button", "x250 y9 w78 h29", "Courbe")
+    CF.floatGraphButton := mini.Add("Button", "x250 y51 w78 h29", "Courbe")
     CF.floatGraphButton.OnEvent("Click", CFDesktopToggleGraph)
     CF.floatChart := mini.Add("Picture", "x12 y108 w300 h65")
     CF.floatChartHint := mini.Add("Text", "x12 y111 w300 h21 c97B2D0",
@@ -168,24 +168,25 @@ CFDesktopResizeFloat(guiObj, state, width, height) {
     margin := 12
     inner := width - 2 * margin
     ; Le nom a deux lignes et l'action courbe reste à droite.
-    CF.floatProfile.Move(margin, 8, Max(120, inner - 87), 40)
-    CF.floatGraphButton.Move(width - 89, 9, 77, 29)
-    CF.floatStatus.Move(margin, 49, inner, 20)
-    CF.floatCps.Move(margin, 72, inner, 27)
+    ; Le nom utilise toute la largeur : les profils longs passent sur deux lignes.
+    CF.floatProfile.Move(margin, 8, inner, 40)
+    CF.floatGraphButton.Move(width - 89, 51, 77, 29)
+    CF.floatStatus.Move(margin, 53, Max(120, inner - 87), 20)
+    CF.floatCps.Move(margin, 79, inner, 27)
     buttonY := height - 44
     buttonWidth := Floor((inner - 9) / 2)
     CF.floatOpen.Move(margin, buttonY, buttonWidth, 33)
     CF.floatStop.Move(margin + buttonWidth + 9, buttonY,
         inner - buttonWidth - 9, 33)
-    graphHeight := Max(0, buttonY - 109)
+    graphHeight := Max(0, buttonY - 117)
     showChart := CF.floatGraph && graphHeight >= 48
     CF.floatChart.Visible := showChart
     CF.floatChartHint.Visible := CF.floatGraph && !showChart
     if showChart {
-        CF.floatChart.Move(margin, 105, inner, graphHeight)
+        CF.floatChart.Move(margin, 113, inner, graphHeight)
         CFDesktopDrawFloatChart()
     } else if CF.floatGraph
-        CF.floatChartHint.Move(margin, 105, inner, 21)
+        CF.floatChartHint.Move(margin, 113, inner, 21)
     ; On ne réécrit pas settings.ini sur chaque pixel du glisser-déposer.
 }
 
