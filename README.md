@@ -33,7 +33,7 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Statistiques de CPS et de clics générés.
 - **Onglet Test CPS manuel** : 2, 5, 10, 30 ou 60 secondes, chronométrage au premier clic, CPS glissants sur une seconde, CPS moyens, pic, total, progression et courbe en temps réel.
 - Animation lumineuse discrète sur chaque clic gauche dans la zone de test, sans effet sonore.
-- Historique des 6 derniers essais pendant la session et records par durée conservés dans `%APPDATA%\ClickFlow\cps-records.ini`.
+- Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
 ## Lancer ClickFlow plusieurs fois et nettoyer les caches
@@ -83,9 +83,9 @@ Dans l'interface étendue, ouvre **Test CPS**, choisis 2, 5, 10, 30 ou 60 second
 - **CPS moyens** : clics totaux divisés par la durée écoulée, puis par la durée exacte au terme du test.
 - **Pic sur 1 s** : maximum relevé sur une fenêtre glissante.
 - **Courbe** : évolution en temps réel, échantillonnée régulièrement pendant l'essai.
-- **Record personnel** : meilleur nombre de clics pour chaque durée, automatiquement enregistré dans un fichier local dédié.
+- **Dernier test terminé** : durée choisie, nombre de clics, moyenne et pic du dernier essai, en mémoire jusqu'à fermeture de ClickFlow.
 
-Le bouton **Recommencer** remet le compteur à zéro sans effacer les records ni les derniers résultats de la session. Quitter l'onglet pendant le test annule l'essai. L'autoclicker est arrêté quand tu entres dans cet onglet, pour éviter de mélanger les deux fonctionnalités. Aucun score n'est envoyé sur internet.
+Le bouton **Recommencer** remet le compteur à zéro tout en laissant visible le dernier résultat terminé. Quitter l'onglet pendant le test annule l'essai. L'autoclicker est arrêté quand tu entres dans cet onglet, pour éviter de mélanger les deux fonctionnalités. Aucun score n'est envoyé sur internet.
 
 ## Code source
 
