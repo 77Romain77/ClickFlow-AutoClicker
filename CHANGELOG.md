@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.0.3 - 2026-11-19
+
+- Boutons pour ouvrir le dossier des profils et celui des fichiers du logiciel depuis "À propos".
+- Désinstallation avec conservation des profils ou suppression totale des données de ClickFlow.
+- Confirmation explicite en tapant SUPPRIMER avant la désinstallation.
+- Nettoyage différé après fermeture de WebView2, sans supprimer les raccourcis tiers.
+- Tests Windows des deux modes de désinstallation et de la préservation des fichiers non liés au programme.
+
 ## 1.0.2 - 2026-11-19
 
 - Gestion indépendante des raccourcis du Bureau et du menu Démarrer dans l'onglet "À propos".
