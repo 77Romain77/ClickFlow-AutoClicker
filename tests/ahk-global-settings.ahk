@@ -5,7 +5,8 @@
 ; Tests sans clics : persistance des reglages globaux et mode de fenetre.
 global CF
 CF.loading := false
-CF.configFile := A_Temp "\clickflow-1.1.0-test-" A_TickCount ".ini"
+CF.configFile := A_Temp "\clickflow-1.2.0-test-" A_TickCount ".ini"
+CF.profilesDir := A_Temp "\clickflow-1.2.0-profiles-" A_TickCount
 CF.emergencyKey := "F10"
 CF.compactMode := true
 CF.profiles := [{id: 1, name: "Principal", cfg: DefaultConfig()}]
@@ -26,8 +27,8 @@ try {
         throw Error("Le mode compact n'est pas sauvegarde.")
 
     ; Une touche d'activation identique a l'arret d'urgence est refusee au chargement.
-    IniWrite("F10", CF.configFile, "Profile_1", "activation")
-    parsed := ReadConfig(CF.configFile, "Profile_1", DefaultConfig())
+    IniWrite("F10", CFProfileFile(1), "Settings", "activation")
+    parsed := ReadConfig(CFProfileFile(1), "Settings", DefaultConfig())
     if SameKey(parsed.activation, CF.emergencyKey)
         throw Error("Un raccourci d'activation bloque l'arret d'urgence.")
 
@@ -48,10 +49,12 @@ try {
         throw Error("La taille etendue n'est pas respectee: " w "x" h)
     g.Destroy()
     FileDelete(CF.configFile)
+    DirDelete(CF.profilesDir, true)
     FileAppend("Global settings and view switching passed.", "*", "UTF-8")
     ExitApp(0)
 } catch as err {
     FileAppend("REGRESSION FAILURE: " err.Message, "*", "UTF-8")
     try FileDelete(CF.configFile)
+    try DirDelete(CF.profilesDir, true)
     ExitApp(1)
 }
