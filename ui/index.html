@@ -95,7 +95,15 @@ body.compact #page-dashboard{display:block!important}
 .maintenance-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .maintenance-actions .btn{flex:1 1 185px;min-height:40px}
 
-/* Test CPS intégré : interface et retour visuel léger à chaque clic. */
+/* Test CPS intégré : mode profil et mode manuel. */
+.cps-source-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}
+.cps-profile-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid #2b4161;border-radius:11px;background:#101d31;margin-bottom:13px}
+.cps-profile-controls .select{width:auto;flex:1;min-width:170px;max-width:300px}.cps-profile-controls .btn{white-space:nowrap}
+.cps-sound-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;color:#b7cbe6;font-size:12px}
+#cpsClickArea:disabled{cursor:default;opacity:1}
+.cps-profile-controls[hidden]{display:none}
+@media(max-width:560px){.cps-profile-controls{align-items:stretch}.cps-profile-controls .select{max-width:none}}
+
 .cps-card{max-width:1040px}.cps-duration-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px}
 .cps-durations{display:flex;gap:7px;flex-wrap:wrap}.cps-durations .btn{min-width:52px}
 .cps-main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(235px,.85fr);gap:15px}
@@ -193,7 +201,10 @@ body.compact #page-cps{display:none!important}
  <section id="page-cps" class="hidden">
   <div class="hero"><div><h2>Teste ta vitesse de clic.</h2><p>Un test manuel, une courbe en direct et des records pour chaque durée.</p></div></div>
   <div class="card cps-card">
-   <div class="card-head"><div><div class="card-title">Test de clics par seconde</div><div class="card-description">Le chronomètre démarre au premier clic gauche dans la zone.</div></div><span class="number">TEST / CPS</span></div>
+   <div class="card-head"><div><div class="card-title">Test de clics par seconde</div><div class="card-description">Teste les CPS générés par tes profils ou ta vitesse de clic manuelle.</div></div><span class="number">TEST / CPS</span></div>
+   <div class="cps-source-row"><span class="label" style="margin:0">Mode de test</span><div class="cps-durations"><button id="cpsSourceProfile" class="btn sm primary" type="button">Profil ClickFlow</button><button id="cpsSourceManual" class="btn sm" type="button">Clics manuels</button></div></div>
+   <div id="cpsProfileControls" class="cps-profile-controls"><label for="cpsProfileSelect" class="label" style="margin:0">Profil à tester</label><select id="cpsProfileSelect" class="select" aria-label="Profil à tester"></select><button id="cpsStartProfile" class="btn primary" type="button">Démarrer le test</button></div>
+   <div class="cps-sound-row"><span>Retour sonore léger sur chaque clic</span><button id="cpsSound" class="btn sm quiet" type="button" aria-pressed="true">Son activé</button></div>
    <div class="cps-duration-row"><span class="label" style="margin:0">Durée du test</span><div class="cps-durations" role="group" aria-label="Durée du test CPS"><button class="btn sm" data-cps-duration="2">2 s</button><button class="btn sm primary" data-cps-duration="5">5 s</button><button class="btn sm" data-cps-duration="10">10 s</button><button class="btn sm" data-cps-duration="30">30 s</button><button class="btn sm" data-cps-duration="60">60 s</button></div></div>
    <div class="cps-main">
     <div>
@@ -216,7 +227,7 @@ body.compact #page-cps{display:none!important}
    <div class="cps-progress"><div id="cpsProgressFill"></div></div>
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
    <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div></div>
-   <p class="subnote" style="margin-top:13px">Le test se limite aux clics manuels dans cette zone. L'autoclicker ClickFlow est arrêté à l'ouverture de cet onglet. Aucun résultat n'est enregistré sur le disque.</p>
+   <p id="cpsDescription" class="subnote" style="margin-top:13px">Le test de profil reprend la cadence réelle calculée par le moteur ClickFlow (fixe, aléatoire ou naturelle), sans injecter de clics dans Windows. La touche d'activation et la condition souris ne sont pas nécessaires pour ce banc de test. Aucun score n'est enregistré.</p>
   </div>
  </section>
  <section id="page-about" class="hidden">
@@ -544,14 +555,15 @@ $('uninstallAll').onclick=()=>{
     else toast('La désinstallation nécessite la version Windows.');
 };
 
-// Test CPS : clics manuels uniquement, chronométrage monotone et relevé sur 1 s.
+// Test CPS : profil ClickFlow ou souris manuelle, résultats en mémoire seulement.
 const cpsTest = {
-    seconds:5, phase:'ready', startedAt:0, clicks:[], samples:[], peak:0,
-    timer:0, last:null
+    seconds:5, source:'profile', phase:'ready', startedAt:0,
+    clicks:[], samples:[], peak:0, timer:0, last:null, run:0,
+    profileName:'', lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
 };
-const cpsDurations = [2,5,10,30,60];
-const cpsNow = () => performance.now();
-const cpsElapsed = now => cpsTest.phase==='ready'?0:
+const cpsDurations=[2,5,10,30,60];
+const cpsNow=()=>performance.now();
+const cpsElapsed=now=>cpsTest.phase==='ready'||cpsTest.phase==='pending'?0:
     Math.max(0,Math.min(cpsTest.seconds,(now-cpsTest.startedAt)/1000));
 function cpsLastSecond(now) {
     let count=0;
@@ -563,70 +575,206 @@ function cpsLastSecond(now) {
 }
 function cpsSample(now,force=false) {
     const elapsed=cpsElapsed(now);
-    if(!force && cpsTest.samples.length
-        && elapsed-cpsTest.samples[cpsTest.samples.length-1].t<.09)return;
-    const cps=cpsLastSecond(now);
-    cpsTest.samples.push({t:elapsed,v:cps});
-    cpsTest.peak=Math.max(cpsTest.peak,cps);
+    if(!force&&cpsTest.samples.length
+        &&elapsed-cpsTest.samples[cpsTest.samples.length-1].t<.09)return;
+    const value=cpsLastSecond(now);
+    cpsTest.samples.push({t:elapsed,v:value});
+    cpsTest.peak=Math.max(cpsTest.peak,value);
+}
+function cpsPrepareAudio() {
+    if(!cpsTest.audioEnabled)return;
+    if(!cpsTest.audio) {
+        const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+        if(!AudioContextClass)return;
+        try {
+            cpsTest.audio=new AudioContextClass();
+            const ctx=cpsTest.audio;
+            const sampleCount=Math.max(1,Math.ceil(ctx.sampleRate*.012));
+            const buffer=ctx.createBuffer(1,sampleCount,ctx.sampleRate);
+            const output=buffer.getChannelData(0);
+            for(let i=0;i<sampleCount;i++){
+                const t=i/ctx.sampleRate;
+                // Petit clic sec à faible volume, sans fichier externe.
+                output[i]=.038*Math.sin(2*Math.PI*820*t)*Math.exp(-t*390);
+            }
+            cpsTest.clickBuffer=buffer;
+        } catch {cpsTest.audio=null;cpsTest.clickBuffer=null;}
+    }
+    if(cpsTest.audio && cpsTest.audio.state==='suspended')
+        cpsTest.audio.resume().catch(()=>{});
+}
+function cpsPlaySound(delaySeconds=0) {
+    if(!cpsTest.audioEnabled||!cpsTest.audio||!cpsTest.clickBuffer
+        ||cpsTest.audio.state!=='running')return;
+    try {
+        const source=cpsTest.audio.createBufferSource();
+        source.buffer=cpsTest.clickBuffer;
+        source.connect(cpsTest.audio.destination);
+        source.start(cpsTest.audio.currentTime+Math.max(0,Math.min(.10,delaySeconds)));
+        source.onended=()=>source.disconnect();
+    } catch {}
+}
+function cpsPulse(event) {
+    if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const now=cpsNow();
+    // Le son suit tous les clics, mais le rendu reste fluide à 100 CPS.
+    if(now-cpsTest.lastPulseAt<35)return;
+    cpsTest.lastPulseAt=now;
+    const area=$('cpsClickArea'),bounds=area.getBoundingClientRect();
+    const dot=document.createElement('span');
+    dot.className='cps-ripple';
+    dot.style.left=(event?event.clientX-bounds.left:bounds.width/2+(Math.random()-.5)*65)+'px';
+    dot.style.top=(event?event.clientY-bounds.top:bounds.height/2+(Math.random()-.5)*45)+'px';
+    area.appendChild(dot);
+    dot.addEventListener('animationend',()=>dot.remove(),{once:true});
 }
 function cpsStopTimer() {
     if(cpsTest.timer){clearInterval(cpsTest.timer);cpsTest.timer=0;}
 }
 function cpsResetTest() {
+    if(cpsTest.source==='profile' && (cpsTest.phase==='pending'||cpsTest.phase==='running')
+        && connected)send('cpsTest','stop');
+    cpsTest.run++;
     cpsStopTimer();
-    cpsTest.phase='ready';cpsTest.startedAt=0;cpsTest.clicks=[];cpsTest.samples=[];cpsTest.peak=0;
-    $('cpsClickArea').disabled=false;
+    cpsTest.phase='ready';cpsTest.startedAt=0;
+    cpsTest.clicks=[];cpsTest.samples=[];cpsTest.peak=0;
+    cpsTest.profileName='';
     cpsRender(cpsNow());
 }
 function cpsFinish(now) {
     if(cpsTest.phase!=='running')return;
     const end=cpsTest.startedAt+cpsTest.seconds*1000;
     cpsSample(end,true);
-    cpsTest.phase='done';
-    cpsStopTimer();
-    const clicks=cpsTest.clicks.length;
-    const seconds=cpsTest.seconds;
-    cpsTest.last={seconds,clicks,average:clicks/seconds,peak:cpsTest.peak};
+    cpsTest.phase='done';cpsStopTimer();
+    cpsTest.last={
+        seconds:cpsTest.seconds,clicks:cpsTest.clicks.length,
+        average:cpsTest.clicks.length/cpsTest.seconds,peak:cpsTest.peak,
+        source:cpsTest.source,
+        profile:cpsTest.source==='profile'?cpsTest.profileName:'Clics manuels'
+    };
     cpsLastRender();
     cpsRender(end);
 }
 function cpsStart(now) {
     cpsStopTimer();
-    cpsTest.phase='running';
-    cpsTest.startedAt=now;
-    cpsTest.clicks=[];
-    cpsTest.samples=[{t:0,v:0}];
-    cpsTest.peak=0;
+    cpsTest.phase='running';cpsTest.startedAt=now;
+    cpsTest.clicks=[];cpsTest.samples=[{t:0,v:0}];cpsTest.peak=0;
     cpsTest.timer=setInterval(()=>cpsRender(cpsNow()),85);
 }
-function cpsRipple(event) {
-    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    const area=$('cpsClickArea'),bounds=area.getBoundingClientRect();
-    const dot=document.createElement('span');
-    dot.className='cps-ripple';
-    dot.style.left=(event.clientX-bounds.left)+'px';
-    dot.style.top=(event.clientY-bounds.top)+'px';
-    area.appendChild(dot);
-    dot.addEventListener('animationend',()=>dot.remove(),{once:true});
+function cpsSyncProfiles() {
+    const selector=$('cpsProfileSelect');
+    const previous=selector.value;
+    selector.replaceChildren();
+    model.profiles.forEach(profile=>{
+        const option=document.createElement('option');
+        option.value=String(profile.id);
+        option.textContent=profile.name;
+        selector.append(option);
+    });
+    const exists=model.profiles.some(profile=>String(profile.id)===previous);
+    selector.value=exists?previous:String(model.selected);
 }
+function cpsStartProfile() {
+    if(cpsTest.source!=='profile'||cpsTest.phase==='running'||cpsTest.phase==='pending')return;
+    if(!connected){toast('Lance ClickFlow sous Windows pour tester le moteur du profil.');return;}
+    const profileId=Number($('cpsProfileSelect').value);
+    const profile=model.profiles.find(p=>p.id===profileId);
+    if(!profile){toast('Sélectionne un profil valide.');return;}
+    cpsPrepareAudio();
+    cpsResetTest();
+    cpsTest.phase='pending';cpsTest.profileName=profile.name;
+    const run=cpsTest.run;
+    cpsRender(cpsNow());
+    send('cpsTest','start',cpsTest.seconds,run,profile.id);
+}
+$('cpsStartProfile').onclick=cpsStartProfile;
 $('cpsClickArea').addEventListener('pointerdown',event=>{
-    // pointerdown compte une seule fois par pression; ni souris maintenue
-    // ni touche clavier ne doivent incrémenter artificiellement le score.
-    if(event.pointerType!=='mouse'||event.button!==0||event.isPrimary===false)return;
-    if(cpsTest.phase==='done')return;
+    if(cpsTest.source!=='manual'||cpsTest.phase==='done'
+       ||event.pointerType!=='mouse'||event.button!==0||event.isPrimary===false)return;
     event.preventDefault();
     const now=cpsNow();
-    if(cpsTest.phase==='ready')cpsStart(now);
+    if(cpsTest.phase==='ready'){cpsPrepareAudio();cpsStart(now);}
     if(now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
     cpsTest.clicks.push(now);
-    cpsRipple(event);
-    cpsSample(now,true);
-    cpsRender(now);
+    cpsPulse(event);cpsPlaySound();
+    cpsSample(now,true);cpsRender(now);
 });
+function cpsReceiveEngineTicks(offsets) {
+    if(!Array.isArray(offsets))return;
+    const base=cpsTest.startedAt;
+    let lastOffset=cpsTest.clicks.length?cpsTest.clicks[cpsTest.clicks.length-1]-base:-1;
+    for(let index=0;index<offsets.length;index++) {
+        const offset=Number(offsets[index]);
+        if(!Number.isFinite(offset)||offset<0||offset>=cpsTest.seconds*1000
+            ||offset<lastOffset)continue;
+        lastOffset=offset;
+        const instant=base+offset;
+        cpsTest.clicks.push(instant);
+        cpsPlaySound(Math.min(.07,index*.009));
+        cpsPulse();
+    }
+    cpsSample(cpsNow(),true);
+    cpsRender(cpsNow());
+}
+function cpsRebuildFinalSamples() {
+    const endMs=cpsTest.seconds*1000;
+    const step=100;
+    const offsets=cpsTest.clicks.map(x=>x-cpsTest.startedAt);
+    const samples=[{t:0,v:0}];
+    let first=0,last=0,peak=0;
+    for(let ms=step;ms<endMs;ms+=step) {
+        while(last<offsets.length&&offsets[last]<=ms)last++;
+        while(first<last&&offsets[first]<=ms-1000)first++;
+        const count=last-first;
+        peak=Math.max(peak,count);
+        samples.push({t:ms/1000,v:count});
+    }
+    const countAtEnd=offsets.filter(x=>x>endMs-1000).length;
+    peak=Math.max(peak,countAtEnd);
+    samples.push({t:cpsTest.seconds,v:countAtEnd});
+    // Le pic exact peut se produire entre deux échantillons du graphique.
+    for(let i=0,start=0;i<offsets.length;i++){
+        while(offsets[start]<=offsets[i]-1000)start++;
+        peak=Math.max(peak,i-start+1);
+    }
+    cpsTest.samples=samples;cpsTest.peak=peak;
+}
+function cpsHandleEngineMessage(msg) {
+    if(cpsTest.source!=='profile'||Number(msg.run)!==cpsTest.run)return;
+    if(msg.state==='started') {
+        if(cpsTest.phase!=='pending')return;
+        cpsTest.profileName=msg.profile||cpsTest.profileName;
+        cpsStart(cpsNow());cpsRender(cpsNow());return;
+    }
+    if(msg.state==='ticks'){
+        if(cpsTest.phase==='running')cpsReceiveEngineTicks(msg.ticks);
+        return;
+    }
+    if(msg.state==='finished') {
+        if(cpsTest.phase!=='running')return;
+        if(Array.isArray(msg.ticks)){
+            // Remplace les trames de progression par l'historique complet
+            // des événements réellement produits par le cadenceur.
+            cpsTest.clicks=msg.ticks.filter(x=>Number.isFinite(x)&&x>=0
+                &&x<cpsTest.seconds*1000).map(x=>cpsTest.startedAt+x);
+            cpsRebuildFinalSamples();
+        }
+        cpsFinish(cpsNow());return;
+    }
+    if(msg.state==='stopped') {
+        if(cpsTest.phase==='pending'||cpsTest.phase==='running')cpsResetTest();
+        return;
+    }
+    if(msg.state==='error') {
+        cpsResetTest();
+        toast(msg.message||'Impossible de lancer ce test.');
+    }
+}
 function cpsLastRender() {
     const last=cpsTest.last;
     $('cpsLast').textContent=last
-        ? last.seconds+' s · '+last.clicks+' clics · '+last.average.toFixed(1)+' CPS moyens · pic '+last.peak+' CPS'
+        ? last.profile+' · '+last.seconds+' s · '+last.clicks+' clics · '
+            +last.average.toFixed(1)+' CPS moyens · pic '+last.peak+' CPS'
         : 'Aucun résultat pour le moment.';
 }
 function cpsDrawChart() {
@@ -637,16 +785,13 @@ function cpsDrawChart() {
     const h=Math.max(160,Math.round(box.height||250));
     const dpr=Math.min(2,window.devicePixelRatio||1);
     canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
-    const ctx=canvas.getContext('2d');
-    if(!ctx)return;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.clearRect(0,0,w,h);
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
     const pad={left:39,right:11,top:17,bottom:29};
     const plotW=w-pad.left-pad.right,plotH=h-pad.top-pad.bottom;
     const highest=Math.max(5,cpsTest.peak,...cpsTest.samples.map(x=>x.v));
     const yMax=Math.max(5,Math.ceil((highest+2)/5)*5);
-    ctx.font='10px Segoe UI, sans-serif';
-    ctx.textBaseline='middle';
+    ctx.font='10px Segoe UI, sans-serif';ctx.textBaseline='middle';
     for(let i=0;i<=4;i++) {
         const y=pad.top+plotH*i/4;
         ctx.strokeStyle='#263a55';ctx.lineWidth=1;
@@ -665,8 +810,7 @@ function cpsDrawChart() {
     ctx.beginPath();
     cpsTest.samples.forEach((p,i)=>i?ctx.lineTo(px(p.t),py(p.v)):ctx.moveTo(px(p.t),py(p.v)));
     ctx.lineTo(px(cpsTest.samples[cpsTest.samples.length-1].t),pad.top+plotH);
-    ctx.lineTo(px(cpsTest.samples[0].t),pad.top+plotH);
-    ctx.closePath();
+    ctx.lineTo(px(cpsTest.samples[0].t),pad.top+plotH);ctx.closePath();
     const fill=ctx.createLinearGradient(0,pad.top,0,pad.top+plotH);
     fill.addColorStop(0,'rgba(89,170,255,.32)');
     fill.addColorStop(1,'rgba(89,170,255,.01)');
@@ -676,8 +820,11 @@ function cpsDrawChart() {
     ctx.stroke();
 }
 function cpsRender(now) {
-    if(cpsTest.phase==='running' && now>=cpsTest.startedAt+cpsTest.seconds*1000){
-        cpsFinish(now);return;
+    if(cpsTest.phase==='running'&&cpsTest.source==='manual'
+        &&now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
+    if(cpsTest.phase==='running'&&cpsTest.source==='profile'
+        &&now-cpsTest.startedAt>cpsTest.seconds*1000+2500){
+        cpsResetTest();toast('Le moteur de test ne répond plus.');return;
     }
     if(cpsTest.phase==='running')cpsSample(now);
     const elapsed=cpsTest.phase==='done'?cpsTest.seconds:cpsElapsed(now);
@@ -691,38 +838,72 @@ function cpsRender(now) {
     $('cpsClicks').textContent=String(total);
     $('cpsRemaining').textContent=remaining.toFixed(1)+' s restantes';
     $('cpsProgressFill').style.width=(100*elapsed/cpsTest.seconds).toFixed(1)+'%';
-    $('cpsPhase').textContent=cpsTest.phase==='ready'?'PRÊT':cpsTest.phase==='running'?'EN COURS':'TERMINÉ';
-    $('cpsHitTitle').textContent=cpsTest.phase==='ready'?'Clique ici pour démarrer':
-        cpsTest.phase==='running'?'Continue à cliquer !':'Test terminé';
-    $('cpsHitHelp').textContent=cpsTest.phase==='done'?
-        'Recommencer pour un nouvel essai.':'Clic gauche uniquement. Le premier clic compte.';
-    $('cpsClickArea').disabled=cpsTest.phase==='done';
-    document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
-        const selected=Number(btn.dataset.cpsDuration)===cpsTest.seconds;
-        btn.classList.toggle('primary',selected);
-        btn.disabled=cpsTest.phase==='running';
-        btn.setAttribute('aria-pressed',String(selected));
-    });
+    $('cpsPhase').textContent=cpsTest.phase==='ready'?'PRÊT':cpsTest.phase==='pending'?'DÉMARRAGE':
+        cpsTest.phase==='running'?'EN COURS':'TERMINÉ';
+    $('cpsHitTitle').textContent=cpsTest.source==='profile'
+        ?cpsTest.phase==='running'?'Test du profil en cours...':
+            cpsTest.phase==='pending'?'Initialisation du moteur...':
+            cpsTest.phase==='done'?'Test du profil terminé':'Prêt à tester le profil'
+        :cpsTest.phase==='ready'?'Clique ici pour démarrer':
+            cpsTest.phase==='running'?'Continue à cliquer !':'Test terminé';
+    $('cpsHitHelp').textContent=cpsTest.source==='profile'
+        ?'Cadence calculée par le moteur ClickFlow, sans clics Windows.'
+        :cpsTest.phase==='done'?'Recommencer pour un nouvel essai.':
+            'Clic gauche uniquement. Le premier clic compte.';
+    $('cpsClickArea').disabled=cpsTest.source==='profile'||cpsTest.phase==='done';
+    $('cpsStartProfile').disabled=cpsTest.source!=='profile'
+        ||cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsStartProfile').textContent=cpsTest.phase==='done'?'Relancer le test':'Démarrer le test';
+    $('cpsProfileSelect').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
+    for(const duration of cpsDurations) {
+        const btn=document.querySelector('[data-cps-duration="'+duration+'"]');
+        btn.classList.toggle('primary',duration===cpsTest.seconds);
+        btn.disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
+        btn.setAttribute('aria-pressed',String(duration===cpsTest.seconds));
+    }
+    $('cpsSourceProfile').classList.toggle('primary',cpsTest.source==='profile');
+    $('cpsSourceManual').classList.toggle('primary',cpsTest.source==='manual');
+    $('cpsSourceProfile').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsSourceManual').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsProfileControls').hidden=cpsTest.source!=='profile';
+    $('cpsSound').textContent=cpsTest.audioEnabled?'Son activé':'Son désactivé';
+    $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
+    $('cpsDescription').textContent=cpsTest.source==='profile'
+        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire ou naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
+        :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
     cpsDrawChart();
 }
 document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
     btn.onclick=()=>{
-        if(cpsTest.phase==='running')return;
-        cpsTest.seconds=Number(btn.dataset.cpsDuration);
-        cpsResetTest();
+        if(cpsTest.phase==='running'||cpsTest.phase==='pending')return;
+        cpsTest.seconds=Number(btn.dataset.cpsDuration);cpsResetTest();
     };
 });
+function cpsSetSource(source){
+    if(cpsTest.phase==='running'||cpsTest.phase==='pending')return;
+    if(cpsTest.source===source)return;
+    cpsTest.source=source;cpsResetTest();
+}
+$('cpsSourceProfile').onclick=()=>cpsSetSource('profile');
+$('cpsSourceManual').onclick=()=>cpsSetSource('manual');
+$('cpsSound').onclick=()=>{
+    cpsTest.audioEnabled=!cpsTest.audioEnabled;
+    if(cpsTest.audioEnabled)cpsPrepareAudio();
+    cpsRender(cpsNow());
+};
 $('cpsReset').onclick=cpsResetTest;
-window.addEventListener('resize',()=>{if(!$('page-cps').classList.contains('hidden'))cpsDrawChart();});
-cpsLastRender();
-cpsRender(cpsNow());
+window.addEventListener('resize',()=>{
+    if(!$('page-cps').classList.contains('hidden'))cpsDrawChart();
+});
+cpsSyncProfiles();cpsLastRender();cpsRender(cpsNow());
 
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
     const page=btn.dataset.page;
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));
     ['dashboard','profiles','cps','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));
-    if(page!=='cps' && cpsTest.phase==='running')cpsResetTest();
+    if(page!=='cps' && (cpsTest.phase==='running'||cpsTest.phase==='pending'))cpsResetTest();
     if(page==='cps'){
+        cpsSyncProfiles();
         if(connected)send('cpsTest','open');
         setTimeout(()=>cpsRender(cpsNow()),0);
     }
@@ -747,10 +928,12 @@ if(bridge) {
             model.capturing=false;
             setLiveAppearance();
             render();
+            cpsSyncProfiles();
             $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
+        else if(msg.type==='cpsTest') cpsHandleEngineMessage(msg);
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
