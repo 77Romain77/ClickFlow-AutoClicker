@@ -2,8 +2,12 @@
 ; Every deletion is restricted to owned ClickFlow directories, links and files.
 
 CFMaintenancePaths() {
-    localRoot := EnvGet("LOCALAPPDATA") "\ClickFlow"
-    roamingRoot := EnvGet("APPDATA") "\ClickFlow"
+    localBase := EnvGet("LOCALAPPDATA")
+    roamingBase := EnvGet("APPDATA")
+    if localBase = "" || roamingBase = ""
+        throw Error("Les dossiers Windows APPDATA et LOCALAPPDATA sont introuvables.")
+    localRoot := localBase "\ClickFlow"
+    roamingRoot := roamingBase "\ClickFlow"
     desktop := EnvGet("CLICKFLOW_SHORTCUT_TEST_DESKTOP")
     start := EnvGet("CLICKFLOW_SHORTCUT_TEST_STARTMENU")
     if desktop = ""
