@@ -121,15 +121,10 @@ SendState() {
     profiles := ""
     for p in CF.profiles {
         fav := p.HasOwnProp("favorite") && p.favorite ? "true" : "false"
-        profiles .= (profiles = "" ? "" : ",") '{"id":' p.id
-            ',"name":' JsonQuote(p.name) ',"favorite":' fav
-            ',"settings":' ToUiCfg(p.cfg) '}'
+        profiles .= (profiles = "" ? "" : ",") '{"id":' p.id ',"name":' JsonQuote(p.name) ',"favorite":' fav ',"settings":' ToUiCfg(p.cfg) '}'
     }
     CFDesktopRebuildProfiles()
-    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId
-        ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey))
-        ',"compact":' (CF.compactMode ? "true" : "false")
-        ',"preferences":' CFDesktopPreferencesJson() '}')
+    try CF.web.PostWebMessageAsString('{"type":"state","selected":' CF.selectedId ',"profiles":[' profiles '],"emergencyKey":' JsonQuote(DisplayKey(CF.emergencyKey)) ',"compact":' (CF.compactMode ? "true" : "false") ',"preferences":' CFDesktopPreferencesJson() '}')
 }
 
 ; Gestion indépendante des raccourcis Windows. L'état affiché est celui
