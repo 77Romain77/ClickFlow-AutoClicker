@@ -322,7 +322,7 @@ body.compact #page-settings{display:none!important}
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
-const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false}};
+const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true}};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
 const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
@@ -372,41 +372,75 @@ function render() {
     setSwitch('focusSwitch',c.focus);
     $('gateChoose').style.display=c.gate?'flex':'none';
     renderProfiles();
+    renderSettings();
 }
 function renderProfiles() {
     const sel=$('profileSelect');
     sel.replaceChildren();
-    model.profiles.forEach(p => {
-        const o=document.createElement('option');
-        o.value=p.id;
-        o.textContent=p.name;
-        sel.append(o);
+    model.profiles.forEach(p=>{
+        const opt=document.createElement('option');
+        opt.value=String(p.id);
+        opt.textContent=(p.favorite?'★  ':'')+p.name;
+        sel.append(opt);
     });
-    sel.value=model.selected;
+    sel.value=String(model.selected);
     const list=$('profileList');
     list.replaceChildren();
-    model.profiles.forEach(p => {
-        const row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 2px;border-bottom:1px solid #2b3b54';
-        const box=document.createElement('div');
-        const name=document.createElement('strong');
+    model.profiles.forEach((p,index)=>{
+        const card=document.createElement('article');
+        card.className='profile-card'+(p.id===model.selected?' selected':'');
+        const head=document.createElement('div');head.className='profile-card-head';
+        const name=document.createElement('strong');name.className='profile-card-name';
         name.textContent=p.name;
-        const small=document.createElement('div');
-        small.className='subnote';
-        small.textContent=(p.settings.mode==='fixed'?'Fixe':p.settings.mode==='natural'?'Naturel':'Aléatoire')+' · '+p.settings.min+(p.settings.mode==='fixed'?'':' - '+p.settings.max)+' CPS';
-        box.append(name,small);
-        const btn=document.createElement('button');
-        btn.className='btn sm '+(model.selected===p.id?'primary':'quiet');
-        btn.textContent=model.selected===p.id?'Sélectionné':'Sélectionner';
-        btn.onclick=()=>chooseProfile(p.id);
-        const exportBtn=document.createElement('button');
-        exportBtn.className='btn sm quiet';
-        exportBtn.textContent='Exporter';
-        exportBtn.title='Sauvegarder ce profil dans un fichier .ini';
-        exportBtn.onclick=()=>exportProfile(p.id);
-        row.append(box,btn,exportBtn);
-        list.append(row);
+        const fav=document.createElement('button');fav.type='button';
+        fav.className='btn sm quiet favorite-btn';
+        fav.textContent=p.favorite?'★':'☆';
+        fav.title=p.favorite?'Retirer des favoris':'Ajouter aux favoris';
+        fav.setAttribute('aria-pressed',String(!!p.favorite));
+        fav.onclick=()=>toggleFavorite(p.id);
+        head.append(name,fav);
+        const mode=document.createElement('div');mode.className='profile-card-meta';
+        mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel'})[p.settings.mode]
+            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS';
+        const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
+        shortcut.textContent='Activation : '+(p.settings.hotkey||'F6')
+            +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'');
+        const actions=document.createElement('div');actions.className='profile-card-actions';
+        function action(label,cls,fn,disabled=false) {
+            const button=document.createElement('button');
+            button.type='button';button.className='btn sm '+cls;
+            button.textContent=label;button.disabled=disabled;button.onclick=fn;
+            actions.append(button);
+        }
+        action(p.id===model.selected?'Actif':'Activer',p.id===model.selected?'primary':'quiet',
+            ()=>chooseProfile(p.id),p.id===model.selected);
+        action('Tester','quiet',()=>testSelectedProfile(p.id));
+        action('Exporter','quiet',()=>exportProfile(p.id));
+        action('↑','quiet',()=>moveProfile(p.id,'up'),index===0);
+        action('↓','quiet',()=>moveProfile(p.id,'down'),index===model.profiles.length-1);
+        card.append(head,mode,shortcut,actions);list.append(card);
     });
+}
+function toggleFavorite(id) {
+    if(connected){send('favorite',id);return;}
+    const p=model.profiles.find(p=>p.id===id);
+    if(p){p.favorite=!p.favorite;render();}
+}
+function moveProfile(id,direction) {
+    if(connected){send('reorder',id,direction);return;}
+    const index=model.profiles.findIndex(p=>p.id===id);
+    const next=index+(direction==='up'?-1:1);
+    if(index<0||next<0||next>=model.profiles.length)return;
+    [model.profiles[index],model.profiles[next]]=[model.profiles[next],model.profiles[index]];
+    render();
+}
+function testSelectedProfile(id) {
+    if(model.compact){toast('Passe en mode étendu pour ouvrir le Test CPS.');return;}
+    navigatePage('cps');
+    $('cpsProfileSelect').value=String(id);
+    cpsQuickLoad();
+    cpsSetSource('profile');
+    cpsRender(cpsNow());
 }
 function chooseProfile(id) {
     if(connected) {
@@ -445,7 +479,7 @@ function createProfile(copyCurrent=false) {
     openModal(copyCurrent?'Dupliquer le profil':'Nouveau profil','Choisissez un nom pour cette configuration.',nextName,name=>{
         if(connected) {send(copyCurrent?'duplicate':'new',name);return;}
         if(model.profiles.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom existe déjà.');return;}
-        const p={id:model.nextId++,name,settings:copyCurrent?clone(config()):defaults()};
+        const p={id:model.nextId++,name,favorite:false,settings:copyCurrent?clone(config()):defaults()};
         model.profiles.push(p);
         model.selected=p.id;
         render();toast('Profil créé : '+name);
@@ -558,6 +592,50 @@ function setLiveAppearance() {
     $('demoToggle').classList.remove('primary');
     $('demoToggle').classList.add('danger');
 }
+const liveMonitor={samples:[],lastStamp:0};
+function drawLiveMonitor() {
+    if(!model.preferences.liveMonitor||$('page-dashboard').classList.contains('hidden'))return;
+    const canvas=$('liveCpsChart');
+    const bounds=canvas.getBoundingClientRect();
+    if(!bounds.width)return;
+    const w=Math.max(260,Math.round(bounds.width)),h=115;
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    const pts=liveMonitor.samples;
+    const max=Math.max(5,...pts.map(p=>p.cps));
+    const yMax=Math.ceil((max+2)/5)*5;
+    ctx.strokeStyle='#2a3d58';ctx.lineWidth=1;
+    for(let i=1;i<=3;i++){
+        ctx.beginPath();ctx.moveTo(8,i*h/4);ctx.lineTo(w-8,i*h/4);ctx.stroke();
+    }
+    if(!pts.length)return;
+    const last=pts[pts.length-1].t;
+    ctx.beginPath();ctx.strokeStyle='#63b2ff';ctx.lineWidth=2.2;ctx.lineJoin='round';
+    pts.forEach((p,i)=>{
+        const px=8+(w-16)*(1-(last-p.t)/30000);
+        const py=8+(h-16)*(1-p.cps/yMax);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+}
+function updateLiveMonitor(data) {
+    const now=performance.now();
+    const cps=Number(data.cps)||0;
+    const status=data.waiting?'En attente du bouton souris':
+        data.armed?'Clics en cours':'Prêt';
+    $('liveMonitorStatus').textContent=status;
+    $('liveMonitorValue').textContent=cps+' CPS';
+    if(!liveMonitor.lastStamp||now-liveMonitor.lastStamp>=160) {
+        liveMonitor.lastStamp=now;
+        liveMonitor.samples.push({t:now,cps});
+        liveMonitor.samples=liveMonitor.samples.filter(p=>p.t>=now-30000);
+        if(liveMonitor.samples.length>170)liveMonitor.samples.shift();
+        drawLiveMonitor();
+    }
+}
+window.addEventListener('resize',drawLiveMonitor);
 function updateLiveStats(data) {
     if(!connected)return;
     model.capturing=!!data.capturing;
@@ -572,6 +650,7 @@ function updateLiveStats(data) {
     $('hotkeyView').textContent=data.capturing && model.captureTarget==='activation'?'Appuyez...':data.hotkey;
     $('emergencyView').textContent=data.capturing && model.captureTarget==='emergency'?'Appuyez...':model.emergencyKey;
     $('bridgeStatus').textContent='Connexion AutoHotkey : opérationnelle. Les profils et les clics sont synchronisés.';
+    updateLiveMonitor(data);
 }
 $('demoToggle').onclick=()=>{
     if(connected){send('stop');return;}
@@ -583,6 +662,31 @@ $('demoToggle').onclick=()=>{
     $('demoToggle').textContent=model.demo?"Revenir à l'état inactif":"Simuler l'état actif";
     $('demoToggle').classList.toggle('danger',model.demo);
     $('demoToggle').classList.toggle('primary',!model.demo);
+};
+function renderSettings() {
+    document.querySelectorAll('[data-preference]').forEach(btn=>{
+        const field=btn.dataset.preference;
+        btn.classList.toggle('on',!!model.preferences[field]);
+        btn.setAttribute('aria-pressed',String(!!model.preferences[field]));
+    });
+    $('liveMonitorCard').classList.toggle('hidden',!model.preferences.liveMonitor);
+    $('floatQuick').textContent=model.preferences.floatShown?'Masquer la mini-fenêtre':'Mini-fenêtre';
+}
+document.querySelectorAll('[data-preference]').forEach(btn=>{
+    btn.onclick=()=>{
+        const field=btn.dataset.preference;
+        const value=!model.preferences[field];
+        if(connected)send('preference',field,value?1:0);
+        else {
+            model.preferences[field]=value;
+            renderSettings();
+            toast('Aperçu : paramètre Windows non sauvegardé.');
+        }
+    };
+});
+$('floatQuick').onclick=()=>{
+    if(connected)send('desktop','float');
+    else toast('Mini-fenêtre disponible dans ClickFlow pour Windows.');
 };
 function renderShortcutSettings() {
     for(const place of ['desktop','start']){
