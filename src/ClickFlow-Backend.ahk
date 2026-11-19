@@ -6,6 +6,7 @@
 #Include ClickFlow-CpsTest.ahk
 #Include ClickFlow-Desktop.ahk
 #Include ClickFlow-GlobalHotkeys.ahk
+#Include ClickFlow-Backup.ahk
 
 global CF := {
     hwnd: 0, web: 0, event: 0,
@@ -478,6 +479,17 @@ BackendMessage(sender, args) {
             try CFImportProfile()
             catch as err
                 CFProfileMessage("Import impossible : " err.Message, true)
+            return
+        }
+        if cmd = "backup" && parts.Length >= 2 {
+            try {
+                if parts[2] = "export"
+                    CFBackupExport()
+                else if parts[2] = "restore"
+                    CFBackupRestore()
+            } catch as err {
+                CFProfileMessage("Sauvegarde impossible : " err.Message, true)
+            }
             return
         }
         if cmd = "cpsTest" && parts.Length >= 2 {
@@ -1135,6 +1147,8 @@ SaveSettings(*) {
         IniWrite(CF.overlayOpacity, CF.configFile, "General", "OverlayOpacity")
         IniWrite(CF.overlayMargin, CF.configFile, "General", "OverlayMargin")
         IniWrite(CF.overlayAverageSeconds, CF.configFile, "General", "OverlayAverageSeconds")
+        IniWrite(CF.overlaySize, CF.configFile, "General", "OverlaySize")
+        IniWrite(CF.overlayShowProfile ? 1 : 0, CF.configFile, "General", "OverlayShowProfile")
         IniWrite(CF.overlayMonitor, CF.configFile, "General", "OverlayMonitor")
         IniWrite(CF.overlayPosition, CF.configFile, "General", "OverlayPosition")
         IniWrite(CF.overlayX, CF.configFile, "General", "OverlayX")
