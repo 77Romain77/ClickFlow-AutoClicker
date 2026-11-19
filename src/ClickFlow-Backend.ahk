@@ -18,6 +18,11 @@ global CF := {
     floatPoints: [], floatLastSample: 0, floatReady: false, floatBitmap: 0,
     floatBoundsOuter: false, floatLegacyClient: false,
     floatChartPaintCount: 0, floatGraphActive: false,
+    overlayGui: 0, overlayVisible: false, overlayEditing: false,
+    overlayAlwaysVisible: false, overlayOpacity: 85, overlayMargin: 20,
+    overlayMonitor: 1, overlayPosition: "tm",
+    overlayX: -99999, overlayY: -99999, overlayUntil: 0,
+    overlayRecent: [], overlayStart: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -89,7 +94,6 @@ BackendExit(*) {
     try SetTimer(SaveSettings, 0)
     try SetTimer(SendState, 0)
     CF.desktopReady := false
-    SetTimer(CFDesktopSaveFloatBounds, 0)
     CFDesktopReleaseFloat()
     if CF.capture {
         try CF.inputHook.Stop()
@@ -426,6 +430,10 @@ BackendMessage(sender, args) {
                 CFDesktopToggleFloat()
             else if parts[2] = "hide"
                 CFDesktopHide()
+            else if parts[2] = "overlayEdit"
+                CFOverlaySetEdit(true)
+            else if parts[2] = "overlayDone"
+                CFOverlaySetEdit(false)
             return
         }
         if cmd = "stop" {
@@ -649,6 +657,9 @@ ActivationDown(*) {
     }
 
     CF.armed := true
+    CF.overlayStart := A_TickCount
+    CF.overlayUntil := 0
+    CF.overlayRecent := []
     CF.target := current
     CF.nextAt := A_TickCount
     CFNaturalReset(CF.cfg)
@@ -672,8 +683,13 @@ EmergencyStop(*) {
 
 StopAll(message) {
     global CF
+    wasArmed := CF.armed
     CFTestStop(message)
     CF.armed := false
+    if wasArmed
+        CF.overlayUntil := A_TickCount + 2200
+    CF.overlayRecent := []
+    CF.overlayStart := 0
     CF.target := 0
     CF.nextAt := 0
     CF.cpsNow := 0
@@ -725,6 +741,8 @@ EngineTick() {
     SendInput("{Click " CF.cfg.clickButton "}")
     CF.total += 1
     CF.recent.Push(now)
+    if CF.floatShown
+        CF.overlayRecent.Push(now)
     ; Evite les rafales de rattrapage apres une interruption.
     CF.nextAt := now + intervalMs
 }
@@ -827,6 +845,8 @@ UpdateStats() {
     now := A_TickCount
     while CF.recent.Length && CF.recent[1] < now - 1000
         CF.recent.RemoveAt(1)
+    while CF.overlayRecent.Length && CF.overlayRecent[1] < now - 5000
+        CF.overlayRecent.RemoveAt(1)
     SendStats()
     CFDesktopUpdate()
 }
@@ -1070,15 +1090,14 @@ SaveSettings(*) {
         IniWrite(CF.floatShown ? 1 : 0, CF.configFile, "General", "FloatShown")
         IniWrite(CF.liveMonitor ? 1 : 0, CF.configFile, "General", "LiveMonitor")
         IniWrite(CF.compactChart ? 1 : 0, CF.configFile, "General", "CompactChart")
-        IniWrite(CF.floatGraph ? 1 : 0, CF.configFile, "General", "FloatGraph")
-        IniWrite(CF.floatTopMost ? 1 : 0, CF.configFile, "General", "FloatTopMost")
-        IniWrite(CF.floatOpacity, CF.configFile, "General", "FloatOpacity")
-        IniWrite(CF.floatWidth, CF.configFile, "General", "FloatWidth")
-        IniWrite(CF.floatHeight, CF.configFile, "General", "FloatHeight")
-        IniWrite(CF.floatX, CF.configFile, "General", "FloatX")
-        IniWrite(CF.floatY, CF.configFile, "General", "FloatY")
-        IniWrite(CF.floatBoundsOuter ? "outer" : "client",
-            CF.configFile, "General", "FloatBoundsFormat")
+        IniWrite(CF.floatShown ? 1 : 0, CF.configFile, "General", "OverlayEnabled")
+        IniWrite(CF.overlayAlwaysVisible ? 1 : 0, CF.configFile, "General", "OverlayAlwaysVisible")
+        IniWrite(CF.overlayOpacity, CF.configFile, "General", "OverlayOpacity")
+        IniWrite(CF.overlayMargin, CF.configFile, "General", "OverlayMargin")
+        IniWrite(CF.overlayMonitor, CF.configFile, "General", "OverlayMonitor")
+        IniWrite(CF.overlayPosition, CF.configFile, "General", "OverlayPosition")
+        IniWrite(CF.overlayX, CF.configFile, "General", "OverlayX")
+        IniWrite(CF.overlayY, CF.configFile, "General", "OverlayY")
         IniWrite(CF.mainExpandedW, CF.configFile, "General", "MainExpandedWidth")
         IniWrite(CF.mainExpandedH, CF.configFile, "General", "MainExpandedHeight")
         IniWrite(CF.mainCompactW, CF.configFile, "General", "MainCompactWidth")
