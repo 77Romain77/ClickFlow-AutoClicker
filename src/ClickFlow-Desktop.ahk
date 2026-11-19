@@ -88,20 +88,20 @@ CFDesktopCreateFloat() {
     global CF
     if IsObject(CF.floatGui)
         return
-    gui := Gui("+AlwaysOnTop +ToolWindow", "ClickFlow - Mini")
-    gui.MarginX := 12
-    gui.MarginY := 10
-    gui.BackColor := "142136"
-    gui.SetFont("s10 cF0F5FF", "Segoe UI")
-    CF.floatProfile := gui.Add("Text", "xm ym w218 h23", "Profil : Principal")
-    gui.SetFont("s9 cA6C5E1", "Segoe UI")
-    CF.floatStatus := gui.Add("Text", "xm y+4 w218 h20", "Prêt")
-    gui.SetFont("s11 cFFFFFF bold", "Segoe UI")
-    CF.floatCps := gui.Add("Text", "xm y+4 w218 h24", "0 CPS")
-    gui.SetFont("s9 norm", "Segoe UI")
-    gui.Add("Button", "xm y+8 w105 h30", "Ouvrir").OnEvent("Click", CFDesktopOpen)
-    gui.Add("Button", "x+8 yp w105 h30", "STOP").OnEvent("Click", CFDesktopStop)
-    gui.OnEvent("Close", CFDesktopCloseFloat)
+    mini := Gui("+AlwaysOnTop +ToolWindow", "ClickFlow - Mini")
+    mini.MarginX := 12
+    mini.MarginY := 10
+    mini.BackColor := "142136"
+    mini.SetFont("s10 cF0F5FF", "Segoe UI")
+    CF.floatProfile := mini.Add("Text", "xm ym w218 h23", "Profil : Principal")
+    mini.SetFont("s9 cA6C5E1", "Segoe UI")
+    CF.floatStatus := mini.Add("Text", "xm y+4 w218 h20", "Prêt")
+    mini.SetFont("s11 cFFFFFF bold", "Segoe UI")
+    CF.floatCps := mini.Add("Text", "xm y+4 w218 h24", "0 CPS")
+    mini.SetFont("s9 norm", "Segoe UI")
+    mini.Add("Button", "xm y+8 w105 h30", "Ouvrir").OnEvent("Click", CFDesktopOpen)
+    mini.Add("Button", "x+8 yp w105 h30", "STOP").OnEvent("Click", CFDesktopStop)
+    mini.OnEvent("Close", CFDesktopCloseFloat)
     CF.floatGui := gui
 }
 
