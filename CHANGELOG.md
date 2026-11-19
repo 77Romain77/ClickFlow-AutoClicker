@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.4.0 - 2026-11-19
+
+- Le test CPS mesure désormais le profil ClickFlow sélectionné en réutilisant son cadenceur AutoHotkey (Fixe, Aléatoire ou Naturel).
+- Mode de test manuel toujours disponible ; choix direct du profil dans l'onglet Test CPS.
+- Léger retour sonore synthétique à chaque clic du test, activé par défaut et désactivable.
+- Test sans clic Windows pour protéger les autres fenêtres ; arrêt d'urgence, annulation et gestion des changements d'onglet.
+- Chronologie des déclenchements pour la courbe et le dernier résultat, sans sauvegarde des scores.
+- Tests de non-régression JavaScript et AutoHotkey sur Windows.
+
 ## 1.3.0 - 2026-11-19
 
 - Nouvel onglet Test CPS manuel : durées 2, 5, 10, 30 et 60 secondes.
