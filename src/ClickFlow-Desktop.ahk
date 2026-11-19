@@ -520,6 +520,11 @@ CFDesktopPaintChartDC(destination, hwnd) {
         if sample.t >= now - 30000
             peak := Max(peak, sample.cps)
     pen := CFDesktopChartPen(memDC, 0x00FFB775, 2)
+    ; Toujours dessiner une ligne de base sur toute la largeur, même
+    ; à zéro CPS : le graphique n'a jamais l'air vide.
+    bottomY := height - 5
+    DllCall("gdi32\MoveToEx", "Ptr", memDC,
+        "Int", 3, "Int", bottomY, "Ptr", 0)
     first := true
     for sample in CF.floatPoints {
         if sample.t < now - 30000
@@ -529,13 +534,14 @@ CFDesktopPaintChartDC(destination, hwnd) {
         y := Max(3, Min(height - 4, Round(height - 4
             - (height - 8) * sample.cps / (peak + 2))))
         if first {
-            DllCall("gdi32\MoveToEx", "Ptr", memDC,
-                "Int", x, "Int", y, "Ptr", 0)
+            DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
             first := false
         } else {
             DllCall("gdi32\LineTo", "Ptr", memDC, "Int", x, "Int", y)
         }
     }
+    DllCall("gdi32\LineTo", "Ptr", memDC, "Int", width - 3, "Int",
+        first ? bottomY : y)
     DllCall("gdi32\SelectObject", "Ptr", memDC, "Ptr", pen.old)
     DllCall("gdi32\DeleteObject", "Ptr", pen.pen)
     DllCall("gdi32\BitBlt", "Ptr", destination,
