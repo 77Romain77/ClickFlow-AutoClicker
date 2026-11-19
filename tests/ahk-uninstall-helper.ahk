@@ -45,9 +45,13 @@ try {
             Sleep(250)
         }
         if ProcessExist(helperPid) {
+            detail := ""
+            trace := A_Temp "\ClickFlowUninstallChild-Debug.txt"
+            if FileExist(trace)
+                detail := StrReplace(FileRead(trace, "UTF-8"), Chr(10), " | ")
             ProcessClose(helperPid)
             throw Error("Detached helper did not exit (mode: " mode
-                "; CI flag: " EnvGet("CLICKFLOW_UNINSTALL_CI") ").")
+                "; CI flag: " EnvGet("CLICKFLOW_UNINSTALL_CI") "; trace=" detail ").")
         }
         if DirExist(app "\Runtime-1.1.0") || FileExist(app "\ClickFlow.ahk")
             throw Error("Detached helper did not delete the installed program.")
