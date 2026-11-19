@@ -19,7 +19,7 @@ global CF := {
     floatBoundsOuter: false, floatLegacyClient: false,
     floatChartPaintCount: 0, floatGraphActive: false,
     mainExpandedW: 1120, mainExpandedH: 800,
-    mainCompactW: 465, mainCompactH: 600,
+    mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
     naturalBurstLeft: 0, total: 0, recent: [],
