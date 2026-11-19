@@ -16,6 +16,8 @@ global CF := {
     floatGraph: false, floatTopMost: true, floatOpacity: 100,
     floatWidth: 340, floatHeight: 205, floatX: -99999, floatY: -99999,
     floatPoints: [], floatLastSample: 0, floatReady: false, floatBitmap: 0,
+    floatBoundsOuter: false, floatLegacyClient: false,
+    floatChartPaintCount: 0, floatGraphActive: false,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 465, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
