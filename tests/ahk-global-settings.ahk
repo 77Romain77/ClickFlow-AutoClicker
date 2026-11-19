@@ -2,6 +2,7 @@
 #ErrorStdOut "UTF-8"
 #Include ..\src\ClickFlow-Backend.ahk
 
+FileAppend("AHK global settings script entered.\n", "*", "UTF-8")
 ; Tests sans clics : persistance des reglages globaux et mode de fenetre.
 global CF
 CF.loading := false
@@ -20,7 +21,9 @@ try {
     if SameKey("F10", "F12")
         throw Error("Deux touches differentes ont ete confondues.")
 
+    FileAppend("before SaveSettings\n", "*", "UTF-8")
     SaveSettings()
+    FileAppend("after SaveSettings\n", "*", "UTF-8")
     if IniRead(CF.configFile, "General", "EmergencyKey", "") != "F10"
         throw Error("La touche d'urgence n'est pas sauvegardee.")
     if IniRead(CF.configFile, "General", "CompactMode", "") != "1"
@@ -32,6 +35,7 @@ try {
     if SameKey(parsed.activation, CF.emergencyKey)
         throw Error("Un raccourci d'activation bloque l'arret d'urgence.")
 
+    FileAppend("before GUI\n", "*", "UTF-8")
     g := Gui("+Resize +MinSize460x480", "ClickFlow-test-view")
     g.Show("w900 h760")
     CF.hwnd := g.Hwnd
