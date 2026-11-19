@@ -40,14 +40,14 @@ try {
         ? "ClickFlow a été désinstallé. Les profils et paramètres personnels ont été conservés dans %APPDATA%\ClickFlow."
         : "ClickFlow et ses données personnelles ont été supprimés."
     if EnvGet("CLICKFLOW_UNINSTALL_CI") = "1"
-        FileAppend("Uninstall " mode " completed.", "*", "UTF-8")
+        CFDebug("CI uninstall " mode " completed")
     else
         MsgBox(message Chr(10) Chr(10)
             "Le fichier .ahk téléchargé, s'il se trouve ailleurs, doit être supprimé manuellement.",
             "ClickFlow - Désinstallation terminée", "Iconi")
 } catch as err {
     if EnvGet("CLICKFLOW_UNINSTALL_CI") = "1"
-        FileAppend("Uninstall failed: " err.Message, "*", "UTF-8")
+        CFDebug("CI uninstall failed: " err.Message)
     else
         MsgBox("La désinstallation n'a pas pu être entièrement terminée : " err.Message
             Chr(10) Chr(10) "Tu peux relancer ClickFlow pour réessayer.",
