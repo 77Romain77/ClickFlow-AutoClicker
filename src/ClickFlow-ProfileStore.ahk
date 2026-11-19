@@ -18,6 +18,10 @@ CFWriteProfile(profile) {
             FileDelete(temporary)
         IniWrite("1", temporary, "ClickFlowProfile", "FormatVersion")
         IniWrite(profile.name, temporary, "ClickFlowProfile", "Name")
+        IniWrite(profile.HasOwnProp("favorite") && profile.favorite ? 1 : 0,
+            temporary, "ClickFlowProfile", "Favorite")
+        IniWrite(profile.HasOwnProp("sortOrder") ? profile.sortOrder : profile.id,
+            temporary, "ClickFlowProfile", "SortOrder")
         for field in ["mode", "variation", "min", "max", "hold", "mouseGate",
             "focusStop", "clickButton", "activation", "gateButton"]
             IniWrite(profile.cfg.%field%, temporary, "Settings", field)
@@ -51,8 +55,12 @@ CFLoadSeparatedProfiles() {
         for previous in loaded
             if StrLower(previous.name) = StrLower(name)
                 throw Error("Deux profils utilisent le même nom : " name)
-        loaded.Push({id: id, name: name,
-            cfg: ReadConfig(path, "Settings", DefaultConfig())})
+        favorite := IniRead(path, "ClickFlowProfile", "Favorite", "0") = "1"
+        rank := IniRead(path, "ClickFlowProfile", "SortOrder", String(id))
+        if !RegExMatch(rank, "^\d{1,9}$")
+            rank := id
+        loaded.Push({id: id, name: name, favorite: favorite,
+            sortOrder: rank + 0, cfg: ReadConfig(path, "Settings", DefaultConfig())})
         maxId := Max(maxId, id)
     }
     if loaded.Length = 0 {
@@ -67,6 +75,8 @@ CFLoadSeparatedProfiles() {
         CF.cfg := defaults
         return true
     }
+    ; L'ordre est stocké avec chaque profil, compatible avec les anciens INI.
+    CFSortProfiles(loaded)
     CF.profiles := loaded
     file := CF.configFile
     CF.selectedId := IniRead(file, "Profiles", "Selected", loaded[1].id) + 0
@@ -161,4 +171,58 @@ CFImportProfile() {
     imported := CFImportProfileFromFile(source)
     SelectProfileById(imported.id)
     CFProfileMessage("Profil importé : " imported.name)
+}
+
+
+CFSortProfiles(profiles) {
+    ; Tri stable et sans dépendance externe (nombre de profils limité).
+    length := profiles.Length
+    if length < 2
+        return
+    Loop length - 1 {
+        i := A_Index + 1
+        while i > 1 {
+            a := profiles[i - 1]
+            b := profiles[i]
+            left := a.HasOwnProp("sortOrder") ? a.sortOrder : a.id
+            right := b.HasOwnProp("sortOrder") ? b.sortOrder : b.id
+            if left < right || (left = right && a.id <= b.id)
+                break
+            profiles[i - 1] := b
+            profiles[i] := a
+            i -= 1
+        }
+    }
+}
+
+CFReorderProfile(id, direction) {
+    global CF
+    if direction != "up" && direction != "down"
+        return
+    found := 0
+    for i, p in CF.profiles
+        if p.id = id
+            found := i
+    if !found
+        return
+    other := found + (direction = "up" ? -1 : 1)
+    if other < 1 || other > CF.profiles.Length
+        return
+    temp := CF.profiles[found]
+    CF.profiles[found] := CF.profiles[other]
+    CF.profiles[other] := temp
+    for i, p in CF.profiles
+        p.sortOrder := i
+    SaveSettings()
+    SendState()
+}
+
+CFToggleProfileFavorite(id) {
+    global CF
+    p := CFProfileById(id)
+    if !p
+        return
+    p.favorite := !(p.HasOwnProp("favorite") && p.favorite)
+    SaveSettings()
+    SendState()
 }
