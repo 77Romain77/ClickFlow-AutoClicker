@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.7.1 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.7.2 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -290,6 +290,23 @@ body.compact .compact-panel{display:grid;gap:8px}
  .compact-key-button{flex:1}
  .compact-numbers .input{width:53px}
 }
+
+/* Aide légère pour les modes CPS, disponible au survol et au clavier. */
+button[data-mode-tip]{position:relative}
+button[data-mode-tip]::after{
+ content:attr(data-mode-tip);position:absolute;bottom:calc(100% + 9px);
+ left:50%;transform:translate(-50%,4px);width:max-content;
+ max-width:min(240px,75vw);min-width:170px;box-sizing:border-box;
+ padding:8px 10px;border:1px solid #46648a;border-radius:8px;
+ background:#0b1729;color:#dbeafd;font:400 11px/1.4 "Segoe UI",sans-serif;
+ text-align:left;white-space:normal;box-shadow:0 8px 24px #03081388;
+ opacity:0;visibility:hidden;pointer-events:none;z-index:100;
+ transition:opacity .13s ease,transform .13s ease,visibility .13s ease;
+}
+button[data-mode-tip]:hover::after,button[data-mode-tip]:focus-visible::after{
+ opacity:1;visibility:visible;transform:translate(-50%,0);
+}
+.seg,.compact-segment{overflow:visible}
 </style>
 </head>
 <body>
@@ -308,7 +325,7 @@ body.compact .compact-panel{display:grid;gap:8px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.7.1 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.7.2 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -331,9 +348,9 @@ body.compact .compact-panel{display:grid;gap:8px}
    <section class="compact-tile compact-cadence-tile">
     <div class="compact-caption">CADENCE <span id="compactModeLabel"></span></div>
     <div class="compact-segment" id="compactModeSeg">
-     <button type="button" data-compact-mode="fixed">Fixe</button>
-     <button type="button" data-compact-mode="random">Aléatoire</button>
-     <button type="button" data-compact-mode="natural">Naturel</button>
+     <button type="button" data-compact-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button>
+     <button type="button" data-compact-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button>
+     <button type="button" data-compact-mode="natural" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button>
     </div>
     <div class="compact-numbers">
      <label>CPS min<input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
@@ -365,7 +382,7 @@ body.compact .compact-panel{display:grid;gap:8px}
     <div class="card">
      <div class="card-head"><div><div class="card-title">Fréquence des clics</div><div class="card-description">Configurez votre cadence en quelques secondes.</div></div><span class="number">01 / CPS</span></div>
      <span class="label">Mode de fonctionnement</span>
-     <div class="seg" id="modeSeg"><button data-mode="fixed">Fixe</button><button data-mode="random">Aléatoire</button><button data-mode="natural" class="active">Naturel</button></div>
+     <div class="seg" id="modeSeg"><button data-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button><button data-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button><button data-mode="natural" class="active" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button></div>
      <div class="range-group"><div class="range-top"><b id="minLabel">CPS minimum</b><span class="subnote">1 à 100 CPS</span></div><div class="value-row"><input aria-label="CPS minimum" id="minRange" class="range" type="range" min="1" max="100" value="8"><input aria-label="Valeur minimum" id="minNumber" class="input number-input" type="number" min="1" max="100" value="8"></div></div>
      <div class="range-group" id="maxGroup"><div class="range-top"><b>CPS maximum</b><span class="subnote">Valeur supérieure ou égale au minimum</span></div><div class="value-row"><input aria-label="CPS maximum" id="maxRange" class="range" type="range" min="1" max="100" value="14"><input aria-label="Valeur maximum" id="maxNumber" class="input number-input" type="number" min="1" max="100" value="14"></div></div>
      <div id="intensityBlock"><div class="range-top" style="margin-top:20px"><b>Intensité des variations</b></div><div class="mini-tab" id="intensitySeg"><button data-intensity="low">Faible</button><button data-intensity="medium" class="active">Moyenne</button><button data-intensity="high">Élevée</button></div><p class="subnote" id="naturalIntensityHint" style="margin-top:10px"></p></div>
@@ -841,7 +858,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.7.1 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.7.2 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
