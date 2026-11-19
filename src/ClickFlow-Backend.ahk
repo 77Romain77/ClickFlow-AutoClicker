@@ -13,7 +13,6 @@ global CF := {
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
     profiles: [], selectedId: 1, nextId: 2,
     configFile: A_AppData "\ClickFlow\settings.ini",
-    cpsRecordsFile: A_AppData "\ClickFlow\cps-records.ini",
     profilesDir: A_AppData "\ClickFlow\profiles",
     cfg: {mode: 1, variation: 2, min: 8, max: 14,
         clickButton: "Left", activation: "F6", hold: 1,
@@ -193,51 +192,6 @@ CFSendShortcutStatus(errorMessage := "") {
 }
 
 
-; Les records du test CPS sont séparés des profils de clics.
-; Seuls les 5 intervalles proposés par l'interface sont acceptés.
-CFValidCpsDuration(duration) {
-    return InStr("|2|5|10|30|60|", "|" duration "|") != 0
-}
-
-CFGetBestCpsClicks(duration) {
-    global CF
-    if !CFValidCpsDuration(duration)
-        throw Error("Durée de test CPS inconnue.")
-    raw := IniRead(CF.cpsRecordsFile, "Records", "Best" duration, "0")
-    if !RegExMatch(raw, "^\d{1,6}$")
-        return 0
-    return Min(999999, raw + 0)
-}
-
-CFSaveCpsResult(duration, clicks) {
-    global CF
-    if !CFValidCpsDuration(duration)
-        throw Error("Durée CPS invalide.")
-    if !RegExMatch(String(clicks), "^\d{1,6}$")
-        throw Error("Nombre de clics invalide.")
-    clicks += 0
-    if clicks > 999999
-        throw Error("Nombre de clics excessif.")
-    previous := CFGetBestCpsClicks(duration)
-    if clicks > previous {
-        DirCreate(RegExReplace(CF.cpsRecordsFile, "\\[^\\]+$"))
-        IniWrite(clicks, CF.cpsRecordsFile, "Records", "Best" duration)
-    }
-    return Max(clicks, previous)
-}
-
-CFSendCpsRecords() {
-    global CF
-    if !CF.web
-        return
-    records := "{"
-    for index, duration in [2,5,10,30,60] {
-        records .= (index = 1 ? "" : ",") '"' duration '":' CFGetBestCpsClicks(duration)
-    }
-    records .= "}"
-    try CF.web.PostWebMessageAsString('{"type":"cpsRecords","best":' records '}')
-}
-
 SendStats() {
     global CF
     if !CF.web
@@ -397,7 +351,6 @@ BackendMessage(sender, args) {
             SendState()
             SendStats()
             CFSendShortcutStatus()
-            CFSendCpsRecords()
             return
         }
         if cmd = "connected" {
@@ -438,19 +391,8 @@ BackendMessage(sender, args) {
             return
         }
         if cmd = "cpsTest" && parts.Length >= 2 {
-            if parts[2] = "open" {
+            if parts[2] = "open"
                 StopAll("Test CPS : clics automatiques arrêtés.")
-                CFSendCpsRecords()
-            } else if parts[2] = "records" {
-                CFSendCpsRecords()
-            } else if parts[2] = "result" && parts.Length >= 4 {
-                try {
-                    CFSaveCpsResult(parts[3], parts[4])
-                    CFSendCpsRecords()
-                } catch as err {
-                    SetNotice("Enregistrement du record CPS impossible : " err.Message)
-                }
-            }
             return
         }
         if cmd = "storage" && parts.Length >= 2 {
