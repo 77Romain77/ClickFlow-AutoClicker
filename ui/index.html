@@ -89,6 +89,7 @@ body.compact #page-dashboard{display:block!important}
 .shortcut-setting strong{font-size:12px}
 .shortcut-setting .subnote{margin:5px 0 0}
 .shortcut-setting .btn{flex-shrink:0;min-width:175px}
+.uninstall-section{border-top:1px solid #30415a;margin-top:23px;padding-top:14px}.uninstall-section h3{font-size:14px;margin:0 0 8px}.uninstall-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
 @media(max-width:620px){.shortcut-setting{align-items:flex-start;flex-direction:column}.shortcut-setting .btn{width:100%}}
 </style>
 </head>
@@ -164,6 +165,18 @@ body.compact #page-dashboard{display:block!important}
        <div class="shortcut-setting"><div><strong>Raccourci dans le menu Démarrer</strong><p class="subnote" id="startShortcutStatus">Vérification...</p></div><button id="startShortcutButton" class="btn primary" type="button">Ajouter au menu Démarrer</button></div>
      </div>
      <p class="subnote">Les deux raccourcis sont indépendants. Si tu en supprimes un depuis Windows, ClickFlow ne le recréera pas automatiquement. Tu pourras toujours le réinstaller ici.</p>
+     <div class="shortcut-settings">
+       <div class="shortcut-setting"><div><strong>Ouvrir mes profils et réglages</strong><p class="subnote">%APPDATA%\ClickFlow - profils, préférences et sauvegardes.</p></div><button id="openProfilesFolder" class="btn quiet" type="button">Ouvrir le dossier</button></div>
+       <div class="shortcut-setting"><div><strong>Ouvrir les fichiers du logiciel</strong><p class="subnote">%LOCALAPPDATA%\ClickFlow - lanceur, composants et données WebView2.</p></div><button id="openProgramFolder" class="btn quiet" type="button">Ouvrir le dossier</button></div>
+     </div>
+     <div class="uninstall-section">
+       <h3>Désinstaller ClickFlow</h3>
+       <p class="subnote">ClickFlow se ferme avant le nettoyage. Les raccourcis sont retirés. AutoHotkey, WebView2 et les fichiers .ahk téléchargés ailleurs ne sont pas supprimés.</p>
+       <div class="uninstall-actions">
+         <button id="uninstallKeep" class="btn quiet" type="button">Désinstaller en gardant mes profils</button>
+         <button id="uninstallAll" class="btn danger" type="button">Tout supprimer, y compris mes profils</button>
+       </div>
+     </div>
      <div id="bridgeStatus" class="note" style="margin-top:20px">Connexion à AutoHotkey : vérification...</div></div>
  </section>
 </main>
@@ -178,7 +191,7 @@ const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
 const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false}};
-let connected = false, toastTimer = 0, modalTask = null;
+let connected = false, toastTimer = 0, modalTask = null, modalMode = "name";
 const bridge = !!(window.chrome && window.chrome.webview);
 const active = () => model.profiles.find(p => p.id === model.selected) || model.profiles[0];
 const config = () => active().settings;
@@ -266,18 +279,26 @@ function chooseProfile(id) {
         toast('Profil sélectionné');
     }
 }
-function openModal(title,description,defaultValue,confirm) {
+function openModal(title,description,defaultValue,confirm,mode="name") {
     $('modalTitle').textContent=title;
     $('modalDescription').textContent=description;
     $('modalInput').value=defaultValue||'';
     $('modalBg').classList.remove('hidden');
     modalTask=confirm;
+    modalMode=mode;
     setTimeout(()=>$('modalInput').focus(),50);
 }
 function closeModal() {$('modalBg').classList.add('hidden'); modalTask=null;}
 $('modalCancel').onclick=closeModal;
 $('modalConfirm').onclick=()=>{
     const name=$('modalInput').value.trim();
+    if(modalMode==='confirm'){
+        if(name.toLocaleUpperCase()!=='SUPPRIMER'){toast('Tape SUPPRIMER pour confirmer.');return;}
+        const task=modalTask;
+        closeModal();
+        if(task)task();
+        return;
+    }
     if(!name||name.length>36){toast('Indiquez un nom de 1 à 36 caractères.');return;}
     const compareId=($('modalTitle').textContent==='Renommer le profil')?model.selected:-1;
     if(model.profiles.some(p=>p.id!==compareId && p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('Ce nom est déjà utilisé.');return;}
@@ -309,13 +330,12 @@ $('renameProfile').onclick=()=>openModal('Renommer le profil','Modifiez le nom d
 });
 $('deleteProfile').onclick=()=>{
     if(model.profiles.length<=1){toast('Conservez au moins un profil.');return;}
-    openModal('Supprimer le profil','Saisissez SUPPRIMER pour confirmer la suppression.','',val=>{
-        if(val.toLocaleUpperCase()!=='SUPPRIMER'){toast('Suppression annulée.');return;}
+    openModal('Supprimer le profil','Saisissez SUPPRIMER pour confirmer la suppression.','',()=>{
         if(connected){send('delete');return;}
         model.profiles=model.profiles.filter(p=>p.id!==model.selected);
         model.selected=model.profiles[0].id;
         render();toast('Profil supprimé');
-    });
+    },'confirm');
 };
 $('profileSelect').onchange=e=>chooseProfile(Number(e.target.value));
 function changeCps(which,input) {
@@ -441,6 +461,18 @@ for(const place of ['desktop','start']){
         send('shortcuts',place,model.shortcuts[place]?'remove':'create');
     };
 }
+$('openProfilesFolder').onclick=()=>connected?send('storage','profiles'):toast('Disponible dans ClickFlow pour Windows.');
+$('openProgramFolder').onclick=()=>connected?send('storage','program'):toast('Disponible dans ClickFlow pour Windows.');
+function confirmUninstall(mode) {
+    if(!connected){toast('Ouvre ClickFlow dans sa fenêtre Windows pour le désinstaller.');return;}
+    const keep=mode==='keep';
+    openModal(keep?'Désinstaller en conservant mes profils':'Supprimer définitivement ClickFlow',
+        keep?'Le logiciel et ses raccourcis seront supprimés. Les profils et réglages resteront disponibles pour une réinstallation. Tape SUPPRIMER pour confirmer.':
+             'Le logiciel, ses raccourcis, tous les profils et tous les réglages seront supprimés définitivement. Tape SUPPRIMER pour confirmer.',
+        '',()=>send('uninstall',mode,'SUPPRIMER'),'confirm');
+}
+$('uninstallKeep').onclick=()=>confirmUninstall('keep');
+$('uninstallAll').onclick=()=>confirmUninstall('all');
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
     const page=btn.dataset.page;
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));
@@ -469,6 +501,11 @@ if(bridge) {
             $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
+        else if(msg.type==='utilityError') toast(msg.message||'Une erreur est survenue.');
+        else if(msg.type==='uninstalling'){
+            for(const id of ['uninstallKeep','uninstallAll'])$(id).disabled=true;
+            toast('Fermeture de ClickFlow et désinstallation...');
+        }
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
