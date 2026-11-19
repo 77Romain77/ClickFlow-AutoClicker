@@ -27,7 +27,7 @@ if ($Mode -eq 'Export') {
         Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $profilesOut $file.Name)
     }
     [IO.File]::WriteAllText($marker, 'CLICKFLOW-BACKUP-1')
-    $tmpZip = $Archive + '.partial'
+    $tmpZip = $Archive + '.partial.zip'
     if (Test-Path -LiteralPath $tmpZip) { Remove-Item -LiteralPath $tmpZip -Force }
     try {
         Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $tmpZip -Force
@@ -61,7 +61,7 @@ if ($Mode -eq 'Export') {
         if (!$seen.Contains('settings.ini') -or !$seen.Contains('ClickFlowBackup.txt') -or $count -lt 3) {
             throw 'Sauvegarde incomplète ou mauvais format'
         }
-        [IO.Compression.ZipFile]::ExtractToDirectory($zip, $payload)
+        [IO.Compression.ZipFileExtensions]::ExtractToDirectory($zip, $payload)
     } finally {
         $zip.Dispose()
     }
