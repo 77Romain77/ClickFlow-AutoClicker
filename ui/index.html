@@ -94,6 +94,36 @@ body.compact #page-dashboard{display:block!important}
 .maintenance-section h3{font-size:15px;margin:0 0 8px}
 .maintenance-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .maintenance-actions .btn{flex:1 1 185px;min-height:40px}
+
+/* Test CPS intégré : interface et retour visuel léger à chaque clic. */
+.cps-card{max-width:1040px}.cps-duration-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.cps-durations{display:flex;gap:7px;flex-wrap:wrap}.cps-durations .btn{min-width:52px}
+.cps-main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(235px,.85fr);gap:15px}
+.cps-hit-area{width:100%;min-height:275px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;border-radius:16px;border:1px solid #41679c;background:radial-gradient(circle at 50% 45%,#1d4e80 0,#153253 48%,#101f35 100%);color:#ecf6ff;cursor:crosshair;user-select:none;touch-action:manipulation;transition:background .12s,border-color .12s,box-shadow .12s}
+.cps-hit-area:hover{border-color:#76adff;box-shadow:0 0 0 1px #75aaff45,0 12px 28px #030a2340}.cps-hit-area:active{background:radial-gradient(circle at 50% 45%,#285f9b 0,#193d69 50%,#102039 100%)}
+.cps-hit-area:disabled{cursor:default;opacity:.72}.cps-hit-area strong{position:relative;z-index:1;font-size:clamp(18px,2.3vw,25px);letter-spacing:-.55px}.cps-hit-area small{position:relative;z-index:1;font-size:12px;color:#bdd6f7}
+.cps-hit-decoration{position:relative;z-index:1;color:#86bdff;font-size:39px;line-height:1}
+.cps-ripple{position:absolute;z-index:0;width:16px;height:16px;border-radius:999px;left:0;top:0;border:3px solid #96d5ff;box-shadow:0 0 25px #539fff70;background:#97d7ff47;pointer-events:none;transform:translate(-50%,-50%) scale(0.3);animation:cps-ripple .34s ease-out forwards}
+@keyframes cps-ripple{0%{opacity:.92;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(7)}}
+.cps-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px}
+.cps-phase{color:#83b9fa;font-weight:750;font-size:11px;letter-spacing:1px}
+.cps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cps-metric{display:flex;flex-direction:column;justify-content:center;background:#0d1b2e;border:1px solid #28405e;border-radius:12px;padding:13px 14px;min-height:82px}
+.cps-metric small{font-size:11px;color:#a9c1df}.cps-metric strong{font-size:28px;color:#f3f8ff;letter-spacing:-.7px;font-variant-numeric:tabular-nums}
+.cps-metric-wide{grid-column:1/-1;min-height:62px;flex-direction:row;justify-content:space-between;align-items:center}
+.cps-metric-wide strong{font-size:19px;color:#82cbef}.cps-help{cursor:help}
+.cps-progress-top{display:flex;justify-content:space-between;font-size:11px;color:#afc6e3;margin-top:20px;margin-bottom:7px}
+.cps-progress-top strong{font-variant-numeric:tabular-nums;color:#e1edff}
+.cps-progress{height:9px;background:#223653;border-radius:99px;overflow:hidden}.cps-progress>div{height:100%;width:0;background:linear-gradient(90deg,#3c76ed,#49cbd3);transition:width .09s linear;border-radius:99px}
+.cps-chart-wrap{margin-top:19px;border:1px solid #2e415e;background:#0e1a2b;border-radius:13px;padding:14px 14px 8px}
+.cps-chart-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px}.cps-chart-title span{color:#8ca5c6;font-size:10px}
+#cpsChart{display:block;width:100%;height:250px;margin-top:9px}
+.cps-history-wrap{border-top:1px solid #2d405a;margin-top:20px;padding-top:15px;font-size:12px}.cps-history-empty{color:#94abc8;font-size:11px;margin-top:9px}
+.cps-history-list{display:grid;gap:7px;margin-top:10px}.cps-history-entry{border:1px solid #263d5a;background:#0f2033;border-radius:9px;padding:9px 11px;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:#abc2df}.cps-history-entry b{color:#eff7ff}
+body.compact #page-cps{display:none!important}
+@media(max-width:900px){.cps-main{grid-template-columns:1fr}.cps-hit-area{min-height:240px}}
+@media(max-width:560px){.cps-duration-row{align-items:flex-start}.cps-hit-area{min-height:205px}.cps-metric{padding:11px;min-height:74px}.cps-metric strong{font-size:22px}#cpsChart{height:220px}}
+@media(prefers-reduced-motion:reduce){.cps-ripple{animation:none;opacity:.3}.cps-progress>div{transition:none}}
 </style>
 </head>
 <body>
@@ -105,6 +135,7 @@ body.compact #page-dashboard{display:block!important}
   <nav>
    <button class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg> Tableau de bord</button>
    <button class="nav-item" data-page="profiles"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-7 8-7s8 2 8 7"/></svg> Profils</button>
+   <button class="nav-item" data-page="cps"><svg viewBox="0 0 24 24"><path d="M5 18a9 9 0 1 1 14 0"/><path d="M12 13l4-5"/><circle cx="12" cy="13" r="1"/><path d="M5 21h14"/></svg> Test CPS</button>
    <button class="nav-item" data-page="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg> À propos</button>
   </nav>
  </div>
@@ -159,6 +190,35 @@ body.compact #page-dashboard{display:block!important}
  <section id="page-profiles" class="hidden">
   <div class="hero"><div><h2>Vos profils de clics.</h2><p>Créez, dupliquez et gérez vos profils enregistrés.</p></div></div>
   <div class="card"><div class="card-head"><div class="card-title">Profils enregistrés</div><div class="profile-actions" style="margin-top:0"><button class="btn quiet" id="importProfilePage">Importer un profil</button><button class="btn primary" id="addProfilePage">+ Nouveau profil</button></div></div><div id="profileList"></div><div class="mutedline">Chaque profil est enregistré dans son propre fichier .ini. Tu peux exporter un profil, puis l'importer sur un autre PC.</div></div>
+ </section>
+ <section id="page-cps" class="hidden">
+  <div class="hero"><div><h2>Teste ta vitesse de clic.</h2><p>Un test manuel, une courbe en direct et des records pour chaque durée.</p></div></div>
+  <div class="card cps-card">
+   <div class="card-head"><div><div class="card-title">Test de clics par seconde</div><div class="card-description">Le chronomètre démarre au premier clic gauche dans la zone.</div></div><span class="number">TEST / CPS</span></div>
+   <div class="cps-duration-row"><span class="label" style="margin:0">Durée du test</span><div class="cps-durations" role="group" aria-label="Durée du test CPS"><button class="btn sm" data-cps-duration="2">2 s</button><button class="btn sm primary" data-cps-duration="5">5 s</button><button class="btn sm" data-cps-duration="10">10 s</button><button class="btn sm" data-cps-duration="30">30 s</button><button class="btn sm" data-cps-duration="60">60 s</button></div></div>
+   <div class="cps-main">
+    <div>
+     <button id="cpsClickArea" class="cps-hit-area" type="button" aria-label="Zone de test CPS : cliquer avec le bouton gauche de la souris">
+      <span class="cps-hit-decoration" aria-hidden="true">◎</span>
+      <strong id="cpsHitTitle">Clique ici pour démarrer</strong>
+      <small id="cpsHitHelp">Clic gauche uniquement. Le premier clic compte.</small>
+     </button>
+     <div class="cps-actions"><button id="cpsReset" class="btn quiet" type="button">Recommencer</button><span id="cpsPhase" class="cps-phase">PRÊT</span></div>
+    </div>
+    <div class="cps-metrics">
+     <div class="cps-metric"><small>CPS actuels <span class="cps-help" title="Clics effectués au cours des 1 000 dernières millisecondes.">ⓘ</span></small><strong id="cpsInstant">0.0</strong></div>
+     <div class="cps-metric"><small>CPS moyens</small><strong id="cpsAverage">0.0</strong></div>
+     <div class="cps-metric"><small>Pic sur 1 s</small><strong id="cpsPeak">0</strong></div>
+     <div class="cps-metric"><small>Nombre de clics</small><strong id="cpsClicks">0</strong></div>
+     <div class="cps-metric cps-metric-wide"><small>Record personnel - <span id="cpsRecordDuration">5 s</span></small><strong id="cpsRecord">0.0 CPS</strong></div>
+    </div>
+   </div>
+   <div class="cps-progress-top"><span>Progression</span><strong id="cpsRemaining">5.0 s restantes</strong></div>
+   <div class="cps-progress"><div id="cpsProgressFill"></div></div>
+   <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
+   <div class="cps-history-wrap"><strong>Derniers essais de cette session</strong><div id="cpsHistory" class="cps-history-empty">Termine un test pour afficher tes résultats.</div></div>
+   <p class="subnote" style="margin-top:13px">Le test se limite aux clics manuels dans cette zone. L'autoclicker ClickFlow est arrêté à l'ouverture de cet onglet. Les meilleurs résultats sont enregistrés localement.</p>
+  </div>
  </section>
  <section id="page-about" class="hidden">
   <div class="hero"><div><h2>À propos de ClickFlow.</h2><p>Gère les raccourcis, le stockage et la désinstallation de l'application.</p></div></div>
@@ -484,12 +544,207 @@ $('uninstallAll').onclick=()=>{
     if(connected)send('uninstall','all');
     else toast('La désinstallation nécessite la version Windows.');
 };
+
+// Test CPS : clics manuels uniquement, chronométrage monotone et relevé sur 1 s.
+const cpsTest = {
+    seconds:5, phase:'ready', startedAt:0, clicks:[], samples:[], peak:0,
+    timer:0, history:[], best:{2:0,5:0,10:0,30:0,60:0}
+};
+const cpsDurations = [2,5,10,30,60];
+const cpsNow = () => performance.now();
+const cpsElapsed = now => cpsTest.phase==='ready'?0:
+    Math.max(0,Math.min(cpsTest.seconds,(now-cpsTest.startedAt)/1000));
+function cpsLastSecond(now) {
+    let count=0;
+    for(let i=cpsTest.clicks.length-1;i>=0;i--) {
+        if(cpsTest.clicks[i]<now-1000)break;
+        count++;
+    }
+    return count;
+}
+function cpsSample(now,force=false) {
+    const elapsed=cpsElapsed(now);
+    if(!force && cpsTest.samples.length
+        && elapsed-cpsTest.samples[cpsTest.samples.length-1].t<.09)return;
+    const cps=cpsLastSecond(now);
+    cpsTest.samples.push({t:elapsed,v:cps});
+    cpsTest.peak=Math.max(cpsTest.peak,cps);
+}
+function cpsStopTimer() {
+    if(cpsTest.timer){clearInterval(cpsTest.timer);cpsTest.timer=0;}
+}
+function cpsResetTest() {
+    cpsStopTimer();
+    cpsTest.phase='ready';cpsTest.startedAt=0;cpsTest.clicks=[];cpsTest.samples=[];cpsTest.peak=0;
+    $('cpsClickArea').disabled=false;
+    cpsRender(cpsNow());
+}
+function cpsFinish(now) {
+    if(cpsTest.phase!=='running')return;
+    const end=cpsTest.startedAt+cpsTest.seconds*1000;
+    cpsSample(end,true);
+    cpsTest.phase='done';
+    cpsStopTimer();
+    const clicks=cpsTest.clicks.length;
+    const seconds=cpsTest.seconds;
+    cpsTest.best[seconds]=Math.max(cpsTest.best[seconds]||0,clicks);
+    cpsTest.history.unshift({
+        seconds,clicks,average:clicks/seconds,peak:cpsTest.peak,
+        at:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+    });
+    cpsTest.history.length=Math.min(6,cpsTest.history.length);
+    if(connected)send('cpsTest','result',seconds,clicks);
+    cpsHistoryRender();
+    cpsRender(end);
+}
+function cpsStart(now) {
+    cpsStopTimer();
+    cpsTest.phase='running';
+    cpsTest.startedAt=now;
+    cpsTest.clicks=[];
+    cpsTest.samples=[{t:0,v:0}];
+    cpsTest.peak=0;
+    cpsTest.timer=setInterval(()=>cpsRender(cpsNow()),85);
+}
+function cpsRipple(event) {
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const area=$('cpsClickArea'),bounds=area.getBoundingClientRect();
+    const dot=document.createElement('span');
+    dot.className='cps-ripple';
+    dot.style.left=(event.clientX-bounds.left)+'px';
+    dot.style.top=(event.clientY-bounds.top)+'px';
+    area.appendChild(dot);
+    dot.addEventListener('animationend',()=>dot.remove(),{once:true});
+}
+$('cpsClickArea').addEventListener('pointerdown',event=>{
+    // pointerdown compte une seule fois par pression; ni souris maintenue
+    // ni touche clavier ne doivent incrémenter artificiellement le score.
+    if(event.pointerType!=='mouse'||event.button!==0||event.isPrimary===false)return;
+    if(cpsTest.phase==='done')return;
+    event.preventDefault();
+    const now=cpsNow();
+    if(cpsTest.phase==='ready')cpsStart(now);
+    if(now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
+    cpsTest.clicks.push(now);
+    cpsRipple(event);
+    cpsSample(now,true);
+    cpsRender(now);
+});
+function cpsHistoryRender() {
+    const root=$('cpsHistory');
+    root.replaceChildren();
+    if(!cpsTest.history.length){root.textContent='Termine un test pour afficher tes résultats.';return;}
+    const list=document.createElement('div');list.className='cps-history-list';
+    for(const result of cpsTest.history) {
+        const row=document.createElement('div');row.className='cps-history-entry';
+        const left=document.createElement('span');left.textContent=result.seconds+' s · '+result.at;
+        const right=document.createElement('b');
+        right.textContent=result.clicks+' clics · '+result.average.toFixed(1)+' CPS moyens · pic '+result.peak;
+        row.append(left,right);list.appendChild(row);
+    }
+    root.appendChild(list);
+}
+function cpsDrawChart() {
+    const canvas=$('cpsChart');
+    const box=canvas.getBoundingClientRect();
+    if(!box.width)return;
+    const w=Math.max(260,Math.round(box.width));
+    const h=Math.max(160,Math.round(box.height||250));
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+    const ctx=canvas.getContext('2d');
+    if(!ctx)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const pad={left:39,right:11,top:17,bottom:29};
+    const plotW=w-pad.left-pad.right,plotH=h-pad.top-pad.bottom;
+    const highest=Math.max(5,cpsTest.peak,...cpsTest.samples.map(x=>x.v));
+    const yMax=Math.max(5,Math.ceil((highest+2)/5)*5);
+    ctx.font='10px Segoe UI, sans-serif';
+    ctx.textBaseline='middle';
+    for(let i=0;i<=4;i++) {
+        const y=pad.top+plotH*i/4;
+        ctx.strokeStyle='#263a55';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(w-pad.right,y);ctx.stroke();
+        ctx.fillStyle='#8da7c7';ctx.textAlign='right';
+        ctx.fillText(String(Math.round(yMax*(4-i)/4)),pad.left-8,y);
+    }
+    ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#8da7c7';
+    for(let i=0;i<=4;i++) {
+        const t=cpsTest.seconds*i/4;
+        ctx.fillText(Number.isInteger(t)?t+' s':t.toFixed(1)+' s',pad.left+plotW*i/4,h-pad.bottom+7);
+    }
+    if(!cpsTest.samples.length)return;
+    const px=t=>pad.left+(Math.max(0,Math.min(cpsTest.seconds,t))/cpsTest.seconds)*plotW;
+    const py=v=>pad.top+plotH-(v/yMax)*plotH;
+    ctx.beginPath();
+    cpsTest.samples.forEach((p,i)=>i?ctx.lineTo(px(p.t),py(p.v)):ctx.moveTo(px(p.t),py(p.v)));
+    ctx.lineTo(px(cpsTest.samples[cpsTest.samples.length-1].t),pad.top+plotH);
+    ctx.lineTo(px(cpsTest.samples[0].t),pad.top+plotH);
+    ctx.closePath();
+    const fill=ctx.createLinearGradient(0,pad.top,0,pad.top+plotH);
+    fill.addColorStop(0,'rgba(89,170,255,.32)');
+    fill.addColorStop(1,'rgba(89,170,255,.01)');
+    ctx.fillStyle=fill;ctx.fill();
+    ctx.beginPath();ctx.lineWidth=2.4;ctx.lineJoin='round';ctx.strokeStyle='#75b7ff';
+    cpsTest.samples.forEach((p,i)=>i?ctx.lineTo(px(p.t),py(p.v)):ctx.moveTo(px(p.t),py(p.v)));
+    ctx.stroke();
+}
+function cpsRender(now) {
+    if(cpsTest.phase==='running' && now>=cpsTest.startedAt+cpsTest.seconds*1000){
+        cpsFinish(now);return;
+    }
+    if(cpsTest.phase==='running')cpsSample(now);
+    const elapsed=cpsTest.phase==='done'?cpsTest.seconds:cpsElapsed(now);
+    const remaining=Math.max(0,cpsTest.seconds-elapsed);
+    const total=cpsTest.clicks.length;
+    const current=cpsTest.phase==='running'?cpsLastSecond(now):0;
+    const average=total/Math.max(cpsTest.phase==='done'?cpsTest.seconds:elapsed,.2);
+    $('cpsInstant').textContent=current.toFixed(1);
+    $('cpsAverage').textContent=average.toFixed(1);
+    $('cpsPeak').textContent=String(cpsTest.peak);
+    $('cpsClicks').textContent=String(total);
+    $('cpsRemaining').textContent=remaining.toFixed(1)+' s restantes';
+    $('cpsProgressFill').style.width=(100*elapsed/cpsTest.seconds).toFixed(1)+'%';
+    $('cpsPhase').textContent=cpsTest.phase==='ready'?'PRÊT':cpsTest.phase==='running'?'EN COURS':'TERMINÉ';
+    $('cpsHitTitle').textContent=cpsTest.phase==='ready'?'Clique ici pour démarrer':
+        cpsTest.phase==='running'?'Continue à cliquer !':'Test terminé';
+    $('cpsHitHelp').textContent=cpsTest.phase==='done'?
+        'Recommencer pour un nouvel essai.':'Clic gauche uniquement. Le premier clic compte.';
+    $('cpsRecordDuration').textContent=cpsTest.seconds+' s';
+    $('cpsRecord').textContent=((cpsTest.best[cpsTest.seconds]||0)/cpsTest.seconds).toFixed(1)+' CPS';
+    $('cpsClickArea').disabled=cpsTest.phase==='done';
+    document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
+        const selected=Number(btn.dataset.cpsDuration)===cpsTest.seconds;
+        btn.classList.toggle('primary',selected);
+        btn.disabled=cpsTest.phase==='running';
+        btn.setAttribute('aria-pressed',String(selected));
+    });
+    cpsDrawChart();
+}
+document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
+    btn.onclick=()=>{
+        if(cpsTest.phase==='running')return;
+        cpsTest.seconds=Number(btn.dataset.cpsDuration);
+        cpsResetTest();
+    };
+});
+$('cpsReset').onclick=cpsResetTest;
+window.addEventListener('resize',()=>{if(!$('page-cps').classList.contains('hidden'))cpsDrawChart();});
+cpsHistoryRender();
+cpsRender(cpsNow());
+
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>{
     const page=btn.dataset.page;
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x===btn));
-    ['dashboard','profiles','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));
+    ['dashboard','profiles','cps','about'].forEach(id=>$('page-'+id).classList.toggle('hidden',id!==page));
+    if(page!=='cps' && cpsTest.phase==='running')cpsResetTest();
+    if(page==='cps'){
+        if(connected)send('cpsTest','open');
+        setTimeout(()=>cpsRender(cpsNow()),0);
+    }
     if(page==='about' && connected)send('shortcuts','status');
-    $('crumb').textContent='VOTRE ESPACE / '+(page==='dashboard'?'TABLEAU DE BORD':page==='profiles'?'PROFILS':'À PROPOS');
+    $('crumb').textContent='VOTRE ESPACE / '+(page==='dashboard'?'TABLEAU DE BORD':page==='profiles'?'PROFILS':page==='cps'?'TEST CPS':'À PROPOS');
 });
 if(bridge) {
     window.chrome.webview.addEventListener('message',event=>{
@@ -513,6 +768,13 @@ if(bridge) {
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') updateLiveStats(msg);
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
+        else if(msg.type==='cpsRecords' && msg.best){
+            for(const duration of cpsDurations){
+                const saved=Number(msg.best[String(duration)]);
+                if(Number.isFinite(saved)&&saved>=0)cpsTest.best[duration]=Math.max(cpsTest.best[duration]||0,saved);
+            }
+            if(!$('page-cps').classList.contains('hidden'))cpsRender(cpsNow());
+        }
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
