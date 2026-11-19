@@ -16,7 +16,8 @@ for(const id of [
     'page-settings','page-dashboard','page-profiles','page-cps','page-about',
     'desktopShortcutButton','startShortcutButton','uninstallKeep','uninstallAll'
 ])assert(ids.includes(id),'Missing workspace control: '+id);
-for(const pref of ['closeToTray','minimizeToTray','floatShown','liveMonitor'])
+for(const pref of ['closeToTray','minimizeToTray','floatShown','liveMonitor',
+    'compactChart','floatGraph','floatTopMost'])
     assert(html.includes('data-preference="'+pref+'"'),'Missing desktop preference '+pref);
 assert(html.includes("send('quickSettings'"),'Quick settings must use atomic backend command');
 assert(html.includes("send('favorite'"),'Favorite actions must use backend');
@@ -30,4 +31,20 @@ assert(html.indexOf('id="uninstallAll"')<about,'Uninstaller must move under Sett
 assert(html.indexOf('id="desktopShortcutButton"')<about,'Shortcuts must move under Settings');
 assert(html.includes('body.compact #page-settings{display:none!important}'),
     'Compact mode must keep the dashboard-only layout');
+assert(ids.includes('compactTop')&&ids.includes('compactStatus'),
+    'Compact mode must have its own status banner');
+assert(ids.includes('floatOpacitySelect'),'Mini-window opacity preference missing');
+assert(html.includes('id="intensityBlock"'),
+    'Natural intensity controls must be available in compact mode');
+assert(html.includes('body.compact #intensityBlock:not(.hidden){display:block}'),
+    'Compact natural intensity must not be hidden');
+assert(html.includes('profile-order-row')&&html.includes('profile-order-buttons'),
+    'Reorder buttons must have their own responsive footer');
+assert(html.includes('profile-move-btn')&&html.includes('Monter le profil')
+    &&html.includes('Descendre le profil'),
+    'Up/down reorder arrows must have fixed-size accessible controls');
+assert(html.includes("send('preference','floatOpacity',value)"),
+    'Opacity selector must notify the Windows engine');
+assert(html.includes('model.preferences.compactChart'),
+    'Compact chart must use its independent preference');
 console.log('Workspace HTML structure, live monitor, settings, profile and quick edit JS syntax passed.');

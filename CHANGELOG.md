@@ -1,5 +1,17 @@
 # Historique des versions
 
+## 1.7.0 - 2026-11-19
+
+- Mini-fenêtre flottante redimensionnable en tirant les bords ou les coins, avec largeur, hauteur et position restaurées au prochain démarrage.
+- Affichage adapté à sa taille : nom du profil sur deux lignes, état/CPS/STOP toujours accessibles, courbe CPS GDI native sur 30 secondes affichée facultativement lorsque la fenêtre est assez grande.
+- Bouton "Interface" en remplacement de "Ouvrir" : restaure l'application principale sans démarrer une deuxième instance.
+- Options de mini-fenêtre dans Paramètres : courbe, toujours au premier plan et opacité (70/80/90/100 %).
+- Menu de la zone de notification simplifié : uniquement les noms de profils choisis par l'utilisateur, sans numéros internes.
+- Cartes de profils : flèches haut/bas de dimensions fixes dans un pied de carte distinct, meilleur rendu aux petites largeurs et intitulés accessibles.
+- Mode compact entièrement réorganisé en panneau de commande rapide : profil, état/STOP, CPS, mode, min/max, intensité Naturel, raccourcis et moniteur CPS optionnel.
+- Historique CPS de la mini-fenêtre seulement en mémoire, sans écriture disque ; compatibilité avec les profils et préférences des versions précédentes.
+- Tests de redimensionnement/restauration, GDI, opacité, menus, UI responsive et régressions Windows.
+
 ## 1.6.0 - 2026-11-19
 
 - Moniteur CPS sur le tableau de bord : courbe glissante des 30 dernières secondes, état et CPS réels en direct. Désactivable depuis Paramètres ; données en mémoire seulement.
