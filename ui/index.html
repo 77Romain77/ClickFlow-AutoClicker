@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.8.2 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.9.0 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.8.2 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.0 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -566,6 +566,7 @@ const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
 const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
+model.globalHotkeys={next:'',previous:'',overlay:'',test:'',open:''};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
 if(bridge) {
@@ -886,7 +887,13 @@ document.addEventListener('keydown',e=>{
     model.capturing=false;
     if(e.key!=='Escape') {
         const picked=e.key===' '?'Espace':e.key;
-        if(model.captureTarget==='emergency') {
+        if(model.captureTarget.startsWith('global:')) {
+            const action=model.captureTarget.slice(7);
+            if(picked===model.emergencyKey || model.profiles.some(p=>p.settings.hotkey===picked)
+                || Object.entries(model.globalHotkeys).some(([k,v])=>k!==action&&v===picked))
+                toast('Cette touche est déjà utilisée.');
+            else model.globalHotkeys[action]=picked;
+        } else if(model.captureTarget==='emergency') {
             if(picked===config().hotkey){toast("Cette touche sert déjà à l'activation.");}
             else model.emergencyKey=picked;
         } else {
@@ -895,6 +902,7 @@ document.addEventListener('keydown',e=>{
         }
     }
     render();
+    renderGlobalHotkeys();
 });
 function setLiveAppearance() {
     if(!connected)return;
@@ -903,7 +911,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.8.2 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.0 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible.";
     document.querySelector('.note').innerHTML='<span style="font-size:18px;color:#78b4ff">ⓘ</span><span><b>Vos réglages sont conservés.</b><br>Les profils sont chargés depuis votre configuration AutoHotkey.</span>';
     document.querySelector('#page-profiles .mutedline').textContent='Profils enregistrés automatiquement dans les paramètres locaux de ClickFlow.';
@@ -1034,6 +1042,7 @@ function renderSettings() {
 
     const p=model.preferences;
     $('overlayPosition').value=p.overlayPosition||'tm';
+    $('overlaySize').value=p.overlaySize||'mini';
     const monitor=$('overlayMonitor');
     const count=Math.max(1,Number(p.overlayMonitorCount)||1);
     if(monitor.options.length!==count){
@@ -1053,6 +1062,7 @@ function renderSettings() {
     $('overlayEdit').textContent=p.overlayEditing?'Terminer le placement':'Déplacer librement l\'overlay';
     $('overlayEdit').classList.toggle('danger',!!p.overlayEditing);
     $('overlayEditHint').classList.toggle('hidden',!p.overlayEditing);
+    renderGlobalHotkeys();
 }
 function overlaySetPreference(field,value) {
     if(connected)send('preference',field,value);
@@ -1067,7 +1077,7 @@ document.querySelectorAll('[data-preference]').forEach(btn=>{
         overlaySetPreference(field,!model.preferences[field]?1:0);
     };
 });
-for(const field of ['overlayPosition','overlayMonitor']){
+for(const field of ['overlayPosition','overlayMonitor','overlaySize']){
     $(field).onchange=()=>overlaySetPreference(field,
         $(field).value);
 }
@@ -1092,6 +1102,44 @@ $('overlayEdit').onclick=()=>{
 $('floatQuick').onclick=()=>{
     if(connected)send('desktop','float');
     else toast('Overlay disponible dans ClickFlow Windows.');
+};
+const globalKeySuffix={next:'Next',previous:'Previous',overlay:'Overlay',test:'Test',open:'Open'};
+function renderGlobalHotkeys() {
+    for(const [action,suffix] of Object.entries(globalKeySuffix)) {
+        const value=model.globalHotkeys[action]||'';
+        const captured=model.capturing && model.captureTarget==='global:'+action;
+        $('globalKey'+suffix).textContent=captured?'Appuyez...':(value||'Aucun');
+        $('globalClear'+suffix).disabled=!value && !captured;
+    }
+}
+document.querySelectorAll('[data-global-capture]').forEach(button=>{
+    button.onclick=()=>{
+        const action=button.dataset.globalCapture;
+        model.capturing=true;
+        model.captureTarget='global:'+action;
+        renderGlobalHotkeys();
+        if(connected)send('globalHotkey','capture',action);
+        else toast('Appuie sur une touche, ou Échap pour annuler.');
+    };
+});
+document.querySelectorAll('[data-global-clear]').forEach(button=>{
+    button.onclick=()=>{
+        const action=button.dataset.globalClear;
+        if(connected)send('globalHotkey','clear',action);
+        else {
+            model.globalHotkeys[action]='';
+            model.capturing=false;
+            renderGlobalHotkeys();
+        }
+    };
+});
+$('backupExport').onclick=()=>{
+    if(connected)send('backup','export');
+    else toast('La sauvegarde ZIP est disponible dans ClickFlow Windows.');
+};
+$('backupRestore').onclick=()=>{
+    if(connected)send('backup','restore');
+    else toast('La restauration ZIP est disponible dans ClickFlow Windows.');
 };
 function renderShortcutSettings() {
     for(const place of ['desktop','start']){
@@ -1581,6 +1629,9 @@ if(bridge) {
             if(msg.preferences)model.preferences={
                 ...model.preferences,...msg.preferences
             };
+            if(msg.globalHotkeys)model.globalHotkeys={
+                ...model.globalHotkeys,...msg.globalHotkeys
+            };
             model.nextId=Math.max(...model.profiles.map(p=>p.id))+1;
             model.capturing=false;
             setLiveAppearance();
@@ -1588,7 +1639,11 @@ if(bridge) {
             cpsSyncProfiles();
             $('demoToggle').textContent='Arrêter les clics ('+model.emergencyKey+')';
             window.chrome.webview.postMessage('connected');
-        } else if(msg.type==='stats') updateLiveStats(msg);
+        } else if(msg.type==='stats') {
+            updateLiveStats(msg);
+            if(msg.capturing)renderGlobalHotkeys();
+        }
+        else if(msg.type==='navigate' && msg.page==='cps')navigatePage('cps');
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
         else if(msg.type==='cpsTest') cpsHandleEngineMessage(msg);
         else if(msg.type==='shortcuts') {
