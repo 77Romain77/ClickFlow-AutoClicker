@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.5.0 - 2026-11-19
+
+- Mode Naturel renforcé : variations progressives beaucoup plus visibles, avec un niveau Faible proche de l'ancien niveau Élevé.
+- Micro-irrégularités partiellement corrélées entre les clics, courtes accélérations et rares hésitations selon Faible / Moyen / Élevé.
+- Les délais ordinaires restent dans les limites CPS min/max, mais une hésitation ponctuelle peut ralentir sous le minimum sans rattrapage artificiel.
+- Cadence identique dans le moteur réel et le Test CPS des profils ; les modes Fixe et Aléatoire restent inchangés.
+- Texte explicatif des trois intensités et tests automatisés des distributions de délais sous Windows.
+
 ## 1.4.0 - 2026-11-19
 
 - Le test CPS mesure désormais le profil ClickFlow sélectionné en réutilisant son cadenceur AutoHotkey (Fixe, Aléatoire ou Naturel).
