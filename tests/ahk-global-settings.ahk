@@ -38,7 +38,7 @@ try {
     CF.shuttingDown := false
 
     ; Les deux modes possèdent désormais des tailles indépendantes.
-    CF.mainCompactW := 465
+    CF.mainCompactW := 480
     CF.mainCompactH := 580
     CF.mainExpandedW := 900
     CF.mainExpandedH := 760
@@ -55,7 +55,7 @@ try {
     CF.compactMode := true
     ApplyWindowMode()
     WinGetPos(, , &w, &h, "ahk_id " g.Hwnd)
-    if Abs(w - 465) > 6 || Abs(h - 580) > 6
+    if Abs(w - 480) > 6 || Abs(h - 580) > 6
         throw Error("La taille du mode compact est incorrecte : " w "x" h)
 
     CFDesktopCaptureMainBounds(true)
