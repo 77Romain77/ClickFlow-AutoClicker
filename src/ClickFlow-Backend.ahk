@@ -10,7 +10,8 @@ global CF := {
     capture: false, inputHook: 0, pressed: false, armed: false,
     test: {active: false},
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
-    naturalCps: 12, naturalTarget: 12, total: 0, recent: [],
+    naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
+    naturalBurstLeft: 0, total: 0, recent: [],
     lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
     profiles: [], selectedId: 1, nextId: 2,
@@ -561,9 +562,7 @@ ActivationDown(*) {
     CF.armed := true
     CF.target := current
     CF.nextAt := A_TickCount
-    CF.naturalCps := (CF.cfg.min + CF.cfg.max) / 2
-    CF.naturalTarget := CF.naturalCps
-    CF.nextVariation := 0
+    CFNaturalReset(CF.cfg)
     SetNotice("Clics actifs dans la fenêtre choisie. " DisplayKey(CF.emergencyKey) " pour arrêter.")
 }
 
@@ -628,8 +627,8 @@ EngineTick() {
     now := A_TickCount
     if now < CF.nextAt
         return
-    cps := GetNextCps()
-    CF.cpsNow := cps
+    intervalMs := GetNextIntervalMs(CF.cfg, now)
+    CF.cpsNow := 1000 / intervalMs
 
     ; Les clics sont envoyes a la position actuelle du curseur.
     ; SendInput n'intercepte pas les clics manuels et n'injecte rien dans le jeu.
@@ -637,13 +636,29 @@ EngineTick() {
     CF.total += 1
     CF.recent.Push(now)
     ; Evite les rafales de rattrapage apres une interruption.
-    CF.nextAt := now + Max(10, Round(1000 / cps))
+    CF.nextAt := now + intervalMs
 }
 
-GetNextCps(cfg := 0) {
+; Un état de cadence par session : reset à chaque activation ou banc de test.
+; Les valeurs de CPS minimum/maximum définissent la plage de cadence normale.
+; Les micro-hésitations peuvent allonger ponctuellement l'intervalle.
+CFNaturalReset(cfg) {
+    global CF
+    CF.naturalCps := (cfg.min + cfg.max) / 2
+    CF.naturalTarget := CF.naturalCps
+    CF.nextVariation := 0
+    CF.naturalNoise := 0
+    CF.naturalBurstLeft := 0
+}
+
+; Cadence cible à évolution progressive. Le niveau faible de la v1.5
+; utilise déjà presque toute la plage CPS (ancien niveau élevé).
+GetNextCps(cfg := 0, now := "") {
     global CF
     if !IsObject(cfg)
         cfg := CF.cfg
+    if now = ""
+        now := A_TickCount
     minimum := cfg.min
     maximum := cfg.max
     if cfg.mode = 1
@@ -651,18 +666,70 @@ GetNextCps(cfg := 0) {
     if cfg.mode = 2
         return Random(minimum, maximum)
 
-    now := A_TickCount
+    intensity := Max(1, Min(3, cfg.variation))
     if now >= CF.nextVariation {
-        intensity := cfg.variation
-        radius := (maximum - minimum) * (intensity = 1 ? 0.22 : intensity = 2 ? 0.38 : 0.5)
         center := (minimum + maximum) / 2
-        low := Max(minimum, Round(center - radius))
-        high := Min(maximum, Round(center + radius))
-        CF.naturalTarget := Random(low, high)
-        CF.nextVariation := now + Random(350, 1100)
+        radius := (maximum - minimum) * (intensity = 1 ? 0.46 : 0.5)
+        low := Max(minimum, center - radius)
+        high := Min(maximum, center + radius)
+        ; Les intensités fortes visitent plus souvent les extrêmes.
+        edgeChance := intensity = 1 ? 16 : intensity = 2 ? 29 : 43
+        if Random(1, 100) <= edgeChance
+            CF.naturalTarget := Random(0, 1) ? maximum : minimum
+        else
+            CF.naturalTarget := Random(low, high)
+        CF.nextVariation := now + (intensity = 1
+            ? Random(550, 1500)
+            : intensity = 2 ? Random(380, 1200) : Random(250, 900))
     }
-    CF.naturalCps += (CF.naturalTarget - CF.naturalCps) * 0.2
+    smoothing := intensity = 1 ? 0.25 : intensity = 2 ? 0.36 : 0.52
+    CF.naturalCps += (CF.naturalTarget - CF.naturalCps) * smoothing
     return Max(minimum, Min(maximum, CF.naturalCps))
+}
+
+; Le même intervalle est utilisé par le moteur SendInput et le banc de
+; test CPS. Le mode Fixe et le mode Aléatoire restent inchangés.
+GetNextIntervalMs(cfg := 0, now := "") {
+    global CF
+    if !IsObject(cfg)
+        cfg := CF.cfg
+    if now = ""
+        now := A_TickCount
+    cps := GetNextCps(cfg, now)
+    if cfg.mode != 3
+        return Max(10, Round(1000 / cps))
+
+    intensity := Max(1, Min(3, cfg.variation))
+    ; Bruit partiellement corrélé : les clics voisins ne sont pas
+    ; parfaitement indépendants, mais gardent des imperfections.
+    CF.naturalNoise := 0.28 * CF.naturalNoise
+        + 0.72 * Random(-1.0, 1.0)
+    jitter := intensity = 1 ? 0.11 : intensity = 2 ? 0.21 : 0.34
+    interval := (1000 / cps) * (1 + jitter * CF.naturalNoise)
+
+    ; Très courte accélération spontanée sur quelques clics.
+    burstChance := intensity = 1 ? 45 : intensity = 2 ? 140 : 280
+    if CF.naturalBurstLeft > 0 {
+        CF.naturalBurstLeft -= 1
+        interval *= intensity = 1 ? 0.95 : intensity = 2 ? 0.87 : 0.79
+    } else if Random(1, 10000) <= burstChance {
+        CF.naturalBurstLeft := Random(1, intensity = 1 ? 2 : 3)
+        interval *= intensity = 1 ? 0.95 : intensity = 2 ? 0.87 : 0.79
+    }
+
+    ; Hors hésitations, aucun intervalle ne sort de la plage CPS prévue.
+    shortest := Max(10, Ceil(1000 / cfg.max))
+    longest := Max(shortest, Ceil(1000 / cfg.min))
+    interval := Max(shortest, Min(longest, Round(interval)))
+
+    ; Imperfection rare : un retard isolé, jamais rattrapé en rafale.
+    hesitationChance := intensity = 1 ? 55 : intensity = 2 ? 160 : 300
+    if Random(1, 10000) <= hesitationChance {
+        factor := intensity = 1 ? Random(1.18, 1.42)
+            : intensity = 2 ? Random(1.3, 1.85) : Random(1.5, 2.25)
+        interval := Round(interval * factor)
+    }
+    return Max(10, interval)
 }
 
 UpdateStats() {
