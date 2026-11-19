@@ -194,11 +194,14 @@ CFDesktopFloatPositionValid(x, y, width, height) {
     return false
 }
 
-CFOverlayMetrics() {
+CFOverlayMetrics(dpi := 0) {
     ; Convertir UNE SEULE FOIS les mesures de référence en pixels réels.
     ; Gui -DPIScale et WinMove utilisent alors exactement la même unité.
     ; Les polices Segoe UI restent proportionnelles au DPI système.
-    scale := Max(1, Min(3, A_ScreenDPI / 96))
+    ; Le paramètre DPI sert aussi à tester les calculs à 125/150/200 %.
+    if !dpi
+        dpi := A_ScreenDPI
+    scale := Max(1, Min(3, dpi / 96))
     return {
         w: Round(252 * scale), h: Round(76 * scale),
         left: Round(13 * scale), top: Round(9 * scale),
