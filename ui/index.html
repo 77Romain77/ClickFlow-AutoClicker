@@ -1019,10 +1019,6 @@ function renderSettings() {
         }
     }
     monitor.value=String(p.overlayMonitor||1);
-    for(const field of ['Opacity','Margin']){
-        const input=$('overlay'+field);
-        if(document.activeElement!==input)input.value=Number(p['overlay'+field.toLowerCase().replace(/^./,c=>c.toUpperCase())]);
-    }
     $('overlayOpacity').value=document.activeElement===$('overlayOpacity')
         ?$('overlayOpacity').value:String(p.overlayOpacity??85);
     $('overlayMargin').value=document.activeElement===$('overlayMargin')
