@@ -69,17 +69,55 @@ try {
     if !IsObject(CF.floatGui) || !CF.floatShown
         throw Error("Mini-fenêtre non affichée.")
     CFDesktopUpdate()
+    if !CF.floatProfile || !CF.floatStop || !CF.floatGraphButton
+        throw Error("Contrôles de la mini-fenêtre incomplets.")
+    if CF.floatX != -99999
+        throw Error("Position de fenêtre par défaut incorrecte.")
+    CFDesktopSetPreference("floatGraph", "1")
+    CF.floatGui.Show("NA w420 h340")
+    WinGetClientPos(, , &clientW, &clientH, "ahk_id " CF.floatGui.Hwnd)
+    CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
+    if !CF.floatChart.Visible
+        throw Error("La courbe ne s'affiche pas lors de l'agrandissement.")
+    ; Le bitmap GDI utilise les CPS de l'unique moteur et reste en mémoire.
+    CF.floatPoints := [{t: A_TickCount - 600, cps: 10},
+        {t: A_TickCount - 400, cps: 12},
+        {t: A_TickCount - 200, cps: 8}]
+    CFDesktopDrawFloatChart()
+    if !CF.floatBitmap
+        throw Error("La courbe CPS native n'a pas été dessinée.")
+    CFDesktopSetPreference("floatOpacity", "80")
+    CFDesktopSetPreference("floatTopMost", "0")
+    if CF.floatOpacity != 80 || CF.floatTopMost
+        throw Error("Opacité ou toujours-au-premier-plan incorrect.")
+    CFDesktopSaveFloatBounds()
+    savedW := CF.floatWidth
+    savedH := CF.floatHeight
+    if savedW < 415 || savedH < 330
+        throw Error("Les dimensions redimensionnées ne sont pas mémorisées.")
     CFDesktopSetFloat(false)
     if CF.floatShown
         throw Error("La mini-fenêtre ne peut pas se masquer.")
+    if IniRead(CF.configFile, "General", "FloatWidth", "") != savedW
+        throw Error("La largeur flottante n'est pas sauvegardée.")
+    if IniRead(CF.configFile, "General", "FloatHeight", "") != savedH
+        throw Error("La hauteur flottante n'est pas sauvegardée.")
+    CFDesktopSetPreference("compactChart", "0")
+    CFDesktopSetFloat(true)
+    WinGetPos(, , &restoredW, &restoredH, "ahk_id " CF.floatGui.Hwnd)
+    if Abs(restoredW - savedW) > 5 || Abs(restoredH - savedH) > 5
+        throw Error("Les dimensions flottantes ne sont pas restaurées.")
+    CFDesktopSetFloat(false)
     if CF.total != 0 || CF.armed
         throw Error("Le panneau de bureau a déclenché le moteur.")
     CF.desktopReady := false
-    CF.floatGui.Destroy()
+    CFDesktopReleaseFloat()
     g.Destroy()
     CFDesktopReadPreferences()
     if !CF.closeToTray || !CF.minimizeToTray || CF.liveMonitor || CF.floatShown
-        throw Error("Les préférences générales ne persistent pas.")
+        || !CF.floatGraph || CF.floatTopMost || CF.floatOpacity != 80
+        || CF.compactChart || CF.floatWidth != savedW || CF.floatHeight != savedH
+        throw Error("Les préférences et dimensions ne persistent pas.")
     if IniRead(CF.configFile, "General", "FloatShown", "?") != "0"
         throw Error("L'option mini-fenêtre a perdu son état.")
 
