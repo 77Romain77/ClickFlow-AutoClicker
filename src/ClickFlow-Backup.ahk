@@ -119,10 +119,7 @@ CFBackupRestore(source := "", confirm := true) {
         if source = ""
             return false
     }
-    if confirm && MsgBox("Remplacer TOUS les profils et paramètres actuels "
-        "par ceux de cette sauvegarde ? ClickFlow conservera une copie "
-        "temporaire pour revenir en arrière en cas d'erreur.",
-        "Restaurer ClickFlow", "YesNo Icon!") != "Yes"
+    if confirm && MsgBox("Remplacer TOUS les profils et paramètres actuels par cette sauvegarde ? Une copie de secours sera conservée en cas d'erreur.", "Restaurer ClickFlow", "YesNo Icon!") != "Yes"
         return false
     work := CFBackupWorkFolder()
     changed := false
