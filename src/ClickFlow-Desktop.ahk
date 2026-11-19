@@ -248,7 +248,10 @@ CFOverlayPlace() {
     if !IsObject(CF.overlayGui)
         return
     pt := CFOverlayPositionCoords()
-    WinMove(pt.x, pt.y, 226, 48, "ahk_id " CF.overlayGui.Hwnd)
+    ; Une fenêtre overlay peut être encore masquée lors de son placement.
+    DetectHiddenWindows(true)
+    try WinMove(pt.x, pt.y, 226, 48, "ahk_id " CF.overlayGui.Hwnd)
+    finally DetectHiddenWindows(false)
 }
 
 CFOverlayShow(visible) {
