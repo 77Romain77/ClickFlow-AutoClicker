@@ -22,6 +22,7 @@ global CF := {
     floatChartPaintCount: 0, floatGraphActive: false,
     overlayGui: 0, overlayVisible: false, overlayEditing: false,
     overlayAlwaysVisible: false, overlayOpacity: 85, overlayMargin: 20,
+    overlaySize: "mini", overlayShowProfile: false,
     overlayAverageSeconds: 5,
     overlayMonitor: 1, overlayPosition: "tm",
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
