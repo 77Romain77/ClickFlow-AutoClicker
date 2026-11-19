@@ -237,7 +237,9 @@ jobs:
             }
             if ($p.HasExited) { throw "AHK process exited with $($p.ExitCode)" }
             if (!(Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'))) {
-              throw "WebView2 loaded, but the JavaScript/AHK bridge did not complete its two-way handshake."
+              $jsErr = if (Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.js-error')) { Get-Content ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.js-error') -Raw } else { 'none' }
+    $ready = Test-Path ($env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.ready')
+    throw "WebView2 loaded but handshake failed: ready=$ready JS errors=$jsErr"
             }
             Write-Host "WebView2 initialized and JavaScript/AHK state exchange confirmed."
             # Reproduce a user pressing the window X: WM_CLOSE, not Stop-Process.
