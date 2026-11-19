@@ -49,6 +49,7 @@ CFDesktopReadPreferences() {
     CF.floatGraphBrush := 0
     CF.floatGraphOffBrush := 0
     CF.floatChartPaintCount := 0
+    CF.floatGraphActive := false
 }
 
 CFDesktopPreferencesJson() {
@@ -264,7 +265,7 @@ CFDesktopResizeFloat(guiObj, state, width, height) {
     CF.floatStatus.Move(margin, 37, inner, 16)
     CF.floatCps.Move(margin, 54, inner, 22)
     chartHeight := Max(0, height - 84)
-    showChart := CF.floatGraph && chartHeight >= 18
+    showChart := CF.floatGraph && CF.floatGraphActive && chartHeight >= 18
     CF.floatChart.Visible := showChart
     if showChart {
         CF.floatChart.Move(margin, 79, inner, chartHeight)
@@ -459,14 +460,19 @@ CFDesktopChartPen(dc, color, thickness := 1) {
 
 CFDesktopDrawFloatChart() {
     global CF
-    if !CF.floatShown || !CF.floatGraph || !CF.floatReady
-        || !IsObject(CF.floatChart) || !CF.floatChart.Visible
+    if !CF.floatShown || !CF.floatGraph || !CF.floatGraphActive
+        || !CF.floatReady || !IsObject(CF.floatChart)
+        || !CF.floatChart.Visible
         return
-    ; Windows redessine le contrôle à chaque WM_PAINT avec SES dimensions
-    ; courantes, et non avec la taille fixe d'un bitmap SS_BITMAP.
+    ; Dessiner directement dans la surface de la fenêtre à chaque
+    ; échantillon du moteur (200 ms). Sur les contrôles Static Windows,
+    ; WM_PAINT peut être absorbé par Windows sans passer par OnMessage.
     hwnd := CF.floatChart.Hwnd
-    DllCall("User32\InvalidateRect", "Ptr", hwnd, "Ptr", 0, "Int", 0)
-    DllCall("User32\UpdateWindow", "Ptr", hwnd)
+    dc := DllCall("User32\GetDC", "Ptr", hwnd, "Ptr")
+    if !dc
+        return
+    try CFDesktopPaintChartDC(dc, hwnd)
+    finally DllCall("User32\ReleaseDC", "Ptr", hwnd, "Ptr", dc)
 }
 
 CFDesktopChartPaint(wParam, lParam, msg, hwnd) {
@@ -565,7 +571,20 @@ CFDesktopUpdate() {
     name := IsObject(profile) ? profile.name : "Principal"
     try A_IconTip := "ClickFlow - " status " - " name
     now := A_TickCount
-    if CF.floatLastSample = 0 || now - CF.floatLastSample >= 180 {
+    ; Ne montrer la courbe que lorsque le moteur a effectivement envoyé
+    ; des clics dans la dernière seconde. Sans activité, pas de graphe.
+    active := CF.recent.Length > 0
+    if active && !CF.floatGraphActive {
+        CF.floatPoints := []
+        CF.floatLastSample := 0
+        CF.floatGraphActive := true
+    } else if !active && CF.floatGraphActive {
+        CF.floatGraphActive := false
+        CF.floatPoints := []
+        CF.floatLastSample := 0
+    }
+    if active && (CF.floatLastSample = 0
+        || now - CF.floatLastSample >= 180) {
         CF.floatLastSample := now
         CF.floatPoints.Push({t: now, cps: CF.recent.Length})
         while CF.floatPoints.Length
@@ -578,8 +597,15 @@ CFDesktopUpdate() {
         CF.floatProfile.Text := name
         CF.floatStatus.Text := status
         CF.floatCps.Text := CF.recent.Length " CPS - " CF.total " clics"
-        CF.floatGraphButton.Text := CF.floatGraph ? "CPS" : "OFF"
-        CFDesktopDrawFloatChart()
+        CF.floatGraphButton.Text := CF.floatGraph ? "Courbe" : "OFF"
+        if CF.floatGraph && CF.floatGraphActive && CF.floatReady {
+            WinGetClientPos(, , &clientW, &clientH,
+                "ahk_id " CF.floatGui.Hwnd)
+            CFDesktopResizeFloat(CF.floatGui, 0, clientW, clientH)
+            CFDesktopDrawFloatChart()
+        } else if IsObject(CF.floatChart) {
+            CF.floatChart.Visible := false
+        }
     }
 }
 
