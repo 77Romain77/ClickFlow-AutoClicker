@@ -458,7 +458,8 @@ BackendMessage(sender, args) {
             StartCapture("emergency")
             return
         }
-        if cmd = "globalHotkey" && parts.Length >= 3 {
+        ; Même la commande cancel sans argument (2 champs) doit passer.
+        if cmd = "globalHotkey" && parts.Length >= 2 {
             try {
                 ; Clavier capturé par WebView2 : contrairement à InputHook,
                 ; les frappes ne sont pas perdues dans le processus Chromium.
