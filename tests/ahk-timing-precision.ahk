@@ -39,11 +39,11 @@ try {
     metrics := []
     for index, rate in [10, 50, 100] {
         CFTestStart(2, index, index)
-        if !CF.engineTimerActive || !CF.precisionRequested
-            throw Error("La resolution 1 ms n'a pas ete activee.")
+        if !CF.engineTimerActive || (!CF.precisionHandle && !CF.precisionRequested)
+            throw Error("Aucun timer haute resolution disponible.")
         SetTimer(CFPrecisionStop, -650)
         Sleep(760)
-        if CF.test.active || CF.engineTimerActive || CF.precisionRequested
+        if CF.test.active || CF.engineTimerActive || CF.precisionRequested || CF.precisionHandle
             throw Error("La cadence n'a pas relache ses timers.")
         stamps := CF.test.clicks
         count := stamps.Length
