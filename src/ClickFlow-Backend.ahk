@@ -488,6 +488,7 @@ BackendMessage(sender, args) {
                 if CF.capture && (CF.captureKind = "emergency"
                     || SubStr(CF.captureKind, 1, 7) = "global:")
                     FinishCapture("")
+                SetNotice("Raccourci refusé : " err.Message)
                 CFProfileMessage("Raccourci refusé : " err.Message, true)
                 SendState()
             }
