@@ -1017,7 +1017,7 @@ function setLiveMonitorActive(active) {
 }
 function updateGateMethodStatus(data) {
     const lastLabels={
-        event:'Événementielle (Raw Input reçu)',
+        event:'Événementielle (activation Raw Input)',
         classic:'Classique (vérification périodique)',
         fallback:'Secours classique (contrôle physique)',
         'already-held':'Bouton déjà maintenu à l’activation',
@@ -1049,9 +1049,13 @@ function updateGateMethodStatus(data) {
             +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
             +'. GetKeyState : '+physical
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
-            +(rawKnown && rawHeld && !data.gatePhysicalHeld
-                ?' Différence Raw Input / GetKeyState : le maintien Raw Input est prioritaire jusqu’au relâchement Raw Input.'
-                :'')
+            +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
+            +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
+            +(rawKnown && !rawHeld && data.gatePhysicalHeld
+                ?' Désaccord détecté : Raw Input signale UP, mais la souris est physiquement maintenue. La vérification physique conserve le maintien.'
+                :rawKnown && rawHeld && !data.gatePhysicalHeld
+                    ?' Désaccord détecté : Raw Input signale DOWN, mais la souris semble relâchée. Le moteur coupe après une brève confirmation.'
+                    :'')
             +(registered && rawCount===0
                 ?' ATTENTION : inscrit mais aucun message reçu ; la méthode événementielle ne peut pas déclencher.'
                 :rawCount>0 && downs===0
