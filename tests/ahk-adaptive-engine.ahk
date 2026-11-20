@@ -266,14 +266,42 @@ try {
         throw Error("La sécurité s'active sur un événement DOWN Raw.")
     if CFGateSafetyDisagree(false, true, false, true, false)
         throw Error("La sécurité ne doit pas affecter le mode Classique.")
-    if CFGateSafetyTimeoutMs() < 20 || CFGateSafetyTimeoutMs() > 80
-        throw Error("Tolérance de sécurité trop grande ou trop petite.")
-    if CFGateSafetyExpired(100, 100 + CFGateSafetyTimeoutMs() - 1)
-        throw Error("La sécurité s'active avant la fin de la tolérance.")
-    if !CFGateSafetyExpired(100, 100 + CFGateSafetyTimeoutMs())
-        throw Error("La divergence prolongée ne déclenche pas la sécurité.")
-    if CFGateSafetyExpired(0, 1000)
-        throw Error("La sécurité s'active sans début de divergence.")
+    ; GetAsyncKeyState LOW pendant les clics ne doit jamais arrêter
+    ; immédiatement un appui physique maintenu.
+    pending := CFGateSafetyNext(0, 0, 100, true, true, false, true, false)
+    if pending.phase != 1 || pending.pause || pending.stop
+        throw Error("Une discordance isolée ne doit pas arrêter les clics.")
+    recovered := CFGateSafetyNext(pending.phase, pending.since, 105,
+        true, true, false, true, true)
+    if recovered.phase != 0 || recovered.pause || recovered.stop
+        throw Error("Une discordance transitoire doit se résorber.")
+    suspect := CFGateSafetyNext(0, 0, 200, true, true, false, true, false)
+    pause := CFGateSafetyNext(suspect.phase, suspect.since,
+        200 + CFGateSafetySuspectMs(), true, true, false, true, false)
+    if pause.phase != 2 || !pause.pause || pause.stop
+        throw Error("Une discordance prolongée doit suspendre les clics.")
+    stillPaused := CFGateSafetyNext(pause.phase, pause.since,
+        200 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs() - 1,
+        true, true, false, true, false)
+    if stillPaused.phase != 2 || !stillPaused.pause || stillPaused.stop
+        throw Error("La pause sans SendInput doit être respectée.")
+    resumed := CFGateSafetyNext(stillPaused.phase, stillPaused.since,
+        201 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs(),
+        true, true, false, true, true)
+    if resumed.phase != 0 || resumed.pause || resumed.stop
+        throw Error("Un vrai maintien confirmé après pause doit reprendre.")
+    stopped := CFGateSafetyNext(pause.phase, pause.since,
+        200 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs(),
+        true, true, false, true, false)
+    if stopped.phase != 3 || !stopped.stop || !stopped.pause
+        throw Error("Un relâchement persistant après pause doit arrêter.")
+    released := CFGateSafetyNext(pause.phase, pause.since, 225,
+        true, true, false, false, false)
+    if released.phase != 0 || !released.pause || !released.disarm
+        throw Error("Un relâchement physique doit rester sans clic.")
+    noRaw := CFGateSafetyNext(0, 0, 100, false, false, false, true, false)
+    if noRaw.phase != 0 || noRaw.pause || noRaw.stop
+        throw Error("Le mode Classique ne doit pas dépendre de Raw Input.")
 
     ; Régression v1.9.13 sur vrai PC : Raw UP est parfois reçu pendant
     ; que GetKeyState indique Maintenu. Le moteur ne doit PAS s'arrêter.
