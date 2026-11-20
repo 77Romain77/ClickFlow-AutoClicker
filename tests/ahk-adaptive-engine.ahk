@@ -247,6 +247,42 @@ try {
     }
     if CF.gateRawDowns != 5 || CF.gateRawUps != 10
         throw Error("Les compteurs d'appui/relâchement Raw Input sont faux.")
+
+    ; Régression matérielle v1.9.12 : après un premier clic valide,
+    ; le moteur ne doit pas revenir en attente pendant que Raw Input
+    ; indique DOWN, même si GetKeyState physique est faux.
+    CF.cfg.gateButton := "RButton"
+    CF.gateEventKnown := false
+    CF.gateWakeSignal := false
+    CFGateRawButtonFlags(0x4)
+    if !CFGateIsHeld()
+        throw Error("Raw Input DOWN doit maintenir la condition en Événementielle.")
+    CF.mouseDetectionMode := "auto"
+    if !CFGateIsHeld()
+        throw Error("Raw Input DOWN doit maintenir la condition en Automatique.")
+    CF.mouseDetectionMode := "event"
+    CF.cfg.mode := 1
+    CF.cfg.min := 50
+    CF.cfg.max := 50
+    CF.target := WinExist("A")
+    CF.gateWaiting := true
+    CF.nextAt := CFNowMs() - 1
+    beforeRepeated := CF.total
+    EngineTick()
+    if CF.total != beforeRepeated + 1 || CF.gateWaiting
+        throw Error("Le premier clic Raw Input ne démarre pas la cadence.")
+    CF.nextAt := CFNowMs() - 1
+    EngineTick()
+    if CF.total != beforeRepeated + 2 || CF.gateWaiting
+        throw Error("Le deuxième clic Raw Input est coupé malgré le maintien.")
+    CFGateRawButtonFlags(0x8)
+    CF.nextAt := CFNowMs() - 1
+    EngineTick()
+    if CF.total != beforeRepeated + 2 || !CF.gateWaiting || CFGateIsHeld()
+        throw Error("La cadence n'est pas interrompue après Raw Input UP.")
+
+    ; Retablir le bouton X2 du test d'horodatage suivant.
+    CF.cfg.gateButton := "XButton2"
     ; Un nouveau premier clic ne doit pas utiliser un horodatage de
     ; l'ancien appui relâché (régression du faux délai 174805 ms).
     CF.gateProbePending := true

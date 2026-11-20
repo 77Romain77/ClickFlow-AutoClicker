@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.13 - 2026-11-20
+
+- Corrige l'arrêt des clics répétés pendant qu'un bouton conditionnel Raw Input reste maintenu : ne combine plus chaque DOWN Raw Input avec GetKeyState pouvant fluctuer pendant SendInput.
+- Le premier UP Raw Input reprend la priorité absolue pour stopper les clics ; Automatique conserve la méthode physique de secours tant qu'aucun événement Raw Input n'a été reçu.
+- Ajoute une comparaison visible Raw Input / GetKeyState / décision du moteur, utile pour distinguer blocage du déclenchement et relâchement détecté.
+- Régression Windows légère : 2 clics successifs après DOWN simulé, aucun après UP ; modes Auto et Événementielle ; aucune modification au mode Classique.
+- Reste expérimental : aucun test du runner ne reproduit à lui seul les signaux de la souris physique de l'utilisateur.
+
+
 ## 1.9.12 - 2026-11-20
 
 - Correctif expérimental de la condition souris Raw Input v1.9.11 qui ne déclenche pas sur certaines machines.

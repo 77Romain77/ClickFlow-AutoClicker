@@ -253,7 +253,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !CFGateIsHeld()
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gatePhysicalHeld":' (CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gatePhysicalHeld":' (CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") ',"gateRawEventKnown":' (CF.gateEventKnown ? "true" : "false") ',"gateRawHeld":' (CF.gateWakeSignal ? "true" : "false") ',"gateEngineHeld":' (CF.armed && CF.cfg.mouseGate && CFGateIsHeld() ? "true" : "false") '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -900,15 +900,18 @@ CFGateIsHeld() {
         return physical
     if CF.mouseDetectionMode = "event" && !CF.gateRawRegistered
         return false
-    if CF.gateRawRegistered {
-        if CF.gateEventKnown && !CF.gateWakeSignal
-            return false
-        if CF.mouseDetectionMode = "event"
-            return CF.gateEventKnown && CF.gateWakeSignal && physical
+    if CF.gateRawRegistered && CF.gateEventKnown {
+        ; Après un DOWN physique Raw Input, l'état Raw Input est la
+        ; référence jusqu'au UP correspondant. GetKeyState peut refléter
+        ; un relâchement logique causé par les SendInput successifs,
+        ; notamment si le bouton conditionnel est aussi celui simulé.
+        ; Ne jamais laisser cette lecture logique casser le maintien.
+        ; Le premier UP Raw Input stoppe les clics, sans délai CPS.
+        return CF.gateWakeSignal
     }
-    ; Le mode Automatique conserve la vérification classique si la
-    ; réception Raw Input échoue ou si le bouton était déjà maintenu.
-    return physical
+    ; Auto : avant le premier événement reçu, conserver la méthode
+    ; classique de secours. Event : pas de clic sans DOWN Raw Input.
+    return CF.mouseDetectionMode = "auto" ? physical : false
 }
 
 ; RI_MOUSE_{LEFT/RIGHT/MIDDLE/BUTTON_4/BUTTON_5}_DOWN/UP.
