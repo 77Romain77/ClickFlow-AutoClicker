@@ -205,15 +205,61 @@ try {
         throw Error("Le mode classique doit attendre sans hook.")
     StopAll("Test classique terminé.")
 
-    ; Ancienne configuration forcee : le hook ne doit pas se réinstaller.
+    ; Enregistrer réellement un périphérique Raw Input avec un HWND AHK
+    ; secondaire, sans injecter de clic physique ni allonger les benchmarks.
+    rawWindow := Gui("+ToolWindow", "ClickFlow test Raw Input")
+    CF.hwnd := rawWindow.Hwnd
+    CF.armed := true
+    CF.cfg.mouseGate := 1
+    CF.diagnosticsEnabled := true
     CF.mouseDetectionMode := "event"
-    CF.pressed := false
-    ActivationDown()
+    CF.gateRawFailed := false
+    CFGateProbeStart()
+    if !CF.gateRawRegistered || !CF.gateRawListener
+        throw Error("RegisterRawInputDevices a échoué sur la fenêtre de test.")
     if CF.gateHook || CF.gateHookCallback
-        throw Error("L'ancienne méthode a recréé le hook.")
-    StopAll("Repli de sécurité terminé.")
-    CF.mouseDetectionMode := "classic"
+        throw Error("Un hook bloquant WH_MOUSE_LL a été réinstallé.")
+    ; Les 5 boutons reconnus doivent capturer DOWN puis UP.
+    for test in [
+        ["LButton", 0x1, 0x2],
+        ["RButton", 0x4, 0x8],
+        ["MButton", 0x10, 0x20],
+        ["XButton1", 0x40, 0x80],
+        ["XButton2", 0x100, 0x200]
+    ] {
+        CF.cfg.gateButton := test[1]
+        CF.gateEventKnown := false
+        CF.gateWakeSignal := false
+        CFGateRawButtonFlags(0x800)  ; Flag sans rapport avec le bouton
+        if CF.gateEventKnown || CF.gateWakeSignal
+            throw Error("Un autre bouton a déclenché la condition.")
+        CFGateRawButtonFlags(test[2])
+        if !CF.gateEventKnown || !CF.gateWakeSignal
+            throw Error("L'appui Raw Input n'est pas reconnu : " test[1])
+        CFGateRawButtonFlags(test[3])
+        if !CF.gateEventKnown || CF.gateWakeSignal || CFGateIsHeld()
+            throw Error("Le relâchement Raw Input reste actif : " test[1])
+        CFGateRawButtonFlags(test[2] | test[3])
+        if CF.gateWakeSignal
+            throw Error("Un relâchement simultané doit annuler l'appui.")
+    }
+    ; Un nouveau premier clic ne doit pas utiliser un horodatage de
+    ; l'ancien appui relâché (régression du faux délai 174805 ms).
+    CF.gateProbePending := true
+    CF.gateProbeQpc := CFPerfCounter()
+    CFGateRawButtonFlags(0x200) ; UP du bouton XButton2
+    if CF.gateProbeQpc || CF.gateWakeSignal
+        throw Error("L'horodatage reste actif après relâchement.")
+    ; Aucune notification Raw Input ne doit réactiver le moteur après Stop.
+    StopAll("Raw Input terminé.")
+    if CF.gateRawRegistered || CF.gateRawListener || CF.gateWakeSignal
+        || CF.gateHook || CF.gateHookCallback
+        throw Error("Raw Input reste enregistré après l'arrêt.")
+    CF.cfg.gateButton := "RButton"
     CF.cfg.mouseGate := 0
+    CF.mouseDetectionMode := "classic"
+    CF.hwnd := 0
+    rawWindow.Destroy()
 
     ; Mesure indicative du CPU consommé au repos par le processus AutoHotkey.
     ; La limite est volontairement large pour ne pas dépendre du runner CI.
