@@ -18,6 +18,8 @@ assert(html.includes('Automatique (Raw Input + secours, expérimental)')
 assert(html.includes("Moteur : ") && html.includes('GetKeyState : ')
     && html.includes('le maintien Raw Input est prioritaire'),
     'Gate diagnostics should expose Raw Input versus GetKeyState disagreement');
+assert(html.includes('id="gateTraceCps"') && html.includes("data.gateTrace"),
+    'Opt-in bounded mouse gate history must be visible after stop');
 assert(html.includes('Messages Raw Input reçus') && html.includes('aucun message reçu'),
     'Raw Input status must report missing real events instead of only registration');
 assert(html.includes('id="mouseDetectionMode"') && html.includes('id="gateMethodCps"')

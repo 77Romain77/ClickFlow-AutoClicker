@@ -927,7 +927,7 @@ CFGateTraceText() {
     if CF.gateTraceStopReason != ""
         result .= " | raison du dernier arrêt : " CF.gateTraceStopReason
     for line in CF.gateTrace
-        result .= "\n" line
+        result .= "`n" line
     return result
 }
 

@@ -292,6 +292,9 @@ try {
         throw Error("L'horodatage reste actif après relâchement.")
     ; Aucune notification Raw Input ne doit réactiver le moteur après Stop.
     StopAll("Raw Input terminé.")
+    if !InStr(CFGateTraceText(), "RAW_DOWN") || !InStr(CFGateTraceText(), "RAW_UP")
+        || !InStr(CFGateTraceText(), "STOP")
+        throw Error("L'historique Raw Input doit survivre à l'arrêt.")
     if CF.gateRawRegistered || CF.gateRawListener || CF.gateWakeSignal
         || CF.gateRawHwnd || CF.gateRawWindow || CF.gateHook || CF.gateHookCallback
         throw Error("Raw Input reste enregistré après l'arrêt.")
