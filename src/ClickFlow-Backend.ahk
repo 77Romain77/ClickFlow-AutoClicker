@@ -1089,7 +1089,7 @@ EngineTick(firstFromActivation := false) {
     ; la condition souris a retardé son émission après l'activation.
     firstClick := CF.diagnosticsEnabled && CF.firstDispatchMs = ""
     measureStart := firstClick ? (firstFromActivation ? CF.activationCounter : CFPerfCounter()) : 0
-    if firstClick && !firstFromActivation && CF.cfg.mouseGate {
+    if firstClick && !firstFromActivation && (CF.cfg.mouseGate || CF.gateProbePending) {
         if CF.gateProbeQpc > 0 && CF.qpcFrequency > 0 && measureStart >= CF.gateProbeQpc {
             CF.gateDetectionMs := Round(1000.0 * (measureStart - CF.gateProbeQpc) / CF.qpcFrequency, 2)
             CF.gateProbeStatus := "measured"
