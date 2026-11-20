@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.8 - 2026-11-20
+
+- Détection événementielle de l'appui du bouton de souris conditionnel, sans injection de clic depuis le callback Windows.
+- Attente du cadenceur interruptible par les messages `MsgWaitForMultipleObjectsEx` tant que la condition n'est pas remplie, avec repli polling si hook indisponible.
+- Hook actif uniquement quand le bouton est attendu et retiré au clic/à l'arrêt ; filtrage des événements `SendInput`.
+- Réinitialisation immédiate de l'échéance après l'appui conditionnel ; CPS et timers adaptatifs conservés.
+- Diagnostics désactivables et moyenne d'estimation Windows v1.9.7 conservés ; tests rapides ajoutés au script existant.
+
+
 ## 1.9.7 - 2026-11-20
 
 - Ajoute un interrupteur de diagnostics facultatifs et désactivés par défaut dans Test CPS et Paramètres, synchronisé et enregistré.

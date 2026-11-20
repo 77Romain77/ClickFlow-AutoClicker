@@ -119,33 +119,61 @@ try {
         throw Error("La condition souris n'empêche pas le premier clic.")
     if CF.firstDispatchMs != "" || CF.firstDispatchKind != ""
         throw Error("Une mesure a ete creee sans aucun premier clic.")
-    ; Simule la condition devenue vraie, sans injecter un bouton physique
-    ; sur le runner CI : le premier clic ulterieur doit etre mesure.
-    ; Callback horodaté artificiellement 6 ms avant le tick :
-    ; aucune injection de clic ni nouveau test long.
+    ; Contrôler le chemin événementiel sans injection physique sur le runner :
+    ; mauvais bouton et événements injectés ne doivent jamais déclencher.
+    if !CF.gateHook && !CF.gateHookFailed
+        throw Error("Le hook souris conditionnel n'a pas été essayé.")
+    CFGateTrackEvent(0x201, 0, 0, A_TickCount) ; clic gauche, pas droit
+    CFGateTrackEvent(0x204, 0, 1, A_TickCount) ; injection logicielle
+    if CF.gateWakeSignal
+        throw Error("Un événement souris non autorisé déclenche la condition.")
+    CFGateTrackEvent(0x204, 0, 0, A_TickCount) ; appui physique droit
+    if !CF.gateWakeSignal
+        throw Error("L'appui physique ne réveille pas la condition.")
+    CFGateTrackEvent(0x205, 0, 0, A_TickCount) ; relâché avant envoi
+    if CF.gateWakeSignal
+        throw Error("Le relâchement souris n'annule pas l'attente.")
+    CFGateTrackEvent(0x204, 0, 0, A_TickCount)
+    ; 6 ms simulées depuis le callback, indépendamment du temps Windows.
     CF.gateProbeQpc := CFPerfCounter() - Round(CF.qpcFrequency * 0.006)
     CF.gateEventUptime := (DllCall("Kernel32\GetTickCount64", "UInt64") - 16) & 0xFFFFFFFF
     CF.gateProbePending := true
-    CF.cfg.mouseGate := 0
     EngineTick()
     if CF.total != count + 2 || CF.firstDispatchMs = ""
         || CF.firstDispatchKind != "condition" || CF.firstDispatchMs < 0
-        throw Error("Le premier clic apres attente souris n'est pas mesure.")
+        throw Error("Le premier clic événementiel n'est pas envoyé immédiatement.")
     if CF.gateProbeStatus != "measured" || CF.gateDetectionMs < 5
         || CF.gateDetectionMs > 60
         throw Error("La mesure du callback souris est incorrecte : " CF.gateDetectionMs)
     if CF.gateEventDelayMs = "" || CF.gateEventSamples.Length != 1
         throw Error("La mesure approximative depuis l'evenement Windows manque.")
-    if CF.gateHook || CF.gateHookCallback || CF.gateProbePending
-        throw Error("Hook de diagnostic non libere apres le premier clic.")
+    if CF.gateHook || CF.gateHookCallback || CF.gateProbePending || CF.gateWakeSignal
+        throw Error("Hook de détection non libéré après le premier clic.")
     StopAll("Condition souris testée.")
+    ; Diagnostics désactivés : la condition doit toujours détecter l'appui,
+    ; sans calcul de latence, et libérer son hook après l'envoi.
+    CFDiagToggle(false)
+    CF.pressed := false
+    CF.cfg.mouseGate := 1
+    ActivationDown()
+    if !CF.armed || CF.firstDispatchMs != ""
+        throw Error("La condition sans diagnostics ne démarre pas correctement.")
+    CFGateTrackEvent(0x204, 0, 0, A_TickCount)
+    if !CF.gateWakeSignal
+        throw Error("La détection événementielle dépend des diagnostics.")
+    EngineTick()
+    if CF.total != count + 3 || CF.gateHook || CF.firstDispatchMs != ""
+        throw Error("Le clic sans diagnostics ne fonctionne pas.")
+    StopAll("Condition souris testée sans diagnostics.")
+    CF.diagnosticsEnabled := true
+    CF.cfg.mouseGate := 0
 
     ; Le mode Maintenir doit aussi envoyer son premier clic dès le
     ; callback, avant même la stabilisation de GetKeyState("F6", "P").
     CF.pressed := false
     CF.cfg.hold := 1
     ActivationDown()
-    if CF.total != count + 3
+    if CF.total != count + 4
         throw Error("Le premier clic en mode Maintenir n'est pas immédiat.")
     ActivationUp()
     if CF.armed || CF.engineTimerActive
@@ -156,7 +184,7 @@ try {
     CF.pressed := false
     CF.hwnd := targetGui.Hwnd
     ActivationDown()
-    if CF.armed || CF.engineTimerActive || CF.total != count + 3
+    if CF.armed || CF.engineTimerActive || CF.total != count + 4
         throw Error("La sécurité de focus a été contournée.")
     CF.hwnd := 0
     CF.pressed := false
@@ -169,7 +197,7 @@ try {
     CFTestTick(CF.test.started + 2000)
     if CF.test.active || CF.engineTimerActive || CF.statsTimerActive
         throw Error("Le timer reste actif après la fin du Test CPS.")
-    if CF.total != count + 3
+    if CF.total != count + 4
         throw Error("Le Test CPS a injecté des clics Windows.")
     CFTestStart(5, 105, 1)
     CFTestStop("annulé")
