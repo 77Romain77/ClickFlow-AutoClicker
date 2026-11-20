@@ -268,6 +268,12 @@ try {
         throw Error("La sécurité ne doit pas affecter le mode Classique.")
     if CFGateSafetyTimeoutMs() < 20 || CFGateSafetyTimeoutMs() > 80
         throw Error("Tolérance de sécurité trop grande ou trop petite.")
+    if CFGateSafetyExpired(100, 100 + CFGateSafetyTimeoutMs() - 1)
+        throw Error("La sécurité s'active avant la fin de la tolérance.")
+    if !CFGateSafetyExpired(100, 100 + CFGateSafetyTimeoutMs())
+        throw Error("La divergence prolongée ne déclenche pas la sécurité.")
+    if CFGateSafetyExpired(0, 1000)
+        throw Error("La sécurité s'active sans début de divergence.")
 
     ; Régression v1.9.13 sur vrai PC : Raw UP est parfois reçu pendant
     ; que GetKeyState indique Maintenu. Le moteur ne doit PAS s'arrêter.
