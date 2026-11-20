@@ -28,7 +28,7 @@ assert(html.includes('Moteur : ') && html.includes('GetKeyState (contrôle du ma
     && html.includes('GetAsyncKeyState (indicatif) : ')
     && html.includes('Dernier état Raw Input')
     && html.includes('Bouton matériel suivi')
-    && html.includes('périphérique identifié reste prioritaire')
+    && html.includes('périphérique identifié reste prioritaire'),
     'Mouse diagnostics must reflect the v1.9.18 physical-device tracking and avoid obsolete stop messages');
 assert(html.includes('Messages Raw Input reçus') && html.includes('Aucun message Raw Input compté depuis'),
     'Raw Input diagnostics must distinguish missing counters from missing hardware events');
