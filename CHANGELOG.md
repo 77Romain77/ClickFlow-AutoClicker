@@ -1,5 +1,12 @@
 # Historique des versions
 
+## 1.9.4 - 2026-11-20
+
+- Cadenceur haute précision : remplace la vérification AutoHotkey périodique par des attentes Win32 courtes, après demande de résolution 1 ms uniquement pendant l'activité. Retour à la résolution normale après arrêt.
+- Réduit la perte de CPS aux cadences rapides (notamment 50 et 100), tout en conservant le premier clic immédiat, les protections et la consommation minimale au repos.
+- Diagnostic dans Test CPS : cible fixe, écart, intervalle moyen réel du cadenceur ; délai logiciel du premier clic réel mesuré via QueryPerformanceCounter, clairement distingué de la latence physique.
+- Tests automatisés Windows courts aux cadences 10, 50 et 100 CPS, ajoutés au job existant.
+
 ## 1.9.3 - 2026-11-20
 
 - Timers adaptatifs : le moteur de clics n'a plus de timer à 10 ms lorsqu'il est arrêté ; le timer est actif uniquement pendant les clics automatiques ou un Test CPS.
