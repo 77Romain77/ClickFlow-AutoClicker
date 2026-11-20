@@ -39,7 +39,7 @@ try {
     ; Tester les commandes réellement envoyées par l'interface WebView2.
     PostShortcutCommand("globalHotkey", "begin", "next")
     if !CF.capture || CF.captureKind != "global:next"
-        throw Error("La commande WebView begin n'est pas reçue.")
+        throw Error("La commande begin n'est pas reçue. CF.capture=" CF.capture " notice=" CF.notice " kind=" CF.captureKind)
     PostShortcutCommand("globalHotkey", "set", "next", "vk78")
     if CF.capture || GetKeyVK(CF.globalKeys["next"]) != GetKeyVK("F9")
         throw Error("La touche F9 envoyée par WebView2 n'est pas configurée.")
