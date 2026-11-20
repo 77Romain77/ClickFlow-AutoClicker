@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.14 - 2026-11-20
+
+- Corrige la contradiction observée sur le PC de test : Raw Input signale UP pendant que GetKeyState confirme que le bouton conditionnel est toujours maintenu.
+- Le premier événement Raw DOWN autorise la condition, puis l'état physique confirmé prend le relais pour le maintien et le relâchement ; UP Raw discordant ne coupe plus prématurément la cadence.
+- Une confirmation très courte (8 ms maximum) traite les clignotements physiques pendant SendInput ; un RAW DOWN orphelin ne peut pas maintenir la rafale après relâchement confirmé.
+- Ajoute un compteur de RAW UP reçus pendant un maintien physique, visible dans Test CPS et Paramètres ; tests déterministes ciblés sur les désaccords, le secours Auto et l'arrêt.
+- Classique reste stable et sélectionné par défaut. Raw Input demeure expérimental jusqu'à confirmation matérielle.
+
+
 ## 1.9.13 - 2026-11-20
 
 - Corrige l'arrêt des clics répétés pendant qu'un bouton conditionnel Raw Input reste maintenu : ne combine plus chaque DOWN Raw Input avec GetKeyState pouvant fluctuer pendant SendInput.
