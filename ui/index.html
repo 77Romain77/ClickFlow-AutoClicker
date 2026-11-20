@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.9.1 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.9.2 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.1 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.2 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -876,7 +876,7 @@ $('emergencyCapture').onclick=()=>{
     model.captureTarget='emergency';
     $('emergencyView').textContent='Appuyez...';
     renderGlobalHotkeys();
-    if(connected) send('captureStop');
+    if(connected)send('globalHotkey','begin','emergency');
     else toast("Appuyez sur la touche d'arrêt d'urgence, ou Échap pour annuler.");
 };
 $('viewToggle').onclick=()=>{
@@ -884,27 +884,61 @@ $('viewToggle').onclick=()=>{
     if(connected)send('view',next?'compact':'expanded');
     else{model.compact=next;render();}
 };
+// WebView2 possède le focus clavier quand on clique sur un bouton des
+// Paramètres. Le navigateur transmet donc la frappe à JavaScript, et non
+// toujours à l'InputHook AutoHotkey global (bug v1.9.2).
+function shortcutKeyFromEvent(e) {
+    if(['Shift','Control','Alt','Meta','AltGraph','Process','Unidentified']
+        .includes(e.key))return '';
+    const code=Number(e.keyCode||e.which||0);
+    if(Number.isInteger(code)&&code>=8&&code<=254)
+        return 'vk'+code.toString(16).toUpperCase().padStart(2,'0');
+    if(/^F([1-9]|1\d|2[0-4])$/.test(e.key))return e.key;
+    if(e.key&&e.key.length===1)return e.key.toUpperCase();
+    const special={ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',
+        ArrowRight:'Right',Escape:'Esc',Enter:'Enter',Backspace:'Backspace',
+        Delete:'Delete',Insert:'Insert',Home:'Home',End:'End',
+        PageUp:'PgUp',PageDown:'PgDn',' ':'Space',Tab:'Tab'};
+    return special[e.key]||'';
+}
 document.addEventListener('keydown',e=>{
-    if(!model.capturing || connected) return;
-    e.preventDefault();e.stopPropagation();
+    if(!model.capturing || e.repeat)return;
+    const target=model.captureTarget;
+    const webCapture=connected&&(target==='emergency'||target.startsWith('global:'));
+    // Les anciennes captures (activation) continuent via AutoHotkey.
+    if(connected&&!webCapture)return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.key==='Escape'||e.key==='Esc'){
+        if(webCapture)send('globalHotkey','cancel');
+        else {model.capturing=false;render();renderGlobalHotkeys();}
+        return;
+    }
+    const picked=shortcutKeyFromEvent(e);
+    if(!picked)return;
+    if(webCapture){
+        const action=target==='emergency'?'emergency':target.slice(7);
+        // Ne jamais prétendre que la touche est appliquée avant validation
+        // AutoHotkey. On attend le message state de confirmation.
+        send('globalHotkey','set',action,picked);
+        return;
+    }
     model.capturing=false;
-    if(e.key!=='Escape') {
-        const picked=e.key===' '?'Espace':e.key;
-        if(model.captureTarget.startsWith('global:')) {
-            const action=model.captureTarget.slice(7);
-            if(picked===model.emergencyKey || model.profiles.some(p=>p.settings.hotkey===picked)
-                || Object.entries(model.globalHotkeys).some(([k,v])=>k!==action&&v===picked))
-                toast('Cette touche est déjà utilisée.');
-            else model.globalHotkeys[action]=picked;
-        } else if(model.captureTarget==='emergency') {
-            if(model.profiles.some(p=>p.settings.hotkey===picked)
-                || Object.values(model.globalHotkeys).some(value=>value===picked))
-                toast('Cette touche est déjà utilisée.');
-            else model.emergencyKey=picked;
-        } else {
-            if(picked===model.emergencyKey){toast("Cette touche sert déjà à l'arrêt d'urgence.");}
-            else config().hotkey=picked;
-        }
+    if(target.startsWith('global:')){
+        const action=target.slice(7);
+        if(picked===model.emergencyKey
+            || model.profiles.some(p=>p.settings.hotkey===picked)
+            || Object.entries(model.globalHotkeys).some(([k,v])=>k!==action&&v===picked))
+            toast('Cette touche est déjà utilisée.');
+        else model.globalHotkeys[action]=picked;
+    } else if(target==='emergency'){
+        if(model.profiles.some(p=>p.settings.hotkey===picked)
+            || Object.values(model.globalHotkeys).some(value=>value===picked))
+            toast('Cette touche est déjà utilisée.');
+        else model.emergencyKey=picked;
+    } else {
+        if(picked===model.emergencyKey)toast("Cette touche sert déjà à l'arrêt d'urgence.");
+        else config().hotkey=picked;
     }
     render();
     renderGlobalHotkeys();
@@ -916,7 +950,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.1 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.2 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1138,7 +1172,7 @@ document.querySelectorAll('[data-global-capture]').forEach(button=>{
         model.capturing=true;
         model.captureTarget='global:'+action;
         renderGlobalHotkeys();
-        if(connected)send('globalHotkey','capture',action);
+        if(connected)send('globalHotkey','begin',action);
         else toast('Appuie sur une touche, ou Échap pour annuler.');
     };
 });
@@ -1641,6 +1675,9 @@ if(bridge) {
         }
         if(!msg||typeof msg!=='object')return;
         if(msg.type==='state' && Array.isArray(msg.profiles) && msg.profiles.length) {
+            const wasConnected=connected;
+            const previousEmergency=model.emergencyKey;
+            const previousGlobals={...model.globalHotkeys};
             connected=true;
             model.profiles=msg.profiles;
             model.selected=msg.selected;
@@ -1656,12 +1693,23 @@ if(bridge) {
             model.capturing=false;
             setLiveAppearance();
             render();
+            renderGlobalHotkeys();
+            if(wasConnected){
+                if(previousEmergency!==model.emergencyKey)
+                    toast('Arrêt d’urgence : '+(model.emergencyKey||'Aucun'));
+                else for(const [action,label] of Object.entries(globalKeySuffix)){
+                    if(previousGlobals[action]!==model.globalHotkeys[action]){
+                        toast('Raccourci '+action+' : '+(model.globalHotkeys[action]||'Aucun'));
+                        break;
+                    }
+                }
+            }
             cpsSyncProfiles();
             $('demoToggle').textContent='Arrêter les clics'+(model.emergencyKey?' ('+model.emergencyKey+')':'');
             window.chrome.webview.postMessage('connected');
         } else if(msg.type==='stats') {
             updateLiveStats(msg);
-            if(msg.capturing)renderGlobalHotkeys();
+            renderGlobalHotkeys();
         }
         else if(msg.type==='navigate' && msg.page==='cps')navigatePage('cps');
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');

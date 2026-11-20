@@ -34,8 +34,12 @@ assert(html.includes("model.emergencyKey||'Aucun'"),
 
 assert(html.includes("send('globalHotkey','clear',action)"),
     'Clear action must send explicit unassignment to AutoHotkey');
-assert(html.includes("send('globalHotkey','capture',action)"),
-    'Optional shortcut capture must connect to AutoHotkey');
+assert(html.includes("send('globalHotkey','begin',action)"),
+    'Optional shortcut capture must connect to AutoHotkey WebView mode');
+assert(html.includes("send('globalHotkey','set',action,picked)"),
+    'Keyboard presses must be submitted to the native backend');
+assert(html.includes("send('globalHotkey','cancel')"),
+    'Escape must cancel capture natively');
 assert(html.includes("msg.globalHotkeys"),'State synchronization for global keys is required');
 for(const name of ['backupExport','backupRestore','overlaySize']){
     assert(ids.includes(name),'Missing new setting '+name);

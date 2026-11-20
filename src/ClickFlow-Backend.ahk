@@ -458,18 +458,43 @@ BackendMessage(sender, args) {
             StartCapture("emergency")
             return
         }
-        if cmd = "globalHotkey" && parts.Length >= 3 {
-            if parts[2] = "capture" && parts.Length >= 4 {
-                if HasValue(CFGlobalKeys(), parts[3])
-                    StartCapture("global:" parts[3])
-            } else if parts[2] = "clear" && parts.Length >= 4 {
-                try {
-                    if parts[3] = "emergency"
-                        CFSetEmergencyKey("")
-                    else
-                        CFGlobalSet(parts[3], "")
-                } catch as err
-                    CFProfileMessage("Raccourci refusé : " err.Message, true)
+        ; Même la commande cancel sans argument (2 champs) doit passer.
+        if cmd = "globalHotkey" && parts.Length >= 2 {
+            try {
+                ; Clavier capturé par WebView2 : contrairement à InputHook,
+                ; les frappes ne sont pas perdues dans le processus Chromium.
+                switch parts[2] {
+                    case "begin", "capture":
+                        ; globalHotkey + begin + action = 3 champs.
+                        if parts.Length >= 3
+                            CFWebShortcutBegin(parts[3])
+                    case "set":
+                        ; globalHotkey + set + action + touche = 4 champs.
+                        if parts.Length >= 4
+                            CFWebShortcutFinish(parts[3], parts[4])
+                    case "cancel":
+                        if CF.capture && (CF.captureKind = "emergency"
+                            || SubStr(CF.captureKind, 1, 7) = "global:")
+                            FinishCapture("")
+                    case "clear":
+                        ; globalHotkey + clear + action = 3 champs.
+                        if parts.Length >= 3 {
+                            if CF.capture
+                                FinishCapture("")
+                            if parts[3] = "emergency"
+                                CFSetEmergencyKey("")
+                            else
+                                CFGlobalSet(parts[3], "")
+                            SendState()
+                        }
+                }
+            } catch as err {
+                if CF.capture && (CF.captureKind = "emergency"
+                    || SubStr(CF.captureKind, 1, 7) = "global:")
+                    FinishCapture("")
+                SetNotice("Raccourci refusé : " err.Message)
+                CFProfileMessage("Raccourci refusé : " err.Message, true)
+                SendState()
             }
             return
         }
@@ -659,8 +684,10 @@ UnregisterEmergency() {
 
 CFSetEmergencyKey(key) {
     global CF
-    if key = CF.emergencyKey
+    if key = CF.emergencyKey {
+        SendState()
         return
+    }
     if key != "" {
         if key = "Escape" || key = "Esc" || key = "!" || !GetKeyVK(key)
             throw Error("Touche d'arrêt non prise en charge.")
@@ -924,6 +951,39 @@ UpdateStats() {
         CF.overlayRecent.RemoveAt(1)
     SendStats()
     CFDesktopUpdate()
+}
+
+CFWebShortcutBegin(action) {
+    global CF
+    if action != "emergency" && !HasValue(CFGlobalKeys(), action)
+        throw Error("Action globale inconnue.")
+    if CF.capture
+        FinishCapture("")
+    StopAll("Choix du raccourci global.")
+    ; Seule l'interface WebView2 écoute les touches pendant la capture.
+    ; On désactive temporairement les hotkeys Windows (y compris F12).
+    CF.capture := true
+    CF.captureKind := action = "emergency" ? "emergency" : "global:" action
+    CF.inputHook := 0
+    UnregisterActivation()
+    UnregisterEmergency()
+    CFGlobalUnregister()
+    SendStats()
+    SetNotice("Appuie sur une touche dans ClickFlow ou Échap pour annuler.")
+}
+
+CFWebShortcutFinish(action, key) {
+    global CF
+    expected := action = "emergency" ? "emergency" : "global:" action
+    if !CF.capture || CF.captureKind != expected
+        throw Error("Aucune capture en cours pour cette action.")
+    ; Le client envoie un code virtuel Windows (vkNN) ou un nom AHK.
+    ; Pas de touche vide par erreur : utiliser le bouton Aucun.
+    if key = "" || StrLen(key) > 32 || !GetKeyVK(key)
+        throw Error("Touche non reconnue par Windows.")
+    if key = "Escape" || key = "Esc"
+        throw Error("Échap est réservé à l'annulation.")
+    FinishCapture(key)
 }
 
 StartCapture(kind := "activation") {
