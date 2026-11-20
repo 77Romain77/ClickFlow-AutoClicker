@@ -1291,7 +1291,7 @@ EngineTick(firstFromActivation := false) {
             CF.gateTraceWaits += 1
             CFGateTrace("WAIT", "RawHeld=" CF.gateWakeSignal
                 " RawKnown=" CF.gateEventKnown " GetKeyState="
-                !!GetKeyState(CF.cfg.gateButton, "P")
+                (GetKeyState(CF.cfg.gateButton, "P") ? 1 : 0)
                 " tick=" CF.gateTraceTicks " clicks=" CF.gateTraceClicks)
         }
         CF.gateWaiting := true
