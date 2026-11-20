@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.3 - 2026-11-20
+
+- Timers adaptatifs : le moteur de clics n'a plus de timer à 10 ms lorsqu'il est arrêté ; le timer est actif uniquement pendant les clics automatiques ou un Test CPS.
+- Premier clic envoyé directement depuis l'événement d'activation (modes Maintenir et Basculer), sans attendre le premier tick de 10 ms ; calcul du délai avant le clic suivant depuis cet envoi pour éviter tout doublon.
+- Rafraîchissement des statistiques réduit à une fois par seconde au repos, conservé à cinq fois par seconde pendant l'activité.
+- Maintien des sécurités de focus, de relâchement de touche, de conditionnement souris, d'arrêt d'urgence et de l'affichage de l'overlay pendant 2,2 secondes après l'arrêt.
+- Bench et tests Windows : latence réelle du premier clic, absence de double clic, cadence 5 CPS, réactivation, conditions de sécurité, timer du banc de test, arrêt des timers et temps CPU au repos.
+- Aucun changement de l'interface, des profils ni de leur cadence cible.
+
 ## 1.9.2 - 2026-11-20
 
 - Corrige la capture des raccourcis globaux qui restait bloquée sur "Appuyez..." : la touche est désormais récupérée par WebView2 (fenêtre qui possède le focus) et validée puis enregistrée par AutoHotkey.
