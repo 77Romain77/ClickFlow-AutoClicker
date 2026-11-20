@@ -256,53 +256,18 @@ try {
     if CF.gateDebugEnabled || CF.gateRawDowns || CF.gateRawUps
         throw Error("Les compteurs Raw Input restent actifs après désactivation.")
     ; Les tests de maintien ci-dessous se déroulent sans suivi détaillé.
-    ; État AHK bloqué sur DOWN + état Raw Input sur UP + état asynchrone UP :
-    ; déclenchement de la sécurité après confirmation, pas sur un seul UP.
-    if !CFGateSafetyDisagree(true, true, false, true, false)
-        throw Error("Une divergence physique persistante doit être vérifiée.")
-    if CFGateSafetyDisagree(true, true, false, true, true)
-        throw Error("La sécurité s'active alors que Windows confirme le maintien.")
-    if CFGateSafetyDisagree(true, true, true, true, false)
-        throw Error("La sécurité s'active sur un événement DOWN Raw.")
-    if CFGateSafetyDisagree(false, true, false, true, false)
-        throw Error("La sécurité ne doit pas affecter le mode Classique.")
-    ; GetAsyncKeyState LOW pendant les clics ne doit jamais arrêter
-    ; immédiatement un appui physique maintenu.
-    pending := CFGateSafetyNext(0, 0, 100, true, true, false, true, false)
-    if pending.phase != 1 || pending.pause || pending.stop
-        throw Error("Une discordance isolée ne doit pas arrêter les clics.")
-    recovered := CFGateSafetyNext(pending.phase, pending.since, 105,
-        true, true, false, true, true)
-    if recovered.phase != 0 || recovered.pause || recovered.stop
-        throw Error("Une discordance transitoire doit se résorber.")
-    suspect := CFGateSafetyNext(0, 0, 200, true, true, false, true, false)
-    quietStep := CFGateSafetyNext(suspect.phase, suspect.since,
-        200 + CFGateSafetySuspectMs(), true, true, false, true, false)
-    if quietStep.phase != 2 || !quietStep.pause || quietStep.stop
-        throw Error("Une discordance prolongée doit suspendre les clics.")
-    stillPaused := CFGateSafetyNext(quietStep.phase, quietStep.since,
-        200 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs() - 1,
-        true, true, false, true, false)
-    if stillPaused.phase != 2 || !stillPaused.pause || stillPaused.stop
-        throw Error("La pause sans SendInput doit être respectée.")
-    resumed := CFGateSafetyNext(stillPaused.phase, stillPaused.since,
-        201 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs(),
-        true, true, false, true, true)
-    if resumed.phase != 0 || resumed.pause || resumed.stop
-        throw Error("Un vrai maintien confirmé après pause doit reprendre.")
-    stopped := CFGateSafetyNext(quietStep.phase, quietStep.since,
-        200 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs(),
-        true, true, false, true, false)
-    if stopped.phase != 3 || !stopped.stop || !stopped.pause
-        throw Error("Un relâchement persistant après pause doit arrêter.")
-    released := CFGateSafetyNext(quietStep.phase, quietStep.since, 225,
-        true, true, false, false, false)
-    if released.phase != 0 || !released.pause || !released.disarm
-        throw Error("Un relâchement physique doit rester sans clic.")
-    noRaw := CFGateSafetyNext(0, 0, 100, false, false, false, true, false)
-    if noRaw.phase != 0 || noRaw.pause || noRaw.stop
-        throw Error("Le mode Classique ne doit pas dépendre de Raw Input.")
-
+    ; Les lectures Windows asynchrones ne doivent pas provoquer un
+    ; arrêt quand l'état physique AHK indique que le bouton est maintenu.
+    ; L'ancienne sécurité basée sur GetAsyncKeyState a provoqué des
+    ; arrêts prématurés dans les v1.9.16 et v1.9.17.
+    if !CFGateHeldDecision("event", true, true, false, true, false)
+        throw Error("Raw UP et GetKeyState DOWN doivent garder le maintien.")
+    if CFGateHeldDecision("event", true, true, false, false, false)
+        throw Error("GetKeyState UP doit arrêter la répétition.")
+    if !CFGateHeldDecision("auto", true, true, false, true, false)
+        throw Error("Le maintien Auto ne doit pas dépendre de GetAsyncKeyState.")
+    if CFGateHeldDecision("auto", true, true, false, false, false)
+        throw Error("Auto doit couper si le maintien physique est relâché.")
     ; Régression v1.9.13 sur vrai PC : Raw UP est parfois reçu pendant
     ; que GetKeyState indique Maintenu. Le moteur ne doit PAS s'arrêter.
     if !CFGateHeldDecision("event", true, true, false, true, false)
