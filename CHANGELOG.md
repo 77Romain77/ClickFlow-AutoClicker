@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.10 - 2026-11-20
+
+- Correctif urgent de stabilité : désactive entièrement le hook souris global `WH_MOUSE_LL` supplémentaire à l'origine probable de freezes et de clics persistants.
+- Force le mode Classique au démarrage, y compris pour les configurations précédentes Automatique/Événementielle ; options suspendues affichées en grisé, requêtes anciennes refusées.
+- Restaure l'attente classique du cadenceur avec contrôle physique `GetKeyState`, sans revenir au timer CPS de basse précision.
+- Remet à zéro les horodatages de callback pour supprimer les mesures aberrantes (plusieurs minutes) et indique leur indisponibilité en mode Classique.
+- Tests Windows courts de non-installation du hook, du contrôle conditionnel, du nettoyage et du changement de mode ; pas de nouveau workflow.
+- Refonte future envisagée via Windows Raw Input après validation ; le hook actuel reste suspendu.
+
+
 ## 1.9.9 - 2026-11-20
 
 - Ajoute trois choix globaux de détection du bouton conditionnel : Automatique (événement + secours), Événementielle uniquement, Classique uniquement.
