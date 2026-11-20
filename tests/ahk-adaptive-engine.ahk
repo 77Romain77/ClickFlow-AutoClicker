@@ -296,13 +296,20 @@ try {
     CF.gateWaiting := true
     CF.nextAt := CFNowMs() - 1
     beforeRepeated := CF.total
+    ; Le runner ne tient aucun bouton physique. En mode Raw Input expérimental,
+    ; la décision nouvelle exige GetKeyState=DOWN ou la petite tolérance de
+    ; notification : réamorcer cette tolérance explicitement pour les deux
+    ; ticks artificiels. Le cas physique maintenu (DOWN) est couvert par
+    ; CFGateHeldDecision(..., physical=true) ci-dessus.
+    CF.gateRawPhysicalUpSince := CFNowMs()
     EngineTick()
     if CF.total != beforeRepeated + 1 || CF.gateWaiting
         throw Error("Le premier clic Raw Input ne démarre pas la cadence.")
     CF.nextAt := CFNowMs() - 1
+    CF.gateRawPhysicalUpSince := CFNowMs()
     EngineTick()
     if CF.total != beforeRepeated + 2 || CF.gateWaiting
-        throw Error("Le deuxième clic Raw Input est coupé malgré le maintien.")
+        throw Error("Le deuxième clic Raw Input est coupé pendant la grâce de notification.")
     CFGateRawButtonFlags(0x8)
     CF.nextAt := CFNowMs() - 1
     EngineTick()
