@@ -950,6 +950,10 @@ CFGateSafetyDisagree(registered, eventKnown, rawDown, physical, asyncHeld) {
     return registered && eventKnown && !rawDown && physical && !asyncHeld
 }
 
+CFGateSafetyExpired(startMs, currentMs) {
+    return startMs > 0 && currentMs - startMs >= CFGateSafetyTimeoutMs()
+}
+
 CFGateIsHeld() {
     global CF
     if !CF.cfg.mouseGate
@@ -971,7 +975,7 @@ CFGateIsHeld() {
         nowSafety := CFNowMs()
         if !CF.gateAsyncUpSince
             CF.gateAsyncUpSince := nowSafety
-        else if nowSafety - CF.gateAsyncUpSince >= CFGateSafetyTimeoutMs() {
+        else if CFGateSafetyExpired(CF.gateAsyncUpSince, nowSafety) {
             ; Ne pas permettre un redémarrage via le fallback Automatique.
             ; EngineTick désactive la session au prochain passage.
             CF.gateSafetyTripped := true
