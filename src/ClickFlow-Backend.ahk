@@ -795,6 +795,16 @@ CFPrecisionSleep(milliseconds) {
     DllCall("Kernel32\Sleep", "UInt", milliseconds)
 }
 
+CFActivationRefreshPressed() {
+    global CF
+    ; La boucle haute précision peut retarder la notification "Up" AHK.
+    ; En Basculer, lire aussi l'état physique pour ne pas bloquer le
+    ; prochain appui lorsque cette notification a été manquée.
+    if CF.cfg.hold = 2 && CF.pressed
+        && !GetKeyState(CF.cfg.activation, "P")
+        CF.pressed := false
+}
+
 CFEngineRun() {
     global CF
     if !CF.engineTimerActive || CF.engineLoopRunning
@@ -802,6 +812,7 @@ CFEngineRun() {
     CF.engineLoopRunning := true
     try {
         while CF.engineTimerActive && !CF.shuttingDown {
+            CFActivationRefreshPressed()
             EngineTick()
             if !CF.engineTimerActive
                 break
@@ -888,11 +899,13 @@ ActivationDown(*) {
     ; EngineTick calcule et programme nextAt pour le clic suivant :
     ; aucun clic double au lancement du cadenceur précis.
     EngineTick(true)
-    if CF.armed {
-        CFEngineSetTimer(true)
-        CFStatsSetTimer(true)
-    }
+    ; Montrer l'overlay pendant que la touche d'activation est encore
+    ; traitée, avant que le cadenceur haute précision prenne la main.
     CFDesktopUpdate()
+    if CF.armed {
+        CFStatsSetTimer(true)
+        CFEngineSetTimer(true)
+    }
     SetNotice(CF.emergencyKey != ""
         ? "Clics actifs. " DisplayKey(CF.emergencyKey) " pour arrêter."
         : "Clics actifs. Pour arrêter, utilise ClickFlow ou la zone de notification.")
