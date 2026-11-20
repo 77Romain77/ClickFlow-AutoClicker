@@ -7,10 +7,12 @@ new vm.Script(src[1],{filename:'ClickFlow v1.9 UI'});
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
 assert.equal(new Set(ids).size,ids.length,'All IDs must remain unique');
 const settings=html.slice(html.indexOf('<section id="page-settings"'),html.indexOf('<section id="page-about"'));
-assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,6,
-    'General, overlay, global shortcuts, Windows shortcuts, backup, maintenance need separate groups');
-const labels=['Général','Overlay','Raccourcis globaux','Raccourcis Windows',
+assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,7,
+    'General, diagnostics, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
+const labels=['Général','Diagnostics','Overlay','Raccourcis globaux','Raccourcis Windows',
     'Sauvegarde complète','Maintenance'];
+assert.equal((html.match(/data-preference="diagnosticsEnabled"/g)||[]).length,2,
+    'Diagnostic toggle must be visible in Test CPS and Settings');
 for(const name of labels)
     assert(settings.includes('<summary>'+name),
         'Missing collapsible settings category '+name);
