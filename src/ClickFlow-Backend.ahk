@@ -937,7 +937,7 @@ CFGateAsyncHeld(button) {
     if !vk
         return false
     ; GetAsyncKeyState est distinct de la lecture physique AHK (GetKeyState).
-    return !!(DllCall("User32\\GetAsyncKeyState", "Int", vk, "Short") & 0x8000)
+    return !!(DllCall("User32\GetAsyncKeyState", "Int", vk, "Short") & 0x8000)
 }
 
 CFGateSafetyTimeoutMs() {
@@ -959,9 +959,14 @@ CFGateIsHeld() {
         return physical
     if CF.gateSafetyTripped
         return false
+    ; N'interroger l'état asynchrone que si Raw Input rapporte UP,
+    ; tandis que l'état physique AHK rapporte encore DOWN.
+    asyncHeld := true
+    if CF.gateRawRegistered && CF.gateEventKnown
+        && !CF.gateWakeSignal && physical
+        asyncHeld := CFGateAsyncHeld(CF.cfg.gateButton)
     disagree := CFGateSafetyDisagree(CF.gateRawRegistered,
-        CF.gateEventKnown, CF.gateWakeSignal, physical,
-        CFGateAsyncHeld(CF.cfg.gateButton))
+        CF.gateEventKnown, CF.gateWakeSignal, physical, asyncHeld)
     if disagree {
         nowSafety := CFNowMs()
         if !CF.gateAsyncUpSince
