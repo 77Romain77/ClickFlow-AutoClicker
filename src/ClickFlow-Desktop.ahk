@@ -548,6 +548,7 @@ CFDesktopSetPreference(field, value) {
     CFDesktopUpdate()
     SaveSettings()
     SendState()
+    SendStats()
 }
 
 CFDesktopReleaseFloat() {

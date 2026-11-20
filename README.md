@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.8 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.9.9 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.8.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.8)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.9.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.9)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.8.ahk`.
+2. Télécharger `ClickFlow-v1.9.9.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.8`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.9`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,14 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Choix de la méthode de détection souris et preuve du chemin utilisé (v1.9.9)
+
+Dans Paramètres > Diagnostics et détection souris, trois modes sont disponibles : **Automatique** (recommandé, hook Windows + contrôle physique de secours), **Événementielle uniquement** (si le hook échoue après l'attente, aucune bascule silencieuse : la condition reste en attente), ou **Classique uniquement** (vérification physique du bouton, sans hook de détection). Le réglage est conservé dans settings.ini sous General/MouseDetectionMode. Tout changement de mode interrompt la session de clics en cours avant d'appliquer le nouveau choix.
+
+Le panneau Test CPS et la page des paramètres affichent indépendamment de l'interrupteur des diagnostics le **dernier mécanisme ayant réellement permis le clic conditionné** : événement par hook, contrôle classique, secours classique, ou bouton déjà maintenu au démarrage. Ils indiquent également si un hook est installé pendant l'attente. La présence d'un hook ne prouve pas que le déclenchement vient de lui : le contrôle physique peut gagner la course en mode Automatique. Aucun clic conditionné n'est signalé lorsque le profil ne possède pas de condition.
+
+En mode Classique, les mesures de latence liées au callback souris ne sont pas disponibles, puisqu'aucun hook n'est installé. Les mesures restent facultatives. Les choix de moteur ne contournent pas les protections des jeux, ne garantissent pas la compatibilité avec leurs anti-cheats et ne changent pas les règles d'utilisation de l'automatisation.
 
 ## Condition souris réactive aux événements (v1.9.8)
 
