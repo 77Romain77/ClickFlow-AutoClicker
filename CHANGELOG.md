@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 1.9.17 - 2026-11-20
+
+- Corrige les arrêts intempestifs sous maintien en mode Événementielle et Automatique observés sur PC réel dans la v1.9.16.
+- Lors d'un désaccord persistant Raw Input UP / GetKeyState DOWN / GetAsyncKeyState UP, suspend d'abord l'envoi de clics, puis réévalue l'état de Windows sans SendInput avant toute décision d'arrêt.
+- La vérification est déclenchée après 12 ms de désaccord continu et dure jusqu'à 50 ms sans injection ; le maintien peut reprendre si GetAsyncKeyState reconfirme le bouton enfoncé.
+- Si le relâchement persiste après cette pause, le profil est arrêté pour éviter les clics fantômes. Le mode Classique est inchangé.
+- Le diagnostic facultatif conserve explicitement le motif d'arrêt de sécurité lorsque le moteur est au repos.
+- Ajoute des tests de désaccord transitoire, de pause, de reprise, d'arrêt et de désarmement, sans nouvel hook global.
+- À confirmer sur une vraie souris : les tests du runner ne simulent pas les effets des pilotes et des clics SendInput pendant un maintien physique.
+
+
 ## 1.9.16 - 2026-11-20
 
 - Ajoute une protection contre les clics persistants dans les modes Automatique et Événementielle : un désaccord prolongé entre Raw Input (UP), GetKeyState (DOWN) et GetAsyncKeyState (UP) déclenche l'arrêt complet de la session.
