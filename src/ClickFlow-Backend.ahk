@@ -35,7 +35,7 @@ global CF := {
     gateWakeSignal: false, gateHookFailed: false, gateEventKnown: false,
     gateRawArmed: false, gateRawDownAt: 0, gateRawPhysicalUpSince: 0,
     gateRawUpsWhilePhysicalHeld: 0,
-    gateAsyncUpSince: 0, gateSafetyTripped: false,
+    gateSafetyPhase: 0, gateSafetySince: 0, gateSafetyTripped: false,
     gateRawRegistered: false, gateRawListener: false, gateRawFailed: false,
     gateRawWindow: 0, gateRawHwnd: 0, gateRawError: 0,
     gateRawMessages: 0, gateRawMousePackets: 0,
@@ -926,9 +926,9 @@ CFGateHeldDecision(mode, rawRegistered, rawArmed, rawDown, physical, grace) {
     return mode = "auto" ? physical : false
 }
 
-; Sécurité : si Raw Input signale UP et GetKeyState reste bloqué sur DOWN,
-; une seconde lecture indépendante de l'état Windows peut confirmer le
-; relâchement. Une divergence très brève est tolérée pendant SendInput.
+; Sécurité : si Raw Input indique UP mais GetKeyState indique DOWN,
+; GetAsyncKeyState n'est qu'un indice : SendInput peut l'influencer.
+; Une divergence persistante provoque une pause de vérification sans clic.
 ; Aucun hook WH_MOUSE_LL supplémentaire n'est installé.
 CFGateAsyncHeld(button) {
     vk := button = "LButton" ? 0x01 : button = "RButton" ? 0x02
@@ -940,18 +940,57 @@ CFGateAsyncHeld(button) {
     return !!(DllCall("User32\GetAsyncKeyState", "Int", vk, "Short") & 0x8000)
 }
 
-CFGateSafetyTimeoutMs() {
-    ; Au plus quelques intervalles à 50 CPS en cas d'état physique incohérent.
-    return 35
-}
-
+; Une lecture asynchrone LOW pendant SendInput n'est pas une preuve
+; suffisante du relâchement physique. On vérifie donc sans injecter de clic.
 CFGateSafetyDisagree(registered, eventKnown, rawDown, physical, asyncHeld) {
-    ; Ne pas interrompre un maintien sur un seul RAW UP discordant.
     return registered && eventKnown && !rawDown && physical && !asyncHeld
 }
 
-CFGateSafetyExpired(startMs, currentMs) {
-    return startMs > 0 && currentMs - startMs >= CFGateSafetyTimeoutMs()
+; Les deux délais n'affectent que les états incohérents, jamais le
+; déclenchement normal Raw Input ni la cadence en situation saine.
+CFGateSafetySuspectMs() {
+    return 12
+}
+
+CFGateSafetyQuietMs() {
+    return 50
+}
+
+; 0=normal, 1=discordance courte, 2=pause sans SendInput, 3=arrêt.
+; Fonction pure pour vérifier exactement le comportement sur le runner.
+CFGateSafetyNext(phase, since, now, registered, eventKnown, rawDown,
+    physical, asyncHeld) {
+    if phase = 3
+        return {phase: 3, since: since, pause: true, stop: true,
+            disarm: true}
+    if phase = 2 {
+        ; Le bouton est vraiment remonté selon AHK : aucun autre clic.
+        if !physical
+            return {phase: 0, since: 0, pause: true, stop: false,
+                disarm: true}
+        ; Après une vraie pause sans clic, Windows confirme le maintien.
+        if asyncHeld
+            return {phase: 0, since: 0, pause: false, stop: false,
+                disarm: false}
+        if now - since >= CFGateSafetyQuietMs()
+            return {phase: 3, since: since, pause: true, stop: true,
+                disarm: true}
+        return {phase: 2, since: since, pause: true, stop: false,
+            disarm: false}
+    }
+    disagree := CFGateSafetyDisagree(registered, eventKnown, rawDown,
+        physical, asyncHeld)
+    if !disagree
+        return {phase: 0, since: 0, pause: false, stop: false,
+            disarm: false}
+    if phase != 1
+        return {phase: 1, since: now, pause: false, stop: false,
+            disarm: false}
+    if now - since >= CFGateSafetySuspectMs()
+        return {phase: 2, since: now, pause: true, stop: false,
+            disarm: false}
+    return {phase: 1, since: since, pause: false, stop: false,
+        disarm: false}
 }
 
 CFGateIsHeld() {
@@ -963,26 +1002,25 @@ CFGateIsHeld() {
         return physical
     if CF.gateSafetyTripped
         return false
-    ; N'interroger l'état asynchrone que si Raw Input rapporte UP,
-    ; tandis que l'état physique AHK rapporte encore DOWN.
+    ; GetAsyncKeyState peut suivre les événements SendInput. En cas de
+    ; désaccord persistant, suspendre d'abord l'envoi et revérifier.
     asyncHeld := true
-    if CF.gateRawRegistered && CF.gateEventKnown
-        && !CF.gateWakeSignal && physical
+    if (CF.gateRawRegistered && CF.gateEventKnown
+        && !CF.gateWakeSignal && physical) || CF.gateSafetyPhase = 2
         asyncHeld := CFGateAsyncHeld(CF.cfg.gateButton)
-    disagree := CFGateSafetyDisagree(CF.gateRawRegistered,
-        CF.gateEventKnown, CF.gateWakeSignal, physical, asyncHeld)
-    if disagree {
-        nowSafety := CFNowMs()
-        if !CF.gateAsyncUpSince
-            CF.gateAsyncUpSince := nowSafety
-        else if CFGateSafetyExpired(CF.gateAsyncUpSince, nowSafety) {
-            ; Ne pas permettre un redémarrage via le fallback Automatique.
-            ; EngineTick désactive la session au prochain passage.
-            CF.gateSafetyTripped := true
-            return false
-        }
-    } else
-        CF.gateAsyncUpSince := 0
+    safety := CFGateSafetyNext(CF.gateSafetyPhase, CF.gateSafetySince,
+        CFNowMs(), CF.gateRawRegistered, CF.gateEventKnown,
+        CF.gateWakeSignal, physical, asyncHeld)
+    CF.gateSafetyPhase := safety.phase
+    CF.gateSafetySince := safety.since
+    if safety.stop
+        CF.gateSafetyTripped := true
+    if safety.disarm {
+        CF.gateRawArmed := false
+        CF.gateRawPhysicalUpSince := 0
+    }
+    if safety.pause
+        return false
     grace := false
     if CF.gateRawRegistered && CF.gateRawArmed {
         if physical {
@@ -1239,7 +1277,8 @@ ActivationDown(*) {
     CF.gateRawLastFlags := 0
     CF.gateRawParseErrors := 0
     CF.gateRawUpsWhilePhysicalHeld := 0
-    CF.gateAsyncUpSince := 0
+    CF.gateSafetyPhase := 0
+    CF.gateSafetySince := 0
     CF.gateSafetyTripped := false
     CF.gateRawArmed := false
     CF.gateRawDownAt := 0
@@ -1297,7 +1336,8 @@ StopAll(message) {
     CF.gateWaiting := false
     CF.gateMethodCurrent := "inactive"
     CF.gateSafetyTripped := false
-    CF.gateAsyncUpSince := 0
+    CF.gateSafetyPhase := 0
+    CF.gateSafetySince := 0
     CFGateProbeStop()
     CFEngineSetTimer(false)
     CFStatsSetTimer(false)
@@ -1351,7 +1391,7 @@ EngineTick(firstFromActivation := false) {
     }
     if CF.cfg.mouseGate && !CFGateIsHeld() {
         if CF.gateSafetyTripped {
-            StopAll("Arrêt de sécurité : Raw Input et état physique souris incohérents.")
+            StopAll("Arrêt de sécurité : relâchement confirmé après pause sans clic. Passe en Classique si le bouton est encore maintenu.")
             return
         }
         CF.gateWaiting := true
