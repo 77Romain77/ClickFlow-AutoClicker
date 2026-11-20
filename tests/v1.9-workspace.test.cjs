@@ -21,6 +21,7 @@ assert(html.includes('Automatique (Raw Input + secours, recommandé)')
 assert(!html.includes('Raw Input reste expérimental'),
     'Old experimental label should be removed');
 assert(html.includes("Moteur : ") && html.includes('GetKeyState : ')
+    && html.includes('GetAsyncKeyState : ')
     && html.includes('UP Raw pendant maintien physique')
     && html.includes('La vérification physique conserve le maintien'),
     'Gate diagnostics should expose Raw Input versus GetKeyState disagreement');
