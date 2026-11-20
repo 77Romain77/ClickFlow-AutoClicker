@@ -35,6 +35,7 @@ global CF := {
     gateWakeSignal: false, gateHookFailed: false, gateEventKnown: false,
     gateRawArmed: false, gateRawDownAt: 0, gateRawPhysicalUpSince: 0,
     gateRawUpsWhilePhysicalHeld: 0,
+    gateAsyncUpSince: 0, gateSafetyTripped: false,
     gateRawRegistered: false, gateRawListener: false, gateRawFailed: false,
     gateRawWindow: 0, gateRawHwnd: 0, gateRawError: 0,
     gateRawMessages: 0, gateRawMousePackets: 0,
@@ -255,7 +256,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !CFGateIsHeld()
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateDebugEnabled":' (CF.gateDebugEnabled ? "true" : "false") ',"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gateRawUpsWhilePhysicalHeld":' CF.gateRawUpsWhilePhysicalHeld ',"gateRawArmed":' (CF.gateRawArmed ? "true" : "false") ',"gatePhysicalHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") ',"gateRawEventKnown":' (CF.gateEventKnown ? "true" : "false") ',"gateRawHeld":' (CF.gateWakeSignal ? "true" : "false") ',"gateEngineHeld":' (CF.gateDebugEnabled && CF.armed && CF.cfg.mouseGate && CFGateIsHeld() ? "true" : "false") '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateDebugEnabled":' (CF.gateDebugEnabled ? "true" : "false") ',"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gateRawUpsWhilePhysicalHeld":' CF.gateRawUpsWhilePhysicalHeld ',"gateRawArmed":' (CF.gateRawArmed ? "true" : "false") ',"gatePhysicalHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") ',"gateAsyncHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && CFGateAsyncHeld(CF.cfg.gateButton) ? "true" : "false") ',"gateRawEventKnown":' (CF.gateEventKnown ? "true" : "false") ',"gateRawHeld":' (CF.gateWakeSignal ? "true" : "false") ',"gateEngineHeld":' (CF.gateDebugEnabled && CF.armed && CF.cfg.mouseGate && CFGateIsHeld() ? "true" : "false") '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -925,6 +926,34 @@ CFGateHeldDecision(mode, rawRegistered, rawArmed, rawDown, physical, grace) {
     return mode = "auto" ? physical : false
 }
 
+; Sécurité : si Raw Input signale UP et GetKeyState reste bloqué sur DOWN,
+; une seconde lecture indépendante de l'état Windows peut confirmer le
+; relâchement. Une divergence très brève est tolérée pendant SendInput.
+; Aucun hook WH_MOUSE_LL supplémentaire n'est installé.
+CFGateAsyncHeld(button) {
+    vk := button = "LButton" ? 0x01 : button = "RButton" ? 0x02
+        : button = "MButton" ? 0x04 : button = "XButton1" ? 0x05
+        : button = "XButton2" ? 0x06 : 0
+    if !vk
+        return false
+    ; GetAsyncKeyState est distinct de la lecture physique AHK (GetKeyState).
+    return !!(DllCall("User32\GetAsyncKeyState", "Int", vk, "Short") & 0x8000)
+}
+
+CFGateSafetyTimeoutMs() {
+    ; Au plus quelques intervalles à 50 CPS en cas d'état physique incohérent.
+    return 35
+}
+
+CFGateSafetyDisagree(registered, eventKnown, rawDown, physical, asyncHeld) {
+    ; Ne pas interrompre un maintien sur un seul RAW UP discordant.
+    return registered && eventKnown && !rawDown && physical && !asyncHeld
+}
+
+CFGateSafetyExpired(startMs, currentMs) {
+    return startMs > 0 && currentMs - startMs >= CFGateSafetyTimeoutMs()
+}
+
 CFGateIsHeld() {
     global CF
     if !CF.cfg.mouseGate
@@ -932,6 +961,28 @@ CFGateIsHeld() {
     physical := !!GetKeyState(CF.cfg.gateButton, "P")
     if CF.mouseDetectionMode = "classic"
         return physical
+    if CF.gateSafetyTripped
+        return false
+    ; N'interroger l'état asynchrone que si Raw Input rapporte UP,
+    ; tandis que l'état physique AHK rapporte encore DOWN.
+    asyncHeld := true
+    if CF.gateRawRegistered && CF.gateEventKnown
+        && !CF.gateWakeSignal && physical
+        asyncHeld := CFGateAsyncHeld(CF.cfg.gateButton)
+    disagree := CFGateSafetyDisagree(CF.gateRawRegistered,
+        CF.gateEventKnown, CF.gateWakeSignal, physical, asyncHeld)
+    if disagree {
+        nowSafety := CFNowMs()
+        if !CF.gateAsyncUpSince
+            CF.gateAsyncUpSince := nowSafety
+        else if CFGateSafetyExpired(CF.gateAsyncUpSince, nowSafety) {
+            ; Ne pas permettre un redémarrage via le fallback Automatique.
+            ; EngineTick désactive la session au prochain passage.
+            CF.gateSafetyTripped := true
+            return false
+        }
+    } else
+        CF.gateAsyncUpSince := 0
     grace := false
     if CF.gateRawRegistered && CF.gateRawArmed {
         if physical {
@@ -1188,6 +1239,8 @@ ActivationDown(*) {
     CF.gateRawLastFlags := 0
     CF.gateRawParseErrors := 0
     CF.gateRawUpsWhilePhysicalHeld := 0
+    CF.gateAsyncUpSince := 0
+    CF.gateSafetyTripped := false
     CF.gateRawArmed := false
     CF.gateRawDownAt := 0
     CF.gateRawPhysicalUpSince := 0
@@ -1243,6 +1296,8 @@ StopAll(message) {
     CF.armed := false
     CF.gateWaiting := false
     CF.gateMethodCurrent := "inactive"
+    CF.gateSafetyTripped := false
+    CF.gateAsyncUpSince := 0
     CFGateProbeStop()
     CFEngineSetTimer(false)
     CFStatsSetTimer(false)
@@ -1295,6 +1350,10 @@ EngineTick(firstFromActivation := false) {
         return
     }
     if CF.cfg.mouseGate && !CFGateIsHeld() {
+        if CF.gateSafetyTripped {
+            StopAll("Arrêt de sécurité : Raw Input et état physique souris incohérents.")
+            return
+        }
         CF.gateWaiting := true
         CF.cpsNow := 0
         CF.nextAt := CFNowMs()

@@ -1,23 +1,29 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.15 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.16 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.15.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.15)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.16.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.16)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.15.ahk`.
+2. Télécharger `ClickFlow-v1.9.16.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.15`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.16`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Sécurité du relâchement en v1.9.16
+
+Une incohérence observée sur le PC utilisateur provoquait parfois des clics alors que le bouton n'était plus maintenu : Raw Input indiquait UP, mais GetKeyState restait DOWN. Pour les modes Automatique et Événementielle, ClickFlow vérifie maintenant GetAsyncKeyState lorsque ces sources divergent. Si cette troisième source confirme le relâchement pendant plus de 35 ms, la session s'arrête entièrement pour éviter les clics persistants et les redémarrages automatiques.
+
+Les diagnostics détaillés restent facultatifs et affichent également la troisième lecture lorsqu'ils sont activés. Aucune modification du mode Classique. Les tests automatisés vérifient la sécurité du moteur, mais la fiabilité sur une souris réelle et en jeu nécessite encore des essais. En cas d'arrêt de sécurité injustifié pendant un vrai maintien, revenir au mode Classique et transmettre les diagnostics des trois sources.
 
 ## Fonctionnalités
 
