@@ -464,17 +464,20 @@ BackendMessage(sender, args) {
                 ; les frappes ne sont pas perdues dans le processus Chromium.
                 switch parts[2] {
                     case "begin", "capture":
-                        if parts.Length >= 4
+                        ; globalHotkey + begin + action = 3 champs.
+                        if parts.Length >= 3
                             CFWebShortcutBegin(parts[3])
                     case "set":
-                        if parts.Length >= 5
+                        ; globalHotkey + set + action + touche = 4 champs.
+                        if parts.Length >= 4
                             CFWebShortcutFinish(parts[3], parts[4])
                     case "cancel":
                         if CF.capture && (CF.captureKind = "emergency"
                             || SubStr(CF.captureKind, 1, 7) = "global:")
                             FinishCapture("")
                     case "clear":
-                        if parts.Length >= 4 {
+                        ; globalHotkey + clear + action = 3 champs.
+                        if parts.Length >= 3 {
                             if CF.capture
                                 FinishCapture("")
                             if parts[3] = "emergency"
