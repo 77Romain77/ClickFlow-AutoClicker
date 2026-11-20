@@ -32,6 +32,7 @@ global CF := {
     firstDispatchMs: "", firstDispatchKind: "", activationCounter: 0, qpcFrequency: 0,
     diagnosticsEnabled: false, gateDetectionMs: "", gateProbeStatus: "",
     gateHook: 0, gateHookCallback: 0, gateProbePending: false, gateProbeQpc: 0,
+    gateEventUptime: 0, gateEventDelayMs: "", gateEventAverageMs: "", gateEventSamples: [],
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -244,7 +245,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -860,6 +861,9 @@ CFDiagToggle(enabled) {
     CF.firstDispatchKind := ""
     CF.gateDetectionMs := ""
     CF.gateProbeStatus := ""
+    CF.gateEventDelayMs := ""
+    CF.gateEventAverageMs := ""
+    CF.gateEventSamples := []
     SendStats()
 }
 
@@ -877,8 +881,10 @@ CFGateProbeProc(code, msg, data) {
                 xButton := (NumGet(data, 8, "UInt") >> 16) & 0xFFFF
                 match := xButton = (gate = "XButton1" ? 1 : 2)
             }
-            if match
+            if match {
+                CF.gateEventUptime := NumGet(data, 16, "UInt")
                 CF.gateProbeQpc := CFPerfCounter()
+            }
         }
     }
     return DllCall("User32\CallNextHookEx", "Ptr", CF.gateHook,
@@ -892,6 +898,7 @@ CFGateProbeStart() {
         return
     CF.gateProbePending := true
     CF.gateProbeQpc := 0
+    CF.gateEventUptime := 0
     CF.gateProbeStatus := "waiting"
     callback := CallbackCreate(CFGateProbeProc, "Fast", 3)
     hook := DllCall("User32\SetWindowsHookExW", "Int", 14,
@@ -970,6 +977,7 @@ ActivationDown(*) {
     CF.firstDispatchMs := ""
     CF.firstDispatchKind := ""
     CF.gateDetectionMs := ""
+    CF.gateEventDelayMs := ""
     CF.gateProbeStatus := ""
     CF.overlayStart := A_TickCount
     CF.overlayUntil := 0
@@ -1093,6 +1101,21 @@ EngineTick(firstFromActivation := false) {
         if CF.gateProbeQpc > 0 && CF.qpcFrequency > 0 && measureStart >= CF.gateProbeQpc {
             CF.gateDetectionMs := Round(1000.0 * (measureStart - CF.gateProbeQpc) / CF.qpcFrequency, 2)
             CF.gateProbeStatus := "measured"
+            ; La structure MSLLHOOKSTRUCT contient aussi le temps de
+            ; l'événement Windows. Il peut être quantifié à ~15,6ms.
+            ; À utiliser comme ESTIMATION et non comme mesure exacte.
+            uptime := DllCall("Kernel32\GetTickCount64", "UInt64")
+            eventDelay := (uptime - CF.gateEventUptime) & 0xFFFFFFFF
+            if eventDelay <= 1000 {
+                CF.gateEventDelayMs := eventDelay
+                CF.gateEventSamples.Push(eventDelay)
+                if CF.gateEventSamples.Length > 10
+                    CF.gateEventSamples.RemoveAt(1)
+                sumDelay := 0
+                for sample in CF.gateEventSamples
+                    sumDelay += sample
+                CF.gateEventAverageMs := Round(sumDelay / CF.gateEventSamples.Length, 1)
+            }
         } else if CF.gateProbeStatus != "unavailable"
             CF.gateProbeStatus := "unobserved"
     }
