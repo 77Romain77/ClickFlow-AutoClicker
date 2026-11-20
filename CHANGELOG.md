@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.19 - 2026-11-21
+
+- Clarifie les trois modes : Classique vérifie régulièrement le bouton ; Automatique tente de réduire le délai du premier clic et garde un secours classique ; Événementielle utilise le démarrage rapide sans secours.
+- Raccourcit les libellés du sélecteur pour qu'ils restent lisibles.
+- Corrige le diagnostic détaillé : les états Raw Input, GetKeyState et périphérique suivi sont décrits sans évoquer l'ancienne sécurité retirée en v1.9.18.
+- Distingue la dernière mesure de réaction Raw Input et sa moyenne sur 10 activations au maximum, et précise qu'il ne s'agit pas de la latence depuis l'appui matériel ni d'une comparaison directe avec le mode Classique.
+- Aucun changement apporté au moteur de clic ni au filtrage matériel validé sur la v1.9.18 ; adaptation des tests d'interface et de la documentation.
+
+
 ## 1.9.18 - 2026-11-20
 
 - Corrige la confusion entre le maintien physique et les clics injectés lorsque le bouton de condition et le bouton généré sont identiques.

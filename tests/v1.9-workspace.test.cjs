@@ -3,8 +3,8 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../ui/index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/);
 assert(src,'Integrated UI JavaScript missing');
-assert(html.includes('ClickFlow v1.9.18 · AHK v2')
-    && html.includes('ClickFlow v1.9.18 · AutoHotkey v2'),
+assert(html.includes('ClickFlow v1.9.19 · AHK v2')
+    && html.includes('ClickFlow v1.9.19 · AutoHotkey v2'),
     'Both footer version strings must match the shipped version.');
 new vm.Script(src[1],{filename:'ClickFlow v1.9 UI'});
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
@@ -14,21 +14,29 @@ assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,7,
     'General, diagnostics, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
 const labels=['Général','Diagnostics et détection souris','Overlay','Raccourcis globaux','Raccourcis Windows',
     'Sauvegarde complète','Maintenance'];
-assert(html.includes('Automatique (Raw Input + secours)')
-    && html.includes('Événementielle (Raw Input requis au démarrage)')
-    && html.includes('Classique (stable, recommandé)'),
-    'The modes must be explained without experimental labels');
-assert(html.includes('const lastSafetyStop=String(data.notice||\'\').startsWith(\'Arrêt de sécurité\')'),
-    'The mouse diagnostics must explain safety stops even after the engine stops');
+assert(html.includes('Automatique (rapide)')
+    && html.includes('Événementielle (rapide)')
+    && html.includes('<option value="classic" selected>Classique</option>')
+    && html.includes('premier clic plus rapidement')
+    && html.includes('mode Classique en secours'),
+    'The mouse detection modes must have simple first-click-focused explanations');
+assert(!html.includes('const lastSafetyStop=') && !html.includes('Le moteur coupe après une brève confirmation'),
+    'Removed safety-stop mechanics must not appear in detection diagnostics');
 assert(!html.includes('Raw Input reste expérimental'),
     'Old experimental label should be removed');
-assert(html.includes("Moteur : ") && html.includes('GetKeyState : ')
+assert(html.includes('Moteur : ') && html.includes('GetKeyState (contrôle du maintien) : ')
     && html.includes('GetAsyncKeyState (indicatif) : ')
-    && html.includes('UP Raw pendant maintien physique')
-    && html.includes('La vérification physique conserve le maintien'),
-    'Gate diagnostics should expose Raw Input versus GetKeyState disagreement');
-assert(html.includes('Messages Raw Input reçus') && html.includes('aucun message reçu'),
-    'Raw Input status must report missing real events instead of only registration');
+    && html.includes('Dernier état Raw Input')
+    && html.includes('Bouton matériel suivi')
+    && html.includes('périphérique identifié reste prioritaire'),
+    'Mouse diagnostics must reflect the v1.9.18 physical-device tracking and avoid obsolete stop messages');
+assert(html.includes('Messages Raw Input reçus') && html.includes('Aucun message Raw Input compté depuis'),
+    'Raw Input diagnostics must distinguish missing counters from missing hardware events');
+assert(html.includes('Ces mesures commencent après la réception de l\'événement Windows.')
+    && html.includes('Elles ne mesurent ni le délai depuis l\'appui physique')
+    && html.includes('Moyenne Raw Input : ')
+    && html.includes('Mesures du premier clic envoyé'),
+    'Latency diagnostics must explain measurement limitations and use the updated labels');
 assert(html.includes('id="mouseDetectionMode"') && html.includes('id="gateMethodCps"')
     && html.includes('id="gateMethodSettings"'), 'Mouse detection selector and real method status must be visible');
 assert(html.includes("send('preference'") && html.includes("overlaySetPreference('mouseDetectionMode'"),

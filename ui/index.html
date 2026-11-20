@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.18 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.19 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -495,10 +495,10 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div class="cps-progress"><div id="cpsProgressFill"></div></div>
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
    <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div><div id="cpsPrecision" class="subnote" style="margin-top:7px">Aucune mesure de précision.</div></div>
-    <div class="shortcut-setting" style="margin-top:14px"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Désactivés par défaut. Active-les seulement pour examiner les événements Raw Input. La détection continue sans ces diagnostics.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris" aria-pressed="false"></button></div>
+    <div class="shortcut-setting" style="margin-top:14px"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Affiche les événements de la souris et la méthode réellement utilisée pour rechercher un problème. Facultatif, sans effet sur le fonctionnement des clics.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris" aria-pressed="false"></button></div>
     <div id="gateMethodCpsPanel" class="cps-last-wrap hidden" style="margin-top:14px"><strong>Méthode de détection réellement utilisée</strong><div id="gateMethodCps" class="subnote" style="margin-top:7px">Aucun clic conditionné enregistré pour cette session.</div></div>
-    <div class="shortcut-setting" style="margin-top:14px"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Désactivés par défaut. Aucun chronométrage si désactivés. La détection Raw Input reste active indépendamment des diagnostics.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence" aria-pressed="false"></button></div>
-    <div class="cps-last-wrap" style="margin-top:11px"><strong>Diagnostic du premier clic réel</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Diagnostics désactivés.</div><div id="cpsGateLatency" class="subnote" style="margin-top:7px">Délai après callback : non mesuré.</div><div id="cpsEventLatency" class="subnote" style="margin-top:7px">Réception Raw Input -> envoi : non mesuré.</div><p class="subnote" style="margin-top:5px">En mode Raw Input, les mesures partent de la réception du message Windows, pas de l'appui matériel. La moyenne sur 10 activations utilise désormais l'horloge haute précision : elle ne se compare pas directement à celle des v1.9.7-1.9.9. En mode Classique, la mesure de notification n'est pas disponible.</p></div>
+    <div class="shortcut-setting" style="margin-top:14px"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Mesure les délais logiciels du premier clic. Facultatif : désactiver cette mesure ne change pas la méthode de détection.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence" aria-pressed="false"></button></div>
+    <div class="cps-last-wrap" style="margin-top:11px"><strong>Mesures du premier clic envoyé</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Diagnostics désactivés.</div><div id="cpsGateLatency" class="subnote" style="margin-top:7px">Délai après événement Windows : non mesuré.</div><div id="cpsEventLatency" class="subnote" style="margin-top:7px">Moyenne Raw Input : non mesurée.</div><p class="subnote" style="margin-top:5px">Ces mesures commencent après la réception de l'événement Windows. Elles ne mesurent ni le délai depuis l'appui physique ni le gain réel par rapport au mode Classique. La moyenne porte sur les 10 dernières activations mesurées au maximum. En mode Classique, la mesure Raw Input n'est pas disponible.</p></div>
    <p id="cpsDescription" class="subnote" style="margin-top:13px">Le test de profil reprend la cadence réelle calculée par le moteur ClickFlow (fixe, aléatoire ou naturelle), sans injecter de clics dans Windows. La touche d'activation et la condition souris ne sont pas nécessaires pour ce banc de test. Aucun score n'est enregistré.</p>
   </div>
  </section>
@@ -511,11 +511,11 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="shortcut-setting"><div><strong>Réduire dans la zone de notification</strong><p class="subnote">Masquer la fenêtre au lieu de la laisser dans la barre des tâches.</p></div><button class="switch" data-preference="minimizeToTray" aria-label="Réduire dans la zone de notification" aria-pressed="false"></button></div>
     <div class="shortcut-setting"><div><strong>Fermer vers la zone de notification</strong><p class="subnote">Le X masque ClickFlow. Quitter complètement depuis l'icône près de l'horloge.</p></div><button class="switch" data-preference="closeToTray" aria-label="Fermer vers la zone de notification" aria-pressed="false"></button></div>
    </div></details>
-   <details class="settings-group"><summary>Diagnostics et détection souris <small>Choix du moteur et mesures facultatives</small></summary><div class="settings-group-body">
-    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Classique (recommandé) : contrôle l'état physique de la souris. Automatique : utilise Raw Input pour démarrer rapidement et le contrôle classique comme secours. Événementielle : exige un appui Raw Input pour commencer, puis vérifie le maintien physique. Automatique et Événementielle ont la même détection rapide lorsque Raw Input fonctionne.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="classic" selected>Classique (stable, recommandé)</option><option value="auto">Automatique (Raw Input + secours)</option><option value="event">Événementielle (Raw Input requis au démarrage)</option></select></div>
-    <div class="shortcut-setting"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Désactivés par défaut. GetAsyncKeyState est indicatif et peut être influencé par SendInput. Aucun diagnostic ne décide de l'arrêt du moteur.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris dans les paramètres" aria-pressed="false"></button></div>
+   <details class="settings-group"><summary>Diagnostics et détection souris <small>Méthode de détection et mesures facultatives</small></summary><div class="settings-group-body">
+    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Classique : vérifie régulièrement si tu maintiens le bouton, avec un petit délai possible avant le premier clic. Automatique : détecte l'appui plus vite pour lancer le premier clic plus rapidement, avec le mode Classique en secours. Événementielle : utilise la même détection rapide, sans secours si elle ne répond pas. Le maintien et le relâchement restent surveillés.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="classic" selected>Classique</option><option value="auto">Automatique (rapide)</option><option value="event">Événementielle (rapide)</option></select></div>
+    <div class="shortcut-setting"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Affiche les informations détaillées sur la détection et le maintien de la souris. À activer seulement pour analyser un problème.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris dans les paramètres" aria-pressed="false"></button></div>
     <p class="subnote hidden" id="gateMethodSettings" style="margin:6px 0 15px">Aucun clic conditionné enregistré pour cette session.</p>
-    <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Aucune mesure quand désactivé. Raw Input n'est utilisé que si tu choisis Automatique ou Événementielle.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
+    <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Mesure les délais logiciels du premier clic. Raw Input reste disponible dans les modes Automatique et Événementielle, même sans diagnostic.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
    <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
     <div class="shortcut-setting"><div><strong>Overlay ClickFlow</strong><p class="subnote">Statut et CPS moyens calculés sur une durée personnalisable.</p></div><button class="switch" data-preference="floatShown" aria-label="Activer l'overlay" aria-pressed="false"></button></div>
     <div class="shortcut-setting"><div><strong>Toujours afficher l'overlay</strong><p class="subnote">Sinon, il disparaît environ 2 secondes après l'arrêt.</p></div><button class="switch" data-preference="overlayAlwaysVisible" aria-label="Toujours afficher l'overlay" aria-pressed="false"></button></div>
@@ -959,7 +959,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.18 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.19 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1027,9 +1027,9 @@ function updateGateMethodStatus(data) {
         none:'Aucun clic conditionné détecté'
     };
     const currentLabels={
-        event:'Attente événementielle (Raw Input)',
-        classic:'Attente classique (sans hook)',
-        fallback:'Mode de secours classique',
+        event:'Détection rapide active (Raw Input)',
+        classic:'Contrôle classique actif',
+        fallback:'Secours classique actif',
         unavailable:'Raw Input indisponible : attente sans repli',
         'already-held':'Bouton déjà maintenu',
         disabled:'Condition souris désactivée',
@@ -1049,30 +1049,29 @@ function updateGateMethodStatus(data) {
     const rawInfo=(data.armed && data.mouseDetectionMode!=='classic')
         ?' Messages Raw Input reçus : '+rawCount
             +', appuis : '+downs+', relâchements : '+ups
-            +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
-            +'. GetKeyState : '+physical
+            +'. Dernier état Raw Input : '+(rawKnown?(rawHeld?'Appuyé':'Relâché'):'Aucun événement')
+            +'. GetKeyState (contrôle du maintien) : '+physical
             +'. GetAsyncKeyState (indicatif) : '+(data.gateAsyncHeld?'Maintenu':'Relâché')
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
             +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
-            +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
+            +'. Relâchements Raw Input reçus pendant un état maintenu : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
             +'. Raw Input sans périphérique ignoré : '+Number(data.gateRawNullIgnored||0)+'.'
-            +'. Appui matériel reconnu : '+(data.gateHardwareKnown?(data.gateHardwareDown?'Maintenu':'Relâché'):'Non confirmé')+'.'
+            +(data.gateHardwareKnown?'. Bouton matériel suivi : '+(data.gateHardwareDown?'Appuyé':'Relâché')+'.':'')
             +(rawKnown && !rawHeld && data.gatePhysicalHeld
-                ?' Désaccord détecté : Raw Input signale UP, mais la souris est physiquement maintenue. La vérification physique conserve le maintien.'
+                ?' États différents : Raw Input indique relâché et GetKeyState indique maintenu. Le relâchement d\'un périphérique identifié reste prioritaire.'
                 :rawKnown && rawHeld && !data.gatePhysicalHeld
-                    ?' Désaccord détecté : Raw Input signale DOWN, mais la souris semble relâchée. Le moteur coupe après une brève confirmation.'
+                    ?' États différents : Raw Input indique appuyé et GetKeyState indique relâché. Le maintien est vérifié avant les clics suivants.'
                     :'')
             +(registered && rawCount===0
-                ?' ATTENTION : inscrit mais aucun message reçu ; la méthode événementielle ne peut pas déclencher.'
+                ?' Aucun message Raw Input compté depuis l\'activation des diagnostics.'
                 :rawCount>0 && downs===0
-                    ?' Messages reçus, mais aucun appui reconnu pour le bouton conditionnel.'
+                    ?' Aucun appui du bouton surveillé compté depuis l\'activation des diagnostics.'
                     :'')
             +(data.gateRawFailed?' Erreur Windows : '+Number(data.gateRawError||0)+'.':'')
         :'';
-    const lastSafetyStop=String(data.notice||'').startsWith('Arrêt de sécurité');
     const text='Dernier clic : '+last+'. '+(data.armed
         ?'Actuellement : '+current+'. '+installed+rawInfo
-        :'Moteur au repos.'+(lastSafetyStop?' '+data.notice:''));
+        :'Moteur au repos.');
     $('gateMethodCps').textContent=text;
     $('gateMethodSettings').textContent=text;
 }
@@ -1080,13 +1079,13 @@ function updateLiveMonitor(data) {
     updateGateMethodStatus(data);
     if(data.diagnosticsEnabled===false) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
-        $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
-        $('cpsEventLatency').textContent='Réception Raw Input -> envoi : non mesuré.';
+        $('cpsGateLatency').textContent='Délai après événement Windows : non mesuré.';
+        $('cpsEventLatency').textContent='Moyenne Raw Input : non mesurée.';
     } else if(data.diagnosticsEnabled===true) {
         const delay=data.firstDispatchMs;
         const fromCondition=data.firstDispatchKind==='condition';
         $('cpsFirstDispatch').textContent=delay!==null&&Number.isFinite(Number(delay))
-            ?'Premier clic : '+Number(delay).toFixed(2)+' ms de délai logiciel ('
+            ?'Premier clic envoyé : '+Number(delay).toFixed(2)+' ms de traitement logiciel ('
                 +(fromCondition?'condition souris détectée':'raccourci reçu')
                 +' -> SendInput terminé).'
             :data.armed&&data.waiting?'En attente du bouton de souris configuré pour envoyer le premier clic.'
@@ -1094,18 +1093,17 @@ function updateLiveMonitor(data) {
         const gate=data.gateDetectionMs;
         const status=data.gateProbeStatus||'';
         $('cpsGateLatency').textContent=status==='measured'&&gate!==null&&Number.isFinite(Number(gate))
-            ?'Délai après réception Raw Input : '+Number(gate).toFixed(2)+' ms (message Windows -> début de SendInput).'
-            :status==='waiting'?'Délai de détection : en attente du bouton de souris...'
+            ?'Réaction après Raw Input : '+Number(gate).toFixed(2)+' ms (réception Windows -> début de SendInput).'
+            :status==='waiting'?'Réaction Raw Input : en attente du bouton de souris...'
             :status==='already-held'?'Condition souris déjà maintenue lors de l’activation : aucune attente à mesurer.'
-            :status==='unavailable'?'Non mesurable : aucun événement Raw Input disponible (ou mode Classique).'
+            :status==='unavailable'?'Mesure Raw Input indisponible dans ce mode ou sur cet appareil.'
             :status==='unobserved'?'Événement souris non horodaté avant le clic : mesure indisponible.'
-            :'Délai après callback : pas encore mesuré.';
+            :'Réaction après Raw Input : pas encore mesurée.';
         const eventMs=data.gateEventDelayMs,avgMs=data.gateEventAverageMs;
         $('cpsEventLatency').textContent=status==='measured'&&eventMs!==null&&Number.isFinite(Number(eventMs))
-            ?'Réception Raw Input -> envoi : '+Number(eventMs).toFixed(2)
-                +' ms (moyenne '+Number(avgMs).toFixed(2)
-                +' ms sur '+Number(data.gateEventSamples||1)+' activation(s), mesure logicielle).'
-            :'Réception Raw Input -> envoi : non mesuré.';
+            ?'Moyenne Raw Input : '+Number(avgMs).toFixed(2)
+                +' ms sur '+Number(data.gateEventSamples||1)+' activation(s) (réception Windows -> début de SendInput).'
+            :'Moyenne Raw Input : non mesurée.';
     }
     const cps=Number(data.cps)||0;
     const status=data.waiting?'En attente du bouton souris':
@@ -1178,8 +1176,8 @@ function renderSettings() {
     $('gateMethodSettings').classList.toggle('hidden',!model.preferences.gateDebugEnabled);
     if(!model.preferences.diagnosticsEnabled) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
-        $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
-        $('cpsEventLatency').textContent='Réception Raw Input -> envoi : non mesuré.';
+        $('cpsGateLatency').textContent='Délai après événement Windows : non mesuré.';
+        $('cpsEventLatency').textContent='Moyenne Raw Input : non mesurée.';
     }
     $('liveMonitorCard').classList.toggle('hidden',
         !(model.compact?model.preferences.compactChart:model.preferences.liveMonitor));
