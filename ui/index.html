@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.9.8 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.9.9 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.8 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.9 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -495,7 +495,8 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div class="cps-progress"><div id="cpsProgressFill"></div></div>
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
    <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div><div id="cpsPrecision" class="subnote" style="margin-top:7px">Aucune mesure de précision.</div></div>
-    <div class="shortcut-setting" style="margin-top:14px"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Désactivés par défaut. Mesures facultatives lors des prochaines activations. Aucun hook de mesure pendant le jeu si désactivé.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence" aria-pressed="false"></button></div>
+    <div class="cps-last-wrap" style="margin-top:14px"><strong>Méthode de détection réellement utilisée</strong><div id="gateMethodCps" class="subnote" style="margin-top:7px">Aucun clic conditionné enregistré pour cette session.</div></div>
+    <div class="shortcut-setting" style="margin-top:14px"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Désactivés par défaut. Aucun chronométrage si désactivés. Le hook de détection peut rester actif pendant l'attente du bouton selon le mode choisi.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence" aria-pressed="false"></button></div>
     <div class="cps-last-wrap" style="margin-top:11px"><strong>Diagnostic du premier clic réel</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Diagnostics désactivés.</div><div id="cpsGateLatency" class="subnote" style="margin-top:7px">Délai après callback : non mesuré.</div><div id="cpsEventLatency" class="subnote" style="margin-top:7px">Événement Windows -> clic : non mesuré.</div><p class="subnote" style="margin-top:5px">Le délai après callback exclut l'attente de notification. L'estimation issue de l'événement Windows inclut davantage de délai, mais son horodatage peut être quantifié à environ 16 ms : compare surtout la moyenne de plusieurs activations. Il ne s'agit pas d'une latence matérielle exacte. Le moteur de clics reste inchangé.</p></div>
    <p id="cpsDescription" class="subnote" style="margin-top:13px">Le test de profil reprend la cadence réelle calculée par le moteur ClickFlow (fixe, aléatoire ou naturelle), sans injecter de clics dans Windows. La touche d'activation et la condition souris ne sont pas nécessaires pour ce banc de test. Aucun score n'est enregistré.</p>
   </div>
@@ -509,7 +510,10 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="shortcut-setting"><div><strong>Réduire dans la zone de notification</strong><p class="subnote">Masquer la fenêtre au lieu de la laisser dans la barre des tâches.</p></div><button class="switch" data-preference="minimizeToTray" aria-label="Réduire dans la zone de notification" aria-pressed="false"></button></div>
     <div class="shortcut-setting"><div><strong>Fermer vers la zone de notification</strong><p class="subnote">Le X masque ClickFlow. Quitter complètement depuis l'icône près de l'horloge.</p></div><button class="switch" data-preference="closeToTray" aria-label="Fermer vers la zone de notification" aria-pressed="false"></button></div>
    </div></details>
-   <details class="settings-group"><summary>Diagnostics <small>Mesures temporaires, désactivées par défaut</small></summary><div class="settings-group-body"><div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Aucune collecte une fois désactivé. Un hook Windows temporaire est utilisé pendant l'attente du premier clic conditionné.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
+   <details class="settings-group"><summary>Diagnostics et détection souris <small>Choix du moteur et mesures facultatives</small></summary><div class="settings-group-body">
+    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Automatique tente le hook puis utilise le contrôle physique si nécessaire. Événementielle ne bascule pas silencieusement sur la méthode classique si le hook échoue. Classique n'installe pas le hook événementiel supplémentaire.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="auto">Automatique (recommandé)</option><option value="event">Événementielle uniquement</option><option value="classic">Classique uniquement</option></select></div>
+    <p class="subnote" id="gateMethodSettings" style="margin:6px 0 15px">Aucun clic conditionné enregistré pour cette session.</p>
+    <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Aucune collecte une fois désactivé. Un hook Windows temporaire est utilisé pendant l'attente du premier clic conditionné.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
    <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
     <div class="shortcut-setting"><div><strong>Overlay ClickFlow</strong><p class="subnote">Statut et CPS moyens calculés sur une durée personnalisable.</p></div><button class="switch" data-preference="floatShown" aria-label="Activer l'overlay" aria-pressed="false"></button></div>
     <div class="shortcut-setting"><div><strong>Toujours afficher l'overlay</strong><p class="subnote">Sinon, il disparaît environ 2 secondes après l'arrêt.</p></div><button class="switch" data-preference="overlayAlwaysVisible" aria-label="Toujours afficher l'overlay" aria-pressed="false"></button></div>
@@ -570,7 +574,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
-const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,diagnosticsEnabled:false,overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
+const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,diagnosticsEnabled:false,mouseDetectionMode:"auto",overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
 model.globalHotkeys={next:'',previous:'',overlay:'',test:'',open:''};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
@@ -889,7 +893,7 @@ $('viewToggle').onclick=()=>{
 };
 // WebView2 possède le focus clavier quand on clique sur un bouton des
 // Paramètres. Le navigateur transmet donc la frappe à JavaScript, et non
-// toujours à l'InputHook AutoHotkey global (bug v1.9.8).
+// toujours à l'InputHook AutoHotkey global (bug v1.9.9).
 function shortcutKeyFromEvent(e) {
     if(['Shift','Control','Alt','Meta','AltGraph','Process','Unidentified']
         .includes(e.key))return '';
@@ -953,7 +957,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.8 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.9 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1011,7 +1015,32 @@ function setLiveMonitorActive(active) {
         liveMonitor.lastStamp=0;
     }
 }
+function updateGateMethodStatus(data) {
+    const lastLabels={
+        event:'Événementielle (hook utilisé)',
+        classic:'Classique (vérification périodique)',
+        fallback:'Secours classique (contrôle physique)',
+        'already-held':'Bouton déjà maintenu à l’activation',
+        none:'Aucun clic conditionné détecté'
+    };
+    const currentLabels={
+        event:'Attente événementielle (hook Windows)',
+        classic:'Attente classique (sans hook)',
+        fallback:'Mode de secours classique',
+        unavailable:'Hook indisponible : mode événementiel en attente, sans repli',
+        'already-held':'Bouton déjà maintenu',
+        disabled:'Condition souris désactivée',
+        inactive:'Moteur au repos'
+    };
+    const last=lastLabels[data.gateMethodLast]||lastLabels.none;
+    const current=currentLabels[data.gateMethodCurrent]||'État inconnu';
+    const installed=data.gateHookInstalled?'Hook installé.':'Aucun hook installé.';
+    const text='Dernier clic : '+last+'. '+(data.armed?'Actuellement : '+current+'. '+installed:'Moteur au repos.');
+    $('gateMethodCps').textContent=text;
+    $('gateMethodSettings').textContent=text;
+}
 function updateLiveMonitor(data) {
+    updateGateMethodStatus(data);
     if(data.diagnosticsEnabled===false) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
         $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
@@ -1119,6 +1148,8 @@ function renderSettings() {
     $('floatQuick').textContent=model.preferences.floatShown?'Masquer l\'overlay':'Afficher l\'overlay';
 
     const p=model.preferences;
+    $('mouseDetectionMode').value=['auto','event','classic'].includes(p.mouseDetectionMode)
+        ?p.mouseDetectionMode:'auto';
     $('overlayPosition').value=p.overlayPosition||'tm';
     $('overlaySize').value=p.overlaySize||'mini';
     const monitor=$('overlayMonitor');
@@ -1155,6 +1186,7 @@ document.querySelectorAll('[data-preference]').forEach(btn=>{
         overlaySetPreference(field,!model.preferences[field]?1:0);
     };
 });
+$('mouseDetectionMode').onchange=()=>overlaySetPreference('mouseDetectionMode',$('mouseDetectionMode').value);
 for(const field of ['overlayPosition','overlayMonitor','overlaySize']){
     $(field).onchange=()=>overlaySetPreference(field,
         $(field).value);

@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.9 - 2026-11-20
+
+- Ajoute trois choix globaux de détection du bouton conditionnel : Automatique (événement + secours), Événementielle uniquement, Classique uniquement.
+- Affiche dans Test CPS et Paramètres la méthode ayant réellement déclenché le dernier clic et l'état actuel du hook, même si les diagnostics de latence sont coupés.
+- Corrige les clics persistants après relâchement du bouton conditionnel en conservant la détection événementielle pendant toute la session. L'overlay s'appuie sur le même état effectif que le moteur. Hook libéré à l'arrêt.
+- Conserve le mode choisi entre les lancements ; changement de méthode appliqué après arrêt de la session en cours.
+- En mode Classique, aucun hook événementiel supplémentaire n'est installé ; en Événementielle uniquement, l'indisponibilité du hook est affichée sans déclenchement de secours implicite.
+- Régressions intégrées aux tests Windows existants, sans nouvelle matrice ni workflow.
+
+
 ## 1.9.8 - 2026-11-20
 
 - Détection événementielle de l'appui du bouton de souris conditionnel, sans injection de clic depuis le callback Windows.

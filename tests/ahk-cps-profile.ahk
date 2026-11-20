@@ -42,8 +42,10 @@ try {
         throw Error("Un profil inconnu a été accepté.")
 
     CFTestStart(2, 11, 1)
-    if !CF.test.active || CF.test.cfg.min != 20
+    if !CF.test.active || CF.test.cfg.min != 20 || !CF.engineTimerActive
         throw Error("Le moteur n'a pas chargé le profil à tester.")
+    CFEngineSetTimer(false)
+    CFStatsSetTimer(false)
     start := CF.test.started
     Loop 201 {
         offset := (A_Index - 1) * 10
@@ -57,11 +59,13 @@ try {
         throw Error("Le banc de test a modifié le moteur de clic Windows.")
 
     CFTestStart(2, 12, 2)
+    CFEngineSetTimer(false)
+    CFStatsSetTimer(false)
     start := CF.test.started
     Loop 201
         CFTestTick(start + (A_Index - 1) * 10)
     if CF.test.clicks.Length != 20
-        throw Error("Profil 10 CPS : mauvais nombre de déclenchements.")
+        throw Error("Profil 10 CPS : mauvais nombre de déclenchements : " CF.test.clicks.Length)
     if CF.total != 0
         throw Error("Le test a comptabilisé des clics Windows.")
 
