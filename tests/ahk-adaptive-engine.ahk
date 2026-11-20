@@ -41,14 +41,14 @@ CF.total := 0
 CF.recent := []
 CF.overlayRecent := []
 CF.floatShown := false
-gui := 0
+targetGui := 0
 try {
     if CF.engineTimerActive
         throw Error("Le timer moteur doit être arrêté au repos.")
-    gui := Gui("+AlwaysOnTop", "ClickFlow performance target")
-    gui.Show("w350 h160")
-    WinActivate("ahk_id " gui.Hwnd)
-    if !WinWaitActive("ahk_id " gui.Hwnd, , 2)
+    targetGui := Gui("+AlwaysOnTop", "ClickFlow performance target")
+    targetGui.Show("w350 h160")
+    WinActivate("ahk_id " targetGui.Hwnd)
+    if !WinWaitActive("ahk_id " targetGui.Hwnd, , 2)
         throw Error("La cible Windows du test ne prend pas le focus.")
 
     before := A_TickCount
@@ -114,7 +114,7 @@ try {
 
     ; Ne jamais cliquer si la fenêtre principale reprend le focus.
     CF.pressed := false
-    CF.hwnd := gui.Hwnd
+    CF.hwnd := targetGui.Hwnd
     ActivationDown()
     if CF.armed || CF.engineTimerActive || CF.total != count + 2
         throw Error("La sécurité de focus a été contournée.")
@@ -144,14 +144,14 @@ try {
     if idleCpu > 340
         throw Error("Activité CPU au repos anormalement élevée : " idleCpu "ms/850ms.")
 
-    gui.Destroy()
+    targetGui.Destroy()
     FileAppend("Adaptive engine timers, immediate first click, no duplicate, CPS cadence, stop/focus/mouse safety, CPS test lifecycle and idle CPU passed. FirstClick=" firstDelay "ms IdleCPU=" idleCpu "ms/850ms", "*", "UTF-8")
     ExitApp(0)
 } catch as err {
     try CFEngineSetTimer(false)
     try CFStatsSetTimer(false)
-    if IsObject(gui)
-        try gui.Destroy()
+    if IsObject(targetGui)
+        try targetGui.Destroy()
     FileAppend("ADAPTIVE ENGINE TEST FAILED: " err.Message " " err.File ":" err.Line, "*", "UTF-8")
     ExitApp(1)
 }
