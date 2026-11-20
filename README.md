@@ -46,11 +46,11 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 
 ## Choix de la méthode de détection souris et preuve du chemin utilisé (v1.9.9)
 
-Dans Paramètres > Diagnostics et détection souris, trois modes sont disponibles : **Automatique** (recommandé, hook Windows + contrôle physique de secours), **Événementielle uniquement** (si le hook échoue après l'attente, aucune bascule silencieuse : la condition reste en attente), ou **Classique uniquement** (vérification physique du bouton, sans hook de détection). Le réglage est conservé dans settings.ini sous General/MouseDetectionMode. Tout changement de mode interrompt la session de clics en cours avant d'appliquer le nouveau choix.
+Dans Paramètres > Diagnostics et détection souris, trois modes sont disponibles : **Automatique** (recommandé, hook Windows + contrôle physique de secours), **Événementielle uniquement** (si le hook échoue après l'attente, aucune bascule silencieuse : la condition reste en attente), ou **Classique uniquement** (vérification physique du bouton, sans hook événementiel supplémentaire). Le réglage est conservé dans settings.ini sous General/MouseDetectionMode. Tout changement de mode interrompt la session de clics en cours avant d'appliquer le nouveau choix.
 
 Le panneau Test CPS et la page des paramètres affichent indépendamment de l'interrupteur des diagnostics le **dernier mécanisme ayant réellement permis le clic conditionné** : événement par hook, contrôle classique, secours classique, ou bouton déjà maintenu au démarrage. Ils indiquent également si un hook est installé pendant l'attente. La présence d'un hook ne prouve pas que le déclenchement vient de lui : le contrôle physique peut gagner la course en mode Automatique. Aucun clic conditionné n'est signalé lorsque le profil ne possède pas de condition.
 
-En mode Classique, les mesures de latence liées au callback souris ne sont pas disponibles, puisqu'aucun hook n'est installé. Les mesures restent facultatives. Les choix de moteur ne contournent pas les protections des jeux, ne garantissent pas la compatibilité avec leurs anti-cheats et ne changent pas les règles d'utilisation de l'automatisation.
+En mode Classique, les mesures de latence liées au callback souris ne sont pas disponibles, puisqu'aucun hook événementiel supplémentaire n'est installé (AutoHotkey conserve son hook de lecture de l'état physique). Les mesures restent facultatives. Les choix de moteur ne contournent pas les protections des jeux, ne garantissent pas la compatibilité avec leurs anti-cheats et ne changent pas les règles d'utilisation de l'automatisation.
 
 ## Condition souris réactive aux événements (v1.9.8)
 

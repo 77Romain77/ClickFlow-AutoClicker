@@ -6,7 +6,7 @@
 - Affiche dans Test CPS et Paramètres la méthode ayant réellement déclenché le dernier clic et l'état actuel du hook, même si les diagnostics de latence sont coupés.
 - Corrige les clics persistants après relâchement du bouton conditionnel en conservant la détection événementielle pendant toute la session. L'overlay s'appuie sur le même état effectif que le moteur. Hook libéré à l'arrêt.
 - Conserve le mode choisi entre les lancements ; changement de méthode appliqué après arrêt de la session en cours.
-- En mode Classique, aucun hook souris de détection n'est installé ; en Événementielle uniquement, l'indisponibilité du hook est affichée sans déclenchement de secours implicite.
+- En mode Classique, aucun hook événementiel supplémentaire n'est installé ; en Événementielle uniquement, l'indisponibilité du hook est affichée sans déclenchement de secours implicite.
 - Régressions intégrées aux tests Windows existants, sans nouvelle matrice ni workflow.
 
 
