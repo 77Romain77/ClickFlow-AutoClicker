@@ -496,7 +496,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
    <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div><div id="cpsPrecision" class="subnote" style="margin-top:7px">Aucune mesure de précision.</div></div>
     <div class="shortcut-setting" style="margin-top:14px"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Désactivés par défaut. Mesures facultatives lors des prochaines activations. Aucun hook de mesure pendant le jeu si désactivé.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence" aria-pressed="false"></button></div>
-    <div class="cps-last-wrap" style="margin-top:11px"><strong>Diagnostic du premier clic réel</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Diagnostics désactivés.</div><div id="cpsGateLatency" class="subnote" style="margin-top:7px">Délai de détection de la condition souris : non mesuré.</div><p class="subnote" style="margin-top:5px">Mesure indicative : entre le callback d'entrée souris reçu par ClickFlow et le début de SendInput. Le délai matériel et l'attente de la notification Windows sont exclus. Le moteur de clics reste inchangé.</p></div>
+    <div class="cps-last-wrap" style="margin-top:11px"><strong>Diagnostic du premier clic réel</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Diagnostics désactivés.</div><div id="cpsGateLatency" class="subnote" style="margin-top:7px">Délai après callback : non mesuré.</div><div id="cpsEventLatency" class="subnote" style="margin-top:7px">Événement Windows -> clic : non mesuré.</div><p class="subnote" style="margin-top:5px">Le délai après callback exclut l'attente de notification. L'estimation issue de l'événement Windows inclut davantage de délai, mais son horodatage peut être quantifié à environ 16 ms : compare surtout la moyenne de plusieurs activations. Il ne s'agit pas d'une latence matérielle exacte. Le moteur de clics reste inchangé.</p></div>
    <p id="cpsDescription" class="subnote" style="margin-top:13px">Le test de profil reprend la cadence réelle calculée par le moteur ClickFlow (fixe, aléatoire ou naturelle), sans injecter de clics dans Windows. La touche d'activation et la condition souris ne sont pas nécessaires pour ce banc de test. Aucun score n'est enregistré.</p>
   </div>
  </section>
@@ -1014,7 +1014,8 @@ function setLiveMonitorActive(active) {
 function updateLiveMonitor(data) {
     if(data.diagnosticsEnabled===false) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
-        $('cpsGateLatency').textContent='Délai de détection de la condition souris : non mesuré.';
+        $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
+        $('cpsEventLatency').textContent='Événement Windows -> clic : non mesuré.';
     } else if(data.diagnosticsEnabled===true) {
         const delay=data.firstDispatchMs;
         const fromCondition=data.firstDispatchKind==='condition';
@@ -1027,12 +1028,18 @@ function updateLiveMonitor(data) {
         const gate=data.gateDetectionMs;
         const status=data.gateProbeStatus||'';
         $('cpsGateLatency').textContent=status==='measured'&&gate!==null&&Number.isFinite(Number(gate))
-            ?'Délai de détection du bouton : '+Number(gate).toFixed(2)+' ms (callback Windows -> début de SendInput).'
+            ?'Délai après callback : '+Number(gate).toFixed(2)+' ms (callback Windows -> début de SendInput).'
             :status==='waiting'?'Délai de détection : en attente du bouton de souris...'
             :status==='already-held'?'Condition souris déjà maintenue lors de l’activation : aucune attente à mesurer.'
             :status==='unavailable'?'Hook de diagnostic Windows indisponible sur ce PC.'
             :status==='unobserved'?'Événement souris non horodaté avant le clic : mesure indisponible.'
-            :'Délai de détection de la condition souris : pas encore mesuré.';
+            :'Délai après callback : pas encore mesuré.';
+        const eventMs=data.gateEventDelayMs,avgMs=data.gateEventAverageMs;
+        $('cpsEventLatency').textContent=status==='measured'&&eventMs!==null&&Number.isFinite(Number(eventMs))
+            ?'Événement Windows -> début de SendInput : ~'+Math.round(Number(eventMs))
+                +' ms (horodatage approximatif ; moyenne '+Number(avgMs).toFixed(1)
+                +' ms sur '+Number(data.gateEventSamples||1)+' activation(s)).'
+            :'Événement Windows -> clic : non mesuré.';
     }
     const cps=Number(data.cps)||0;
     const status=data.waiting?'En attente du bouton souris':
@@ -1103,7 +1110,8 @@ function renderSettings() {
     });
     if(!model.preferences.diagnosticsEnabled) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
-        $('cpsGateLatency').textContent='Délai de détection de la condition souris : non mesuré.';
+        $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
+        $('cpsEventLatency').textContent='Événement Windows -> clic : non mesuré.';
     }
     $('liveMonitorCard').classList.toggle('hidden',
         !(model.compact?model.preferences.compactChart:model.preferences.liveMonitor));

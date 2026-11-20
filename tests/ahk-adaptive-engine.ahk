@@ -124,6 +124,7 @@ try {
     ; Callback horodaté artificiellement 6 ms avant le tick :
     ; aucune injection de clic ni nouveau test long.
     CF.gateProbeQpc := CFPerfCounter() - Round(CF.qpcFrequency * 0.006)
+    CF.gateEventUptime := (DllCall("Kernel32\GetTickCount64", "UInt64") - 16) & 0xFFFFFFFF
     CF.gateProbePending := true
     CF.cfg.mouseGate := 0
     EngineTick()
@@ -133,6 +134,8 @@ try {
     if CF.gateProbeStatus != "measured" || CF.gateDetectionMs < 5
         || CF.gateDetectionMs > 60
         throw Error("La mesure du callback souris est incorrecte : " CF.gateDetectionMs)
+    if CF.gateEventDelayMs = "" || CF.gateEventSamples.Length != 1
+        throw Error("La mesure approximative depuis l'evenement Windows manque.")
     if CF.gateHook || CF.gateHookCallback || CF.gateProbePending
         throw Error("Hook de diagnostic non libere apres le premier clic.")
     StopAll("Condition souris testée.")
