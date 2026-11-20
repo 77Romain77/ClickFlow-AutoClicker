@@ -41,6 +41,15 @@ try {
         CFTestStart(2, index, index)
         if !CF.engineTimerActive || (!CF.precisionHandle && !CF.precisionRequested)
             throw Error("Aucun timer haute resolution disponible.")
+        if index = 1 {
+            probes := []
+            Loop 8 {
+                probeBefore := A_TickCount
+                CFPrecisionSleep(3)
+                probes.Push(A_TickCount - probeBefore)
+            }
+            FileAppend("Timer probe: " CFPrecisionJoin(probes) " ms (highres=" (CF.precisionHandle ? "yes" : "no") "). ", "*", "UTF-8")
+        }
         SetTimer(CFPrecisionStop, -650)
         Sleep(760)
         if CF.test.active || CF.engineTimerActive || CF.precisionRequested || CF.precisionHandle
@@ -49,7 +58,7 @@ try {
         count := stamps.Length
         expected := rate * 0.65
         if Abs(count - expected) > Max(2, expected * 0.14)
-            throw Error(rate " CPS : " count " clics contre ~" expected " attendus.")
+            throw Error(rate " CPS : " count " clics contre ~" expected " attendus. Offsets: " CFPrecisionJoin(stamps))
         if count < 2
             throw Error("Historique CPS trop court.")
         interval := (stamps[count] - stamps[1]) / (count - 1)
