@@ -28,8 +28,8 @@ try {
         throw Error("L'overlay ne doit pas rester affiché par défaut.")
     if CF.diagnosticsEnabled
         throw Error("Les diagnostics doivent être inactifs par défaut.")
-    if CF.mouseDetectionMode != "auto"
-        throw Error("La méthode doit être Automatique par défaut.")
+    if CF.mouseDetectionMode != "classic"
+        throw Error("La méthode sûre doit être Classique par défaut.")
 
     SaveSettings()
     CFToggleProfileFavorite(7)
@@ -65,15 +65,11 @@ try {
     if CF.mouseDetectionMode != "classic"
         || IniRead(CF.configFile, "General", "MouseDetectionMode", "") != "classic"
         throw Error("Le choix Classique n'est pas conservé.")
-    CFDesktopSetPreference("mouseDetectionMode", "event")
-    if CF.mouseDetectionMode != "event"
-        throw Error("Le mode Événementiel ne s'active pas.")
-    CFDesktopSetPreference("mouseDetectionMode", "invalid")
-    if CF.mouseDetectionMode != "event"
-        throw Error("Une méthode de détection invalide a été acceptée.")
-    CFDesktopSetPreference("mouseDetectionMode", "auto")
-    if CF.mouseDetectionMode != "auto"
-        throw Error("Le mode Automatique ne se rétablit pas.")
+    for disabledMode in ["event", "auto", "invalid"] {
+        CFDesktopSetPreference("mouseDetectionMode", disabledMode)
+        if CF.mouseDetectionMode != "classic" || CF.gateHook || CF.gateHookCallback
+            throw Error("Une méthode événementielle non sécurisée a été acceptée.")
+    }
     CFDesktopSetPreference("floatShown", "1")
     if CF.overlayVisible
         throw Error("L'overlay devrait rester masqué au repos.")
