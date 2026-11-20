@@ -1055,6 +1055,8 @@ function updateGateMethodStatus(data) {
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
             +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
             +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
+            +'. Raw Input sans périphérique ignoré : '+Number(data.gateRawNullIgnored||0)+'.'
+            +'. Appui matériel reconnu : '+(data.gateHardwareKnown?(data.gateHardwareDown?'Maintenu':'Relâché'):'Non confirmé')+'.'
             +(rawKnown && !rawHeld && data.gatePhysicalHeld
                 ?' Désaccord détecté : Raw Input signale UP, mais la souris est physiquement maintenue. La vérification physique conserve le maintien.'
                 :rawKnown && rawHeld && !data.gatePhysicalHeld
