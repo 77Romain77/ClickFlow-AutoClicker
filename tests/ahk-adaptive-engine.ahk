@@ -2,7 +2,7 @@
 #ErrorStdOut "UTF-8"
 #Include ..\src\ClickFlow-Backend.ahk
 
-; Integration Windows : vrai callback d'activation, cadenceur 10ms adaptatif,
+; Integration Windows : vrai callback d'activation, cadenceur precis adaptatif,
 ; premier clic dans le callback (pas 10ms plus tard), timer CPU idle.
 ; Le clic réel vise uniquement la fenêtre de test AHK, sans autre programme.
 
@@ -17,7 +17,15 @@ CFPerfProcessCpuMs() {
     return (NumGet(kernel, 0, "Int64") + NumGet(user, 0, "Int64")) / 10000
 }
 
-global CF
+CFPerfCaptureEarly() {
+    global CF, CFPerfEarlyTotal
+    CFPerfEarlyTotal := CF.total
+}
+CFPerfStopSample() {
+    StopAll("Fin du test.")
+}
+
+global CF, CFPerfEarlyTotal := -1
 CF.web := 0
 CF.desktopReady := false
 CF.shuttingDown := false
@@ -66,14 +74,15 @@ try {
     EngineTick()
     if CF.total != 1
         throw Error("Deux clics ont été déclenchés lors de l'activation.")
-    Sleep(55)
-    if CF.total != 1
+    ; La boucle precise est cooperative : arretons-la via un callback
+    ; planifie avant de reprendre le fil principal du test.
+    SetTimer(CFPerfCaptureEarly, -55)
+    SetTimer(CFPerfStopSample, -260)
+    Sleep(330)
+    if CFPerfEarlyTotal != 1
         throw Error("Double clic avant la prochaine échéance de 200ms.")
-    Sleep(185)
     if CF.total != 2
-        throw Error("La cadence fixe 5 CPS a changé : " CF.total " clics en ~240ms.")
-
-    StopAll("Fin du test.")
+        throw Error("La cadence fixe 5 CPS a changé : " CF.total " clics en ~260ms.")
     if CF.armed || CF.engineTimerActive || CF.statsTimerActive
         throw Error("Les timers ne repassent pas au repos après l'arrêt.")
     count := CF.total
