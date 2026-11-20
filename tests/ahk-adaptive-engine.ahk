@@ -252,6 +252,57 @@ try {
     }
     if CF.gateRawDowns != 5 || CF.gateRawUps != 10
         throw Error("Les compteurs d'appui/relâchement Raw Input sont faux.")
+    ; Le cas réel : bouton gauche maintenu et clic gauche injecté, à 10 CPS
+    ; ou 50 CPS. Les injections sans hDevice ne doivent pas modifier
+    ; l'état matériel. Le vrai UP doit empêcher un maintien AHK bloqué.
+    CF.cfg.gateButton := "LButton"
+    CF.cfg.clickButton := "Left"
+    CF.gateRawArmed := false
+    CF.gateHardwareKnown := false
+    CF.gateHardwareDown := false
+    CF.gateHardwareDevice := 0
+    if !CFGateSameButton()
+        throw Error("Le clic gauche conditionnant le clic gauche n'est pas identifié.")
+    if CFGateAcceptRawSource(true, 0, 0)
+        throw Error("Un périphérique sans identité ne doit pas alimenter l'état matériel.")
+    CFGateRawButtonFlags(0x1, 0)
+    if CF.gateRawArmed || CF.gateHardwareKnown
+        throw Error("Un DOWN sans périphérique matériel a armé le moteur.")
+    CFGateRawButtonFlags(0x1, 1234)
+    if !CF.gateRawArmed || !CF.gateHardwareKnown || !CF.gateHardwareDown
+        || CF.gateHardwareDevice != 1234
+        throw Error("Le DOWN matériel n'a pas armé le bouton gauche.")
+    for cps in [10, 50] {
+        Loop 10 * cps {
+            CFGateRawButtonFlags(0x2, 0)
+            CFGateRawButtonFlags(0x1, 0)
+        }
+        if !CF.gateHardwareDown || !CF.gateRawArmed || !CF.gateWakeSignal
+            throw Error("Un clic synthétique a interrompu le maintien à " cps " CPS.")
+    }
+    CFGateRawButtonFlags(0x2, 5678)
+    if !CF.gateHardwareDown
+        throw Error("Un autre périphérique a interrompu le maintien capturé.")
+    CFGateRawButtonFlags(0x2, 1234)
+    if CF.gateHardwareDown || CF.gateRawArmed || CF.gateWakeSignal
+        throw Error("Le véritable relâchement matériel n'a pas arrêté la condition.")
+    if !CFGateHardwareReleased(true, CF.gateHardwareKnown, CF.gateHardwareDown)
+        throw Error("Le veto matériel doit arrêter même si GetKeyState reste DOWN.")
+    CFGateRawButtonFlags(0x1, 0)
+    if CF.gateRawArmed
+        throw Error("Un DOWN synthétique a redémarré après relâchement.")
+    CFGateRawButtonFlags(0x1, 1234)
+    if !CF.gateRawArmed || !CF.gateHardwareDown
+        throw Error("Un nouvel appui matériel n'a pas redémarré la condition.")
+    CF.cfg.clickButton := "Right"
+    if CFGateSameButton() || !CFGateAcceptRawSource(false, 0, 0)
+        throw Error("Les boutons différents ne doivent pas être filtrés.")
+    CF.cfg.clickButton := "Left"
+    CF.gateHardwareKnown := false
+    CF.gateHardwareDown := false
+    CF.gateHardwareDevice := 0
+    CF.gateRawArmed := false
+    CF.gateWakeSignal := false
     CFGateDebugToggle(false)
     if CF.gateDebugEnabled || CF.gateRawDowns || CF.gateRawUps
         throw Error("Les compteurs Raw Input restent actifs après désactivation.")
