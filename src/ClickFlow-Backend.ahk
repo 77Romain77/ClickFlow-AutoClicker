@@ -992,7 +992,7 @@ EngineTick(firstFromActivation := false) {
     CF.total += 1
     CF.recent.Push(now)
     if CF.floatShown
-        CF.overlayRecent.Push(now)
+        CF.overlayRecent.Push(A_TickCount) ; l'overlay reste sur son horloge historique
     ; Evite les rafales de rattrapage apres une interruption.
     CF.nextAt := now + intervalMs
 }
@@ -1095,7 +1095,7 @@ UpdateStats() {
     now := CFNowMs()
     while CF.recent.Length && CF.recent[1] < now - 1000
         CF.recent.RemoveAt(1)
-    windowStart := now - CF.overlayAverageSeconds * 1000
+    windowStart := A_TickCount - CF.overlayAverageSeconds * 1000
     while CF.overlayRecent.Length && CF.overlayRecent[1] < windowStart
         CF.overlayRecent.RemoveAt(1)
     SendStats()
