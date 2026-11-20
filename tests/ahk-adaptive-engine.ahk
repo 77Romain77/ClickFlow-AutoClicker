@@ -276,11 +276,11 @@ try {
     if recovered.phase != 0 || recovered.pause || recovered.stop
         throw Error("Une discordance transitoire doit se résorber.")
     suspect := CFGateSafetyNext(0, 0, 200, true, true, false, true, false)
-    pause := CFGateSafetyNext(suspect.phase, suspect.since,
+    quietStep := CFGateSafetyNext(suspect.phase, suspect.since,
         200 + CFGateSafetySuspectMs(), true, true, false, true, false)
-    if pause.phase != 2 || !pause.pause || pause.stop
+    if quietStep.phase != 2 || !quietStep.pause || quietStep.stop
         throw Error("Une discordance prolongée doit suspendre les clics.")
-    stillPaused := CFGateSafetyNext(pause.phase, pause.since,
+    stillPaused := CFGateSafetyNext(quietStep.phase, quietStep.since,
         200 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs() - 1,
         true, true, false, true, false)
     if stillPaused.phase != 2 || !stillPaused.pause || stillPaused.stop
@@ -290,12 +290,12 @@ try {
         true, true, false, true, true)
     if resumed.phase != 0 || resumed.pause || resumed.stop
         throw Error("Un vrai maintien confirmé après pause doit reprendre.")
-    stopped := CFGateSafetyNext(pause.phase, pause.since,
+    stopped := CFGateSafetyNext(quietStep.phase, quietStep.since,
         200 + CFGateSafetySuspectMs() + CFGateSafetyQuietMs(),
         true, true, false, true, false)
     if stopped.phase != 3 || !stopped.stop || !stopped.pause
         throw Error("Un relâchement persistant après pause doit arrêter.")
-    released := CFGateSafetyNext(pause.phase, pause.since, 225,
+    released := CFGateSafetyNext(quietStep.phase, quietStep.since, 225,
         true, true, false, false, false)
     if released.phase != 0 || !released.pause || !released.disarm
         throw Error("Un relâchement physique doit rester sans clic.")
