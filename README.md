@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.9 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.9.10 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.9.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.9)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.10.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.10)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.9.ahk`.
+2. Télécharger `ClickFlow-v1.9.10.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.9`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.10`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,16 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Correctif de stabilité de la souris (v1.9.10)
+
+**Important : les modes Événementielle et Automatique sont temporairement suspendus.** Un retour utilisateur a identifié des clics persistants après relâchement et des freezes de souris en mode événementiel, alors que le mode Classique fonctionnait. Le hook global `WH_MOUSE_LL` était installé sur le même thread AutoHotkey que le cadenceur. La documentation Microsoft précise que le délai d'exécution d'un hook bas niveau peut bloquer le traitement des entrées, puis conduire Windows à supprimer silencieusement le hook. Le mode événementiel actuel ne doit plus être utilisé.
+
+Ce correctif impose le mode **Classique** au démarrage, y compris si une configuration précédente demandait Automatique ou Événementielle. Le sélecteur conserve les deux modes visibles mais grisés pour expliciter cette restriction. Les tentatives de réglage via un ancien frontend sont également rejetées côté moteur. Aucun `WH_MOUSE_LL` supplémentaire n'est installé par ClickFlow. Le contrôle de la condition souris utilise le mécanisme physique classique `GetKeyState`, avec le cadenceur haute précision et la cadence CPS conservés. Les diagnostics de latence restent facultatifs, mais les mesures liées au callback ne sont plus possibles en mode Classique.
+
+Le moteur remet à zéro tous les horodatages de hook au début et à la fin des sessions et n'utilise plus d'horodatage précédent pour calculer un délai impossible tel que 174805 ms. Le diagnostic du temps logiciel du premier clic reste actif si l'utilisateur choisit de le mesurer.
+
+Ce correctif privilégie la fiabilité et la sécurité des entrées utilisateur à une optimisation de quelques millisecondes. Une future refonte indépendante pourra examiner la solution recommandée par Microsoft, **Raw Input** (`WM_INPUT`), après validation dans des applications de test autorisant l'automatisation. Ni les raccourcis, ni le CPS, ni l'arrêt d'urgence, ni l'overlay ne sont volontairement modifiés.
 
 ## Choix de la méthode de détection souris et preuve du chemin utilisé (v1.9.9)
 

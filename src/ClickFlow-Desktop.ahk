@@ -18,9 +18,8 @@ CFDesktopReadPreferences() {
         IniRead(file, "General", "FloatShown", "0")) = "1"
     CF.liveMonitor := IniRead(file, "General", "LiveMonitor", "1") != "0"
     CF.diagnosticsEnabled := IniRead(file, "General", "DiagnosticsEnabled", "0") = "1"
-    detectionMode := IniRead(file, "General", "MouseDetectionMode", "auto")
-    CF.mouseDetectionMode := HasValue(["auto", "event", "classic"], detectionMode)
-        ? detectionMode : "auto"
+    ; Safety migration: never restore the problematic WH_MOUSE_LL mode.
+    CF.mouseDetectionMode := "classic"
     CF.compactChart := IniRead(file, "General", "CompactChart", "1") != "0"
     CF.overlayAlwaysVisible := IniRead(file, "General", "OverlayAlwaysVisible", "0") = "1"
     CF.overlayOpacity := CFDesktopInt(IniRead(file, "General",
@@ -488,14 +487,12 @@ CFDesktopSetPreference(field, value) {
         case "diagnosticsEnabled":
             CFDiagToggle(enabled)
         case "mouseDetectionMode":
-            if !HasValue(["auto", "event", "classic"], value)
+            ; Reject legacy frontend attempts to re-enable the unsafe hook.
+            if value != "classic" {
+                SetNotice("Détection événementielle temporairement désactivée pour la stabilité.")
                 return
-            if value != CF.mouseDetectionMode {
-                StopAll("Méthode de détection souris modifiée.")
-                CF.mouseDetectionMode := value
-                CF.gateMethodLast := "none"
-                CF.gateMethodCurrent := "inactive"
             }
+            CF.mouseDetectionMode := "classic"
         case "compactChart":
             CF.compactChart := enabled
         case "overlayAlwaysVisible":

@@ -119,84 +119,38 @@ try {
         throw Error("La condition souris n'empêche pas le premier clic.")
     if CF.firstDispatchMs != "" || CF.firstDispatchKind != ""
         throw Error("Une mesure a ete creee sans aucun premier clic.")
-    ; Contrôler le chemin événementiel sans injection physique sur le runner :
-    ; mauvais bouton et événements injectés ne doivent jamais déclencher.
-    if !CF.gateHook && !CF.gateHookFailed
-        throw Error("Le hook souris conditionnel n'a pas été essayé.")
-    CFGateTrackEvent(0x201, 0, 0, A_TickCount) ; clic gauche, pas droit
-    CFGateTrackEvent(0x204, 0, 1, A_TickCount) ; injection logicielle
-    if CF.gateWakeSignal
-        throw Error("Un événement souris non autorisé déclenche la condition.")
-    CFGateTrackEvent(0x204, 0, 0, A_TickCount) ; appui physique droit
-    if !CF.gateWakeSignal
-        throw Error("L'appui physique ne réveille pas la condition.")
-    CFGateTrackEvent(0x205, 0, 0, A_TickCount) ; relâché avant envoi
-    if CF.gateWakeSignal
-        throw Error("Le relâchement souris n'annule pas l'attente.")
-    CFGateTrackEvent(0x204, 0, 0, A_TickCount)
-    ; 6 ms simulées depuis le callback, indépendamment du temps Windows.
-    CF.gateProbeQpc := CFPerfCounter() - Round(CF.qpcFrequency * 0.006)
-    CF.gateEventUptime := (DllCall("Kernel32\GetTickCount64", "UInt64") - 16) & 0xFFFFFFFF
-    CF.gateProbePending := true
+    ; Aucun hook souris global installe et pas de faux horodatage.
+    if CF.mouseDetectionMode != "classic" || CF.gateHook || CF.gateHookCallback
+        throw Error("Un hook événementiel est encore actif.")
+    if CF.gateMethodCurrent != "classic" || !CF.gateWaiting
+        throw Error("La condition ne passe pas en attente classique.")
+    if CF.gateProbeQpc || CF.gateEventUptime
+        throw Error("Un horodatage événementiel périmé est conservé.")
+    EngineTick()
+    if CF.total != count + 1
+        throw Error("Le moteur clique alors que la condition est absente.")
+    ; Test sans appui physique : neutraliser provisoirement la condition.
+    CF.cfg.mouseGate := 0
     EngineTick()
     if CF.total != count + 2 || CF.firstDispatchMs = ""
-        || CF.firstDispatchKind != "condition" || CF.firstDispatchMs < 0
-        throw Error("Le premier clic événementiel n'est pas envoyé immédiatement.")
-    if CF.gateMethodLast != "event"
-        throw Error("Le hook a été utilisé mais le diagnostic n'indique pas l'événement.")
-    if CF.gateProbeStatus != "measured" || CF.gateDetectionMs < 5
-        || CF.gateDetectionMs > 60
-        throw Error("La mesure du callback souris est incorrecte : " CF.gateDetectionMs)
-    if CF.gateEventDelayMs = "" || CF.gateEventSamples.Length != 1
-        throw Error("La mesure approximative depuis l'evenement Windows manque.")
-    if !CF.gateHook || !CF.gateHookCallback || CF.gateProbePending
-        throw Error("Le hook doit continuer à observer le relâchement après le premier clic.")
-    ; Régression du bug : lorsque GetKeyState semble encore appuyé,
-    ; un UP physique capté par le hook doit bloquer tous les clics suivants.
-    CFGateTrackEvent(0x205, 0, 0, A_TickCount)
-    if CFGateIsHeld() || CF.gateWakeSignal
-        throw Error("Le relâchement physique n'interrompt pas la condition.")
-    EngineTick()
-    if CF.total != count + 2 || !CF.gateWaiting || CF.cpsNow != 0
-        throw Error("Des clics continuent après le relâchement conditionnel.")
-    ; Une nouvelle pression doit pouvoir reprendre immédiatement.
-    CFGateTrackEvent(0x204, 0, 0, A_TickCount)
-    if !CFGateIsHeld()
-        throw Error("La nouvelle pression physique n'est pas reconnue.")
-    EngineTick()
-    if CF.total != count + 3 || CF.gateMethodLast != "event"
-        throw Error("Les clics ne reprennent pas après le nouvel appui.")
-    CFGateTrackEvent(0x205, 0, 0, A_TickCount)
-    EngineTick()
-    if CF.total != count + 3 || !CF.gateWaiting
-        throw Error("Le deuxième relâchement génère encore des clics.")
+        throw Error("Le moteur de clics n'a pas émis son premier clic.")
+    if CF.gateDetectionMs != "" || CF.gateEventDelayMs != ""
+        || CF.gateProbeStatus = "measured"
+        throw Error("Une fausse latence callback est affichée en Classique.")
     StopAll("Condition souris testée.")
-    if CF.gateHook || CF.gateHookCallback || CF.gateProbePending
-        || CF.gateWakeSignal || CF.gateEventKnown
-        throw Error("Le hook de souris reste installé après l'arrêt.")
-    ; Diagnostics désactivés : la condition doit toujours détecter l'appui,
-    ; sans chronométrage, puis libérer son hook à l'arrêt.
+    if CF.gateHook || CF.gateHookCallback
+        throw Error("Un hook souris reste après l'arrêt.")
+
     CFDiagToggle(false)
     CF.pressed := false
     CF.cfg.mouseGate := 1
     ActivationDown()
-    if !CF.armed || CF.firstDispatchMs != ""
-        throw Error("La condition sans diagnostics ne démarre pas correctement.")
-    CFGateTrackEvent(0x204, 0, 0, A_TickCount)
-    if !CF.gateWakeSignal
-        throw Error("La détection événementielle dépend des diagnostics.")
+    if !CF.armed || CF.firstDispatchMs != "" || CF.gateHook
+        throw Error("Le mode Classique dépend des diagnostics.")
     EngineTick()
-    if CF.total != count + 4 || !CF.gateHook || CF.firstDispatchMs != ""
-        throw Error("Le clic sans diagnostics ne fonctionne pas.")
-    CFGateTrackEvent(0x205, 0, 0, A_TickCount)
-    EngineTick()
-    if CF.total != count + 4 || !CF.gateWaiting
-        throw Error("Le relâchement reste ignoré quand les diagnostics sont coupés.")
-    if CF.gateMethodLast != "event"
-        throw Error("Le résultat ne distingue pas le chemin événementiel.")
-    StopAll("Condition souris testée sans diagnostics.")
-    if CF.gateHook || CF.gateHookCallback
-        throw Error("Le hook n'est pas libéré après la session sans diagnostics.")
+    if CF.total != count + 2 || CF.gateMethodCurrent != "classic"
+        throw Error("Des clics partent sans appui conditionnel.")
+    StopAll("Fin du test sans diagnostics.")
     CF.diagnosticsEnabled := true
     CF.cfg.mouseGate := 0
 
@@ -205,7 +159,7 @@ try {
     CF.pressed := false
     CF.cfg.hold := 1
     ActivationDown()
-    if CF.total != count + 5
+    if CF.total != count + 3
         throw Error("Le premier clic en mode Maintenir n'est pas immédiat.")
     ActivationUp()
     if CF.armed || CF.engineTimerActive
@@ -216,7 +170,7 @@ try {
     CF.pressed := false
     CF.hwnd := targetGui.Hwnd
     ActivationDown()
-    if CF.armed || CF.engineTimerActive || CF.total != count + 5
+    if CF.armed || CF.engineTimerActive || CF.total != count + 3
         throw Error("La sécurité de focus a été contournée.")
     CF.hwnd := 0
     CF.pressed := false
@@ -229,7 +183,7 @@ try {
     CFTestTick(CF.test.started + 2000)
     if CF.test.active || CF.engineTimerActive || CF.statsTimerActive
         throw Error("Le timer reste actif après la fin du Test CPS.")
-    if CF.total != count + 5
+    if CF.total != count + 3
         throw Error("Le Test CPS a injecté des clics Windows.")
     CFTestStart(5, 105, 1)
     CFTestStop("annulé")
@@ -251,18 +205,14 @@ try {
         throw Error("Le mode classique doit attendre sans hook.")
     StopAll("Test classique terminé.")
 
-    ; Événementiel forcé : absence de hook = indisponible, jamais fallback.
+    ; Ancienne configuration forcee : le hook ne doit pas se réinstaller.
     CF.mouseDetectionMode := "event"
     CF.pressed := false
     ActivationDown()
-    CFGateProbeStop()
-    CF.gateHookFailed := true
-    EngineTick()
-    if !CF.armed || CF.gateMethodCurrent != "unavailable"
-        || CF.gateHook || CF.gateMethodLast != "none"
-        throw Error("Le mode événementiel ne doit pas se rabattre sur le classique.")
-    StopAll("Test événementiel indisponible terminé.")
-    CF.mouseDetectionMode := "auto"
+    if CF.gateHook || CF.gateHookCallback
+        throw Error("L'ancienne méthode a recréé le hook.")
+    StopAll("Repli de sécurité terminé.")
+    CF.mouseDetectionMode := "classic"
     CF.cfg.mouseGate := 0
 
     ; Mesure indicative du CPU consommé au repos par le processus AutoHotkey.
