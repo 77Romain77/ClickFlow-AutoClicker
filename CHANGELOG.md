@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.15 - 2026-11-20
+
+- Ajoute un interrupteur indépendant pour les diagnostics détaillés de détection souris, désactivés par défaut.
+- Arrête les compteurs Raw Input et les vérifications physiques supplémentaires destinées aux diagnostics lorsque cette option est désactivée ; la détection souris et le maintien restent actifs.
+- Retire les mentions "expérimental" dans l'interface et explique les modes Classique, Automatique et Événementielle.
+- Recommande Automatique (Raw Input avec secours classique), sans modifier le choix sauvegardé de l'utilisateur.
+- Étend les tests de régression et conserve l'option de mesure de latence indépendante.
+
+
 ## 1.9.14 - 2026-11-20
 
 - Corrige la contradiction observée sur le PC de test : Raw Input signale UP pendant que GetKeyState confirme que le bouton conditionnel est toujours maintenu.

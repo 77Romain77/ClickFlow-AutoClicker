@@ -18,6 +18,7 @@ CFDesktopReadPreferences() {
         IniRead(file, "General", "FloatShown", "0")) = "1"
     CF.liveMonitor := IniRead(file, "General", "LiveMonitor", "1") != "0"
     CF.diagnosticsEnabled := IniRead(file, "General", "DiagnosticsEnabled", "0") = "1"
+    CF.gateDebugEnabled := IniRead(file, "General", "GateDebugEnabled", "0") = "1"
     ; Stable default remains classic; event and auto now use Raw Input.
     detectionMode := IniRead(file, "General", "MouseDetectionMode", "classic")
     CF.mouseDetectionMode := HasValue(["auto", "event", "classic"], detectionMode)
@@ -58,6 +59,7 @@ CFDesktopPreferencesJson() {
         . ',"floatShown":' (CF.floatShown ? "true" : "false")
         . ',"liveMonitor":' (CF.liveMonitor ? "true" : "false")
         . ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false")
+        . ',"gateDebugEnabled":' (CF.gateDebugEnabled ? "true" : "false")
         . ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode)
         . ',"compactChart":' (CF.compactChart ? "true" : "false")
         . ',"overlayAlwaysVisible":' (CF.overlayAlwaysVisible ? "true" : "false")
@@ -488,6 +490,8 @@ CFDesktopSetPreference(field, value) {
             CF.liveMonitor := enabled
         case "diagnosticsEnabled":
             CFDiagToggle(enabled)
+        case "gateDebugEnabled":
+            CFGateDebugToggle(enabled)
         case "mouseDetectionMode":
             if !HasValue(["classic", "auto", "event"], value)
                 return
