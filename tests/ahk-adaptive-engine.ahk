@@ -281,6 +281,8 @@ try {
     if CF.total != beforeRepeated + 2 || !CF.gateWaiting || CFGateIsHeld()
         throw Error("La cadence n'est pas interrompue après Raw Input UP.")
 
+    ; Retablir le bouton X2 du test d'horodatage suivant.
+    CF.cfg.gateButton := "XButton2"
     ; Un nouveau premier clic ne doit pas utiliser un horodatage de
     ; l'ancien appui relâché (régression du faux délai 174805 ms).
     CF.gateProbePending := true
