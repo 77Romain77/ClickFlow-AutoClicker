@@ -26,6 +26,8 @@ try {
         throw Error("La moyenne CPS doit commencer sur 5 secondes.")
     if CF.overlayAlwaysVisible
         throw Error("L'overlay ne doit pas rester affiché par défaut.")
+    if CF.diagnosticsEnabled
+        throw Error("Les diagnostics doivent être inactifs par défaut.")
 
     SaveSettings()
     CFToggleProfileFavorite(7)
@@ -49,6 +51,14 @@ try {
     g.Show("w540 h700")
     CF.hwnd := g.Hwnd
     CFDesktopInit()
+    CFDesktopSetPreference("diagnosticsEnabled", "1")
+    if !CF.diagnosticsEnabled
+        throw Error("Les diagnostics ne s'activent pas.")
+    CFDesktopSetPreference("diagnosticsEnabled", "0")
+    if CF.diagnosticsEnabled || CF.gateHook
+        throw Error("Les diagnostics restent actifs après désactivation.")
+    if IniRead(CF.configFile, "General", "DiagnosticsEnabled", "") != "0"
+        throw Error("Le diagnostic ne se sauvegarde pas.")
     CFDesktopSetPreference("floatShown", "1")
     if CF.overlayVisible
         throw Error("L'overlay devrait rester masqué au repos.")

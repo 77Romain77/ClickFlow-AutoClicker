@@ -37,6 +37,7 @@ CF.engineTimerActive := false
 CF.statsTimerActive := false
 CF.test := {active: false}
 CF.cfg := DefaultConfig()
+CF.diagnosticsEnabled := true  ; Mesure volontaire dans les tests.
 CF.cfg.mode := 1
 CF.cfg.min := 5
 CF.cfg.max := 5
@@ -120,11 +121,20 @@ try {
         throw Error("Une mesure a ete creee sans aucun premier clic.")
     ; Simule la condition devenue vraie, sans injecter un bouton physique
     ; sur le runner CI : le premier clic ulterieur doit etre mesure.
+    ; Callback horodaté artificiellement 6 ms avant le tick :
+    ; aucune injection de clic ni nouveau test long.
+    CF.gateProbeQpc := CFPerfCounter() - Round(CF.qpcFrequency * 0.006)
+    CF.gateProbePending := true
     CF.cfg.mouseGate := 0
     EngineTick()
     if CF.total != count + 2 || CF.firstDispatchMs = ""
         || CF.firstDispatchKind != "condition" || CF.firstDispatchMs < 0
         throw Error("Le premier clic apres attente souris n'est pas mesure.")
+    if CF.gateProbeStatus != "measured" || CF.gateDetectionMs < 5
+        || CF.gateDetectionMs > 60
+        throw Error("La mesure du callback souris est incorrecte : " CF.gateDetectionMs)
+    if CF.gateHook || CF.gateHookCallback || CF.gateProbePending
+        throw Error("Hook de diagnostic non libere apres le premier clic.")
     StopAll("Condition souris testée.")
 
     ; Le mode Maintenir doit aussi envoyer son premier clic dès le
@@ -162,6 +172,10 @@ try {
     CFTestStop("annulé")
     if CF.engineTimerActive || CF.statsTimerActive
         throw Error("Le timer reste actif après l'annulation du Test CPS.")
+
+    CFDiagToggle(false)
+    if CF.diagnosticsEnabled || CF.gateHook || CF.gateHookCallback
+        throw Error("Les diagnostics restent actifs après désactivation.")
 
     ; Mesure indicative du CPU consommé au repos par le processus AutoHotkey.
     ; La limite est volontairement large pour ne pas dépendre du runner CI.
