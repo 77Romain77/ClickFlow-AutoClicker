@@ -18,6 +18,9 @@ CFDesktopReadPreferences() {
         IniRead(file, "General", "FloatShown", "0")) = "1"
     CF.liveMonitor := IniRead(file, "General", "LiveMonitor", "1") != "0"
     CF.diagnosticsEnabled := IniRead(file, "General", "DiagnosticsEnabled", "0") = "1"
+    detectionMode := IniRead(file, "General", "MouseDetectionMode", "auto")
+    CF.mouseDetectionMode := HasValue(["auto", "event", "classic"], detectionMode)
+        ? detectionMode : "auto"
     CF.compactChart := IniRead(file, "General", "CompactChart", "1") != "0"
     CF.overlayAlwaysVisible := IniRead(file, "General", "OverlayAlwaysVisible", "0") = "1"
     CF.overlayOpacity := CFDesktopInt(IniRead(file, "General",
@@ -54,6 +57,7 @@ CFDesktopPreferencesJson() {
         . ',"floatShown":' (CF.floatShown ? "true" : "false")
         . ',"liveMonitor":' (CF.liveMonitor ? "true" : "false")
         . ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false")
+        . ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode)
         . ',"compactChart":' (CF.compactChart ? "true" : "false")
         . ',"overlayAlwaysVisible":' (CF.overlayAlwaysVisible ? "true" : "false")
         . ',"overlayOpacity":' CF.overlayOpacity
@@ -483,6 +487,15 @@ CFDesktopSetPreference(field, value) {
             CF.liveMonitor := enabled
         case "diagnosticsEnabled":
             CFDiagToggle(enabled)
+        case "mouseDetectionMode":
+            if !HasValue(["auto", "event", "classic"], value)
+                return
+            if value != CF.mouseDetectionMode {
+                StopAll("Méthode de détection souris modifiée.")
+                CF.mouseDetectionMode := value
+                CF.gateMethodLast := "none"
+                CF.gateMethodCurrent := "inactive"
+            }
         case "compactChart":
             CF.compactChart := enabled
         case "overlayAlwaysVisible":

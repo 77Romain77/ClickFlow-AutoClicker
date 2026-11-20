@@ -142,6 +142,8 @@ try {
     if CF.total != count + 2 || CF.firstDispatchMs = ""
         || CF.firstDispatchKind != "condition" || CF.firstDispatchMs < 0
         throw Error("Le premier clic événementiel n'est pas envoyé immédiatement.")
+    if CF.gateMethodLast != "event"
+        throw Error("Le hook a été utilisé mais le diagnostic n'indique pas l'événement.")
     if CF.gateProbeStatus != "measured" || CF.gateDetectionMs < 5
         || CF.gateDetectionMs > 60
         throw Error("La mesure du callback souris est incorrecte : " CF.gateDetectionMs)
@@ -164,6 +166,8 @@ try {
     EngineTick()
     if CF.total != count + 3 || CF.gateHook || CF.firstDispatchMs != ""
         throw Error("Le clic sans diagnostics ne fonctionne pas.")
+    if CF.gateMethodLast != "event"
+        throw Error("Le résultat ne distingue pas le chemin événementiel.")
     StopAll("Condition souris testée sans diagnostics.")
     CF.diagnosticsEnabled := true
     CF.cfg.mouseGate := 0
@@ -207,6 +211,31 @@ try {
     CFDiagToggle(false)
     if CF.diagnosticsEnabled || CF.gateHook || CF.gateHookCallback
         throw Error("Les diagnostics restent actifs après désactivation.")
+
+    ; Classique : aucun hook, même quand le bouton est attendu.
+    CF.mouseDetectionMode := "classic"
+    CF.cfg.hold := 2
+    CF.cfg.mouseGate := 1
+    CF.pressed := false
+    ActivationDown()
+    if !CF.armed || CF.gateHook || CF.gateHookCallback
+        || CF.gateMethodCurrent != "classic"
+        throw Error("Le mode classique doit attendre sans hook.")
+    StopAll("Test classique terminé.")
+
+    ; Événementiel forcé : absence de hook = indisponible, jamais fallback.
+    CF.mouseDetectionMode := "event"
+    CF.pressed := false
+    ActivationDown()
+    CFGateProbeStop()
+    CF.gateHookFailed := true
+    EngineTick()
+    if !CF.armed || CF.gateMethodCurrent != "unavailable"
+        || CF.gateHook || CF.gateMethodLast != "none"
+        throw Error("Le mode événementiel ne doit pas se rabattre sur le classique.")
+    StopAll("Test événementiel indisponible terminé.")
+    CF.mouseDetectionMode := "auto"
+    CF.cfg.mouseGate := 0
 
     ; Mesure indicative du CPU consommé au repos par le processus AutoHotkey.
     ; La limite est volontairement large pour ne pas dépendre du runner CI.
