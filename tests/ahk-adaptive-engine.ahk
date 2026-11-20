@@ -256,6 +256,18 @@ try {
     if CF.gateDebugEnabled || CF.gateRawDowns || CF.gateRawUps
         throw Error("Les compteurs Raw Input restent actifs après désactivation.")
     ; Les tests de maintien ci-dessous se déroulent sans suivi détaillé.
+    ; État AHK bloqué sur DOWN + état Raw Input sur UP + état asynchrone UP :
+    ; déclenchement de la sécurité après confirmation, pas sur un seul UP.
+    if !CFGateSafetyDisagree(true, true, false, true, false)
+        throw Error("Une divergence physique persistante doit être vérifiée.")
+    if CFGateSafetyDisagree(true, true, false, true, true)
+        throw Error("La sécurité s'active alors que Windows confirme le maintien.")
+    if CFGateSafetyDisagree(true, true, true, true, false)
+        throw Error("La sécurité s'active sur un événement DOWN Raw.")
+    if CFGateSafetyDisagree(false, true, false, true, false)
+        throw Error("La sécurité ne doit pas affecter le mode Classique.")
+    if CFGateSafetyTimeoutMs() < 20 || CFGateSafetyTimeoutMs() > 80
+        throw Error("Tolérance de sécurité trop grande ou trop petite.")
 
     ; Régression v1.9.13 sur vrai PC : Raw UP est parfois reçu pendant
     ; que GetKeyState indique Maintenu. Le moteur ne doit PAS s'arrêter.
