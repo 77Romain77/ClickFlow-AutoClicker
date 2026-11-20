@@ -917,13 +917,7 @@ CFGateTraceText() {
     since := CF.gateTraceLastClickAt > 0
         ? Round(CFNowMs() - CF.gateTraceLastClickAt, 0) " ms depuis dernier clic"
         : "aucun clic"
-    result := "Moteur " (CF.armed ? "armé" : "arrêté")
-        " | ticks=" CF.gateTraceTicks " | clics=" CF.gateTraceClicks
-        " | passages en attente=" CF.gateTraceWaits
-        " | " since
-        " | Raw DOWN=" CF.gateRawDowns " / UP=" CF.gateRawUps
-        " | bouton conditionnel=" CF.cfg.gateButton
-        " | bouton simulé=" CF.cfg.clickButton
+    result := "Moteur " (CF.armed ? "armé" : "arrêté") " | ticks=" CF.gateTraceTicks " | clics=" CF.gateTraceClicks " | passages en attente=" CF.gateTraceWaits " | " since " | Raw DOWN=" CF.gateRawDowns " / UP=" CF.gateRawUps " | bouton conditionnel=" CF.cfg.gateButton " | bouton simulé=" CF.cfg.clickButton
     if CF.gateTraceStopReason != ""
         result .= " | raison du dernier arrêt : " CF.gateTraceStopReason
     for line in CF.gateTrace
