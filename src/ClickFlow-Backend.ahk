@@ -30,6 +30,8 @@ global CF := {
     engineTimerActive: false, statsTimerActive: false,
     engineLoopRunning: false, precisionRequested: false, precisionHandle: 0,
     firstDispatchMs: "", firstDispatchKind: "", activationCounter: 0, qpcFrequency: 0,
+    diagnosticsEnabled: false, gateDetectionMs: "", gateProbeStatus: "",
+    gateHook: 0, gateHookCallback: 0, gateProbePending: false, gateProbeQpc: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -99,6 +101,7 @@ BackendExit(*) {
         return
     CFDesktopCaptureMainBounds(CF.compactMode)
     CF.shuttingDown := true
+    CFGateProbeStop()
 
     ; Aucun nouveau clic, timer ou message WebView2 pendant la fermeture.
     CFTestStop("fermeture")
@@ -241,7 +244,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"firstDispatchMs":' (CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -839,6 +842,83 @@ CFEngineRun() {
     }
 }
 
+; Diagnostic opt-in : un hook bas niveau n'est actif QUE pendant l'attente
+; du premier clic conditionne. Il enregistre l'heure du callback Windows,
+; sans déclencher le clic, afin de mesurer le cadenceur AVANT optimisation.
+; Ce n'est pas l'horodatage matériel : le délai pré-hook reste inconnu.
+CFDiagToggle(enabled) {
+    global CF
+    enabled := !!enabled
+    if CF.diagnosticsEnabled = enabled
+        return
+    ; Changer la mesure ne doit pas modifier une cadence active.
+    if CF.armed
+        StopAll("Diagnostics modifiés : réactive ton profil pour mesurer.")
+    CFGateProbeStop()
+    CF.diagnosticsEnabled := enabled
+    CF.firstDispatchMs := ""
+    CF.firstDispatchKind := ""
+    CF.gateDetectionMs := ""
+    CF.gateProbeStatus := ""
+    SendStats()
+}
+
+CFGateProbeProc(code, msg, data) {
+    global CF
+    if code >= 0 && CF.gateProbePending && !CF.gateProbeQpc && data {
+        ; Ignorer les injections logicielles (SendInput inclus).
+        flags := NumGet(data, 12, "UInt")
+        if !(flags & 0x3) {
+            gate := CF.cfg.gateButton
+            match := gate = "LButton" && msg = 0x201
+                || gate = "RButton" && msg = 0x204
+                || gate = "MButton" && msg = 0x207
+            if !match && msg = 0x20B && (gate = "XButton1" || gate = "XButton2") {
+                xButton := (NumGet(data, 8, "UInt") >> 16) & 0xFFFF
+                match := xButton = (gate = "XButton1" ? 1 : 2)
+            }
+            if match
+                CF.gateProbeQpc := CFPerfCounter()
+        }
+    }
+    return DllCall("User32\CallNextHookEx", "Ptr", CF.gateHook,
+        "Int", code, "UPtr", msg, "Ptr", data, "Ptr")
+}
+
+CFGateProbeStart() {
+    global CF
+    if !CF.diagnosticsEnabled || !CF.armed || !CF.cfg.mouseGate
+        || CF.firstDispatchMs != "" || CF.gateHook
+        return
+    CF.gateProbePending := true
+    CF.gateProbeQpc := 0
+    CF.gateProbeStatus := "waiting"
+    callback := CallbackCreate(CFGateProbeProc, "Fast", 3)
+    hook := DllCall("User32\SetWindowsHookExW", "Int", 14,
+        "Ptr", callback, "Ptr", 0, "UInt", 0, "Ptr")
+    if hook {
+        CF.gateHookCallback := callback
+        CF.gateHook := hook
+    } else {
+        CF.gateProbePending := false
+        CF.gateProbeStatus := "unavailable"
+        CallbackFree(callback)
+    }
+}
+
+CFGateProbeStop() {
+    global CF
+    CF.gateProbePending := false
+    if CF.gateHook {
+        DllCall("User32\UnhookWindowsHookEx", "Ptr", CF.gateHook, "Int")
+        CF.gateHook := 0
+    }
+    if CF.gateHookCallback {
+        CallbackFree(CF.gateHookCallback)
+        CF.gateHookCallback := 0
+    }
+}
+
 CFPerfCounter() {
     ticks := 0
     DllCall("Kernel32\QueryPerformanceCounter", "Int64*", &ticks, "Int")
@@ -869,7 +949,7 @@ CFStatsSetTimer(active) {
 
 ActivationDown(*) {
     global CF
-    activationStarted := CFPerfCounter()
+    activationStarted := CF.diagnosticsEnabled ? CFPerfCounter() : 0
     if CF.capture || CF.pressed || CF.test.active
         return
     CF.pressed := true
@@ -889,6 +969,8 @@ ActivationDown(*) {
     CF.activationCounter := activationStarted
     CF.firstDispatchMs := ""
     CF.firstDispatchKind := ""
+    CF.gateDetectionMs := ""
+    CF.gateProbeStatus := ""
     CF.overlayStart := A_TickCount
     CF.overlayUntil := 0
     CF.overlayRecent := []
@@ -899,6 +981,12 @@ ActivationDown(*) {
     ; EngineTick calcule et programme nextAt pour le clic suivant :
     ; aucun clic double au lancement du cadenceur précis.
     EngineTick(true)
+    if CF.armed && CF.diagnosticsEnabled && CF.cfg.mouseGate
+        && CF.firstDispatchMs = "" {
+        ; Le premier clic attend le bouton. Commencer uniquement
+        ; l'instrumentation, sans accélérer ni modifier EngineTick.
+        CFGateProbeStart()
+    }
     ; Montrer l'overlay pendant que la touche d'activation est encore
     ; traitée, avant que le cadenceur haute précision prenne la main.
     CFDesktopUpdate()
@@ -932,6 +1020,7 @@ StopAll(message) {
     wasArmed := CF.armed
     CFTestStop(message)
     CF.armed := false
+    CFGateProbeStop()
     CFEngineSetTimer(false)
     CFStatsSetTimer(false)
     if wasArmed {
@@ -998,13 +1087,24 @@ EngineTick(firstFromActivation := false) {
     ; SendInput n'intercepte pas les clics manuels et n'injecte rien dans le jeu.
     ; Mesurer une seule fois le premier clic réellement envoyé, même si
     ; la condition souris a retardé son émission après l'activation.
-    firstClick := CF.firstDispatchMs = ""
+    firstClick := CF.diagnosticsEnabled && CF.firstDispatchMs = ""
     measureStart := firstClick ? (firstFromActivation ? CF.activationCounter : CFPerfCounter()) : 0
+    if firstClick && !firstFromActivation && CF.cfg.mouseGate {
+        if CF.gateProbeQpc > 0 && CF.qpcFrequency > 0 && measureStart >= CF.gateProbeQpc {
+            CF.gateDetectionMs := Round(1000.0 * (measureStart - CF.gateProbeQpc) / CF.qpcFrequency, 2)
+            CF.gateProbeStatus := "measured"
+        } else if CF.gateProbeStatus != "unavailable"
+            CF.gateProbeStatus := "unobserved"
+    }
     SendInput("{Click " CF.cfg.clickButton "}")
     if firstClick && CF.qpcFrequency > 0 {
-        CF.firstDispatchMs := Round(1000 * (CFPerfCounter() - measureStart) / CF.qpcFrequency, 2)
+        CF.firstDispatchMs := Round(1000.0 * (CFPerfCounter() - measureStart) / CF.qpcFrequency, 2)
         CF.firstDispatchKind := firstFromActivation ? "activation" : "condition"
+        if firstFromActivation && CF.cfg.mouseGate
+            CF.gateProbeStatus := "already-held"
     }
+    if CF.gateProbePending
+        CFGateProbeStop()
     CF.total += 1
     CF.recent.Push(now)
     if CF.floatShown
