@@ -574,7 +574,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
 const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
-const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,diagnosticsEnabled:false,mouseDetectionMode:"auto",overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
+const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,diagnosticsEnabled:false,mouseDetectionMode:"classic",overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
 model.globalHotkeys={next:'',previous:'',overlay:'',test:'',open:''};
 let connected = false, toastTimer = 0, modalTask = null;
 const bridge = !!(window.chrome && window.chrome.webview);
@@ -1040,9 +1040,18 @@ function updateGateMethodStatus(data) {
     const downs=Number(data.gateRawDowns)||0;
     const ups=Number(data.gateRawUps)||0;
     const physical=data.gatePhysicalHeld?'Maintenu':'Relâché';
+    const rawKnown=!!data.gateRawEventKnown;
+    const rawHeld=!!data.gateRawHeld;
+    const engineHeld=!!data.gateEngineHeld;
     const rawInfo=(data.armed && data.mouseDetectionMode!=='classic')
         ?' Messages Raw Input reçus : '+rawCount
-            +', appuis : '+downs+', relâchements : '+ups+'. Bouton physique : '+physical+'.'
+            +', appuis : '+downs+', relâchements : '+ups
+            +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
+            +'. GetKeyState : '+physical
+            +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
+            +(rawKnown && rawHeld && !data.gatePhysicalHeld
+                ?' Différence Raw Input / GetKeyState : le maintien Raw Input est prioritaire jusqu’au relâchement Raw Input.'
+                :'')
             +(registered && rawCount===0
                 ?' ATTENTION : inscrit mais aucun message reçu ; la méthode événementielle ne peut pas déclencher.'
                 :rawCount>0 && downs===0
