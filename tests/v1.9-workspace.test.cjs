@@ -3,8 +3,8 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../ui/index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/);
 assert(src,'Integrated UI JavaScript missing');
-assert(html.includes('ClickFlow v1.9.17 · AHK v2')
-    && html.includes('ClickFlow v1.9.17 · AutoHotkey v2'),
+assert(html.includes('ClickFlow v1.9.18 · AHK v2')
+    && html.includes('ClickFlow v1.9.18 · AutoHotkey v2'),
     'Both footer version strings must match the shipped version.');
 new vm.Script(src[1],{filename:'ClickFlow v1.9 UI'});
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
@@ -14,16 +14,16 @@ assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,7,
     'General, diagnostics, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
 const labels=['Général','Diagnostics et détection souris','Overlay','Raccourcis globaux','Raccourcis Windows',
     'Sauvegarde complète','Maintenance'];
-assert(html.includes('Automatique (Raw Input + secours, recommandé)')
+assert(html.includes('Automatique (Raw Input + secours)')
     && html.includes('Événementielle (Raw Input requis au démarrage)')
-    && html.includes('Classique (vérification périodique)'),
+    && html.includes('Classique (stable, recommandé)'),
     'The modes must be explained without experimental labels');
 assert(html.includes('const lastSafetyStop=String(data.notice||\'\').startsWith(\'Arrêt de sécurité\')'),
     'The mouse diagnostics must explain safety stops even after the engine stops');
 assert(!html.includes('Raw Input reste expérimental'),
     'Old experimental label should be removed');
 assert(html.includes("Moteur : ") && html.includes('GetKeyState : ')
-    && html.includes('GetAsyncKeyState : ')
+    && html.includes('GetAsyncKeyState (indicatif) : ')
     && html.includes('UP Raw pendant maintien physique')
     && html.includes('La vérification physique conserve le maintien'),
     'Gate diagnostics should expose Raw Input versus GetKeyState disagreement');

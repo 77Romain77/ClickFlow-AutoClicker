@@ -1,35 +1,41 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.17 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.18 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.17.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.17)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.18.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.18)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.17.ahk`.
+2. Télécharger `ClickFlow-v1.9.18.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.17`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.18`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
-## Sécurité du relâchement en v1.9.17
+## Sécurité du relâchement en v1.9.18
 
 Une incohérence observée sur le PC utilisateur provoquait parfois des clics alors que le bouton n'était plus maintenu : Raw Input indiquait UP, mais GetKeyState restait DOWN. Pour les modes Automatique et Événementielle, ClickFlow vérifie maintenant GetAsyncKeyState lorsque ces sources divergent. Si cette troisième source confirme le relâchement pendant plus de 35 ms, la session s'arrête entièrement pour éviter les clics persistants et les redémarrages automatiques.
 
 Les diagnostics détaillés restent facultatifs et affichent également la troisième lecture lorsqu'ils sont activés. Aucune modification du mode Classique. Les tests automatisés vérifient la sécurité du moteur, mais la fiabilité sur une souris réelle et en jeu nécessite encore des essais. En cas d'arrêt de sécurité injustifié pendant un vrai maintien, revenir au mode Classique et transmettre les diagnostics des trois sources.
 
-## Vérification du maintien en v1.9.17
+## Vérification du maintien en v1.9.18
 
-La v1.9.16 pouvait arrêter la session alors que le bouton était encore maintenu : GetAsyncKeyState, consulté pendant les clics SendInput, pouvait indiquer un relâchement transitoire. La v1.9.17 détecte les désaccords persistants entre les trois états, suspend brièvement les clics pour effectuer une seconde vérification sans SendInput, puis reprend le maintien si Windows confirme à nouveau l'appui. Un relâchement encore confirmé après la pause provoque l'arrêt de sécurité. Aucun contrôle supplémentaire n'est activé en mode Classique.
+La v1.9.16 pouvait arrêter la session alors que le bouton était encore maintenu : GetAsyncKeyState, consulté pendant les clics SendInput, pouvait indiquer un relâchement transitoire. La v1.9.18 détecte les désaccords persistants entre les trois états, suspend brièvement les clics pour effectuer une seconde vérification sans SendInput, puis reprend le maintien si Windows confirme à nouveau l'appui. Un relâchement encore confirmé après la pause provoque l'arrêt de sécurité. Aucun contrôle supplémentaire n'est activé en mode Classique.
 
 Dans Test CPS, les diagnostics détaillés facultatifs affichent désormais le motif de l'arrêt de sécurité même au repos. Tester à 50 CPS sur une application non critique avant de réutiliser Automatique ou Événementielle en jeu. Si des arrêts injustifiés ou des clics persistants se reproduisent, utiliser Classique et transmettre les observations : aucune mesure logicielle ne garantit à elle seule l'état physique sur tous les pilotes souris.
+
+## Maintien du même bouton - v1.9.18
+
+Le cas où le bouton conditionnel et le bouton généré sont identiques (par exemple gauche/gauche) utilise maintenant l'identifiant de périphérique des événements Raw Input. Les messages sans périphérique identifié et ceux d'un autre périphérique sont ignorés pour cette condition : ils ne doivent ni interrompre le maintien, ni réarmer la cadence. Un vrai relâchement venant du périphérique matériel suivi interdit les clics jusqu'au prochain appui provenant de ce périphérique, même si GetKeyState reste momentanément bloqué sur DOWN. Le mode Classique et les configurations avec deux boutons distincts restent inchangés.
+
+La séparation par hDevice convient aux souris physiques exposant un identifiant Raw Input ; certains pavés tactiles ont un hDevice nul. Pour eux, le mode Automatique conserve la lecture physique classique en secours, alors que le mode Événementielle peut ne pas démarrer. Les diagnostics détaillés comptent les événements Raw Input sans identité écartés. Les tests du runner rejouent des séquences de clics simulés à 10 et 50 CPS, mais seul un test réel sur le PC utilisateur validera le comportement du pilote et de la souris.
 
 ## Fonctionnalités
 

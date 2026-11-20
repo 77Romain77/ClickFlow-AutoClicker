@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.17 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.18 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -512,8 +512,8 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="shortcut-setting"><div><strong>Fermer vers la zone de notification</strong><p class="subnote">Le X masque ClickFlow. Quitter complètement depuis l'icône près de l'horloge.</p></div><button class="switch" data-preference="closeToTray" aria-label="Fermer vers la zone de notification" aria-pressed="false"></button></div>
    </div></details>
    <details class="settings-group"><summary>Diagnostics et détection souris <small>Choix du moteur et mesures facultatives</small></summary><div class="settings-group-body">
-    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Classique : vérifie périodiquement l'état physique du bouton. Automatique (recommandé) : utilise les appuis Raw Input et passe au contrôle physique classique si un appui n'est pas reçu. Événementielle : exige un appui Raw Input pour commencer, puis vérifie le maintien physique. Automatique et Événementielle ont la même détection rapide lorsque Raw Input fonctionne.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="classic" selected>Classique (vérification périodique)</option><option value="auto">Automatique (Raw Input + secours, recommandé)</option><option value="event">Événementielle (Raw Input requis au démarrage)</option></select></div>
-    <div class="shortcut-setting"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Désactivés par défaut. Affiche les compteurs et les désaccords Raw Input / état physique si nécessaire, sans interrompre les clics.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris dans les paramètres" aria-pressed="false"></button></div>
+    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Classique (recommandé) : contrôle l'état physique de la souris. Automatique : utilise Raw Input pour démarrer rapidement et le contrôle classique comme secours. Événementielle : exige un appui Raw Input pour commencer, puis vérifie le maintien physique. Automatique et Événementielle ont la même détection rapide lorsque Raw Input fonctionne.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="classic" selected>Classique (stable, recommandé)</option><option value="auto">Automatique (Raw Input + secours)</option><option value="event">Événementielle (Raw Input requis au démarrage)</option></select></div>
+    <div class="shortcut-setting"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Désactivés par défaut. GetAsyncKeyState est indicatif et peut être influencé par SendInput. Aucun diagnostic ne décide de l'arrêt du moteur.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris dans les paramètres" aria-pressed="false"></button></div>
     <p class="subnote hidden" id="gateMethodSettings" style="margin:6px 0 15px">Aucun clic conditionné enregistré pour cette session.</p>
     <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Aucune mesure quand désactivé. Raw Input n'est utilisé que si tu choisis Automatique ou Événementielle.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
    <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
@@ -959,7 +959,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.17 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.18 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1051,10 +1051,12 @@ function updateGateMethodStatus(data) {
             +', appuis : '+downs+', relâchements : '+ups
             +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
             +'. GetKeyState : '+physical
-            +'. GetAsyncKeyState : '+(data.gateAsyncHeld?'Maintenu':'Relâché')
+            +'. GetAsyncKeyState (indicatif) : '+(data.gateAsyncHeld?'Maintenu':'Relâché')
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
             +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
             +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
+            +'. Raw Input sans périphérique ignoré : '+Number(data.gateRawNullIgnored||0)+'.'
+            +'. Appui matériel reconnu : '+(data.gateHardwareKnown?(data.gateHardwareDown?'Maintenu':'Relâché'):'Non confirmé')+'.'
             +(rawKnown && !rawHeld && data.gatePhysicalHeld
                 ?' Désaccord détecté : Raw Input signale UP, mais la souris est physiquement maintenue. La vérification physique conserve le maintien.'
                 :rawKnown && rawHeld && !data.gatePhysicalHeld

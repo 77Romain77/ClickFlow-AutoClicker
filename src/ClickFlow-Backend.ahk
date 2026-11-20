@@ -35,7 +35,8 @@ global CF := {
     gateWakeSignal: false, gateHookFailed: false, gateEventKnown: false,
     gateRawArmed: false, gateRawDownAt: 0, gateRawPhysicalUpSince: 0,
     gateRawUpsWhilePhysicalHeld: 0,
-    gateSafetyPhase: 0, gateSafetySince: 0, gateSafetyTripped: false,
+    gateHardwareKnown: false, gateHardwareDown: false, gateHardwareDevice: 0,
+    gateRawNullIgnored: 0,
     gateRawRegistered: false, gateRawListener: false, gateRawFailed: false,
     gateRawWindow: 0, gateRawHwnd: 0, gateRawError: 0,
     gateRawMessages: 0, gateRawMousePackets: 0,
@@ -256,7 +257,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !CFGateIsHeld()
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateDebugEnabled":' (CF.gateDebugEnabled ? "true" : "false") ',"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gateRawUpsWhilePhysicalHeld":' CF.gateRawUpsWhilePhysicalHeld ',"gateRawArmed":' (CF.gateRawArmed ? "true" : "false") ',"gatePhysicalHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") ',"gateAsyncHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && CFGateAsyncHeld(CF.cfg.gateButton) ? "true" : "false") ',"gateRawEventKnown":' (CF.gateEventKnown ? "true" : "false") ',"gateRawHeld":' (CF.gateWakeSignal ? "true" : "false") ',"gateEngineHeld":' (CF.gateDebugEnabled && CF.armed && CF.cfg.mouseGate && CFGateIsHeld() ? "true" : "false") '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateDebugEnabled":' (CF.gateDebugEnabled ? "true" : "false") ',"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gateRawUpsWhilePhysicalHeld":' CF.gateRawUpsWhilePhysicalHeld ',"gateRawNullIgnored":' CF.gateRawNullIgnored ',"gateHardwareKnown":' (CF.gateHardwareKnown ? "true" : "false") ',"gateHardwareDown":' (CF.gateHardwareDown ? "true" : "false") ',"gateRawArmed":' (CF.gateRawArmed ? "true" : "false") ',"gatePhysicalHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") ',"gateAsyncHeld":' (CF.gateDebugEnabled && CF.cfg.mouseGate && CFGateAsyncHeld(CF.cfg.gateButton) ? "true" : "false") ',"gateRawEventKnown":' (CF.gateEventKnown ? "true" : "false") ',"gateRawHeld":' (CF.gateWakeSignal ? "true" : "false") ',"gateEngineHeld":' (CF.gateDebugEnabled && CF.armed && CF.cfg.mouseGate && CFGateIsHeld() ? "true" : "false") '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -886,6 +887,7 @@ CFGateDebugToggle(enabled) {
     CF.gateRawLastFlags := 0
     CF.gateRawParseErrors := 0
     CF.gateRawUpsWhilePhysicalHeld := 0
+    CF.gateRawNullIgnored := 0
 }
 
 CFDiagToggle(enabled) {
@@ -926,9 +928,9 @@ CFGateHeldDecision(mode, rawRegistered, rawArmed, rawDown, physical, grace) {
     return mode = "auto" ? physical : false
 }
 
-; Sécurité : si Raw Input indique UP mais GetKeyState indique DOWN,
-; GetAsyncKeyState n'est qu'un indice : SendInput peut l'influencer.
-; Une divergence persistante provoque une pause de vérification sans clic.
+; GetAsyncKeyState n'est consulté que pour les diagnostics opt-in :
+; SendInput peut fausser l'état logique Windows pendant un vrai maintien.
+; Le moteur utilise GetKeyState physique pour décider des clics.
 ; Aucun hook WH_MOUSE_LL supplémentaire n'est installé.
 CFGateAsyncHeld(button) {
     vk := button = "LButton" ? 0x01 : button = "RButton" ? 0x02
@@ -940,57 +942,30 @@ CFGateAsyncHeld(button) {
     return !!(DllCall("User32\GetAsyncKeyState", "Int", vk, "Short") & 0x8000)
 }
 
-; Une lecture asynchrone LOW pendant SendInput n'est pas une preuve
-; suffisante du relâchement physique. On vérifie donc sans injecter de clic.
-CFGateSafetyDisagree(registered, eventKnown, rawDown, physical, asyncHeld) {
-    return registered && eventKnown && !rawDown && physical && !asyncHeld
+; L'état Windows asynchrone est uniquement informatif. Les clics
+; SendInput peuvent modifier cette lecture même pendant un maintien réel.
+; Le mode événementiel ne doit jamais arrêter la session en se fondant
+; sur un désaccord avec GetAsyncKeyState.
+
+; Un bouton conditionnel qui est aussi injecté par SendInput doit
+; uniquement suivre les paquets de la souris matérielle identifiée.
+CFGateSameButton() {
+    global CF
+    click := StrLower(CF.cfg.clickButton)
+    return (CF.cfg.gateButton = "LButton" && click = "left")
+        || (CF.cfg.gateButton = "RButton" && click = "right")
+        || (CF.cfg.gateButton = "MButton" && click = "middle")
 }
 
-; Les deux délais n'affectent que les états incohérents, jamais le
-; déclenchement normal Raw Input ni la cadence en situation saine.
-CFGateSafetySuspectMs() {
-    return 12
+CFGateAcceptRawSource(sameButton, device, selectedDevice) {
+    ; hDevice peut être nul sur certains périphériques (pavé tactile),
+    ; mais aussi pour des entrées non matérielles. Dans ce cas, le mode
+    ; Automatique conserve son repli Classique : ne pas deviner.
+    return !sameButton || (device && (!selectedDevice || device = selectedDevice))
 }
 
-CFGateSafetyQuietMs() {
-    return 50
-}
-
-; 0=normal, 1=discordance courte, 2=pause sans SendInput, 3=arrêt.
-; Fonction pure pour vérifier exactement le comportement sur le runner.
-CFGateSafetyNext(phase, since, now, registered, eventKnown, rawDown,
-    physical, asyncHeld) {
-    if phase = 3
-        return {phase: 3, since: since, pause: true, stop: true,
-            disarm: true}
-    if phase = 2 {
-        ; Le bouton est vraiment remonté selon AHK : aucun autre clic.
-        if !physical
-            return {phase: 0, since: 0, pause: true, stop: false,
-                disarm: true}
-        ; Après une vraie pause sans clic, Windows confirme le maintien.
-        if asyncHeld
-            return {phase: 0, since: 0, pause: false, stop: false,
-                disarm: false}
-        if now - since >= CFGateSafetyQuietMs()
-            return {phase: 3, since: since, pause: true, stop: true,
-                disarm: true}
-        return {phase: 2, since: since, pause: true, stop: false,
-            disarm: false}
-    }
-    disagree := CFGateSafetyDisagree(registered, eventKnown, rawDown,
-        physical, asyncHeld)
-    if !disagree
-        return {phase: 0, since: 0, pause: false, stop: false,
-            disarm: false}
-    if phase != 1
-        return {phase: 1, since: now, pause: false, stop: false,
-            disarm: false}
-    if now - since >= CFGateSafetySuspectMs()
-        return {phase: 2, since: now, pause: true, stop: false,
-            disarm: false}
-    return {phase: 1, since: since, pause: false, stop: false,
-        disarm: false}
+CFGateHardwareReleased(sameButton, rawKnown, rawDown) {
+    return sameButton && rawKnown && !rawDown
 }
 
 CFGateIsHeld() {
@@ -1000,26 +975,10 @@ CFGateIsHeld() {
     physical := !!GetKeyState(CF.cfg.gateButton, "P")
     if CF.mouseDetectionMode = "classic"
         return physical
-    if CF.gateSafetyTripped
-        return false
-    ; GetAsyncKeyState peut suivre les événements SendInput. En cas de
-    ; désaccord persistant, suspendre d'abord l'envoi et revérifier.
-    asyncHeld := true
-    if (CF.gateRawRegistered && CF.gateEventKnown
-        && !CF.gateWakeSignal && physical) || CF.gateSafetyPhase = 2
-        asyncHeld := CFGateAsyncHeld(CF.cfg.gateButton)
-    safety := CFGateSafetyNext(CF.gateSafetyPhase, CF.gateSafetySince,
-        CFNowMs(), CF.gateRawRegistered, CF.gateEventKnown,
-        CF.gateWakeSignal, physical, asyncHeld)
-    CF.gateSafetyPhase := safety.phase
-    CF.gateSafetySince := safety.since
-    if safety.stop
-        CF.gateSafetyTripped := true
-    if safety.disarm {
-        CF.gateRawArmed := false
-        CF.gateRawPhysicalUpSince := 0
-    }
-    if safety.pause
+    ; Le paquet UP d'un périphérique matériel identifié a priorité
+    ; absolue sur l'état AHK, parfois bloqué à DOWN après SendInput.
+    if CFGateHardwareReleased(CFGateSameButton(), CF.gateHardwareKnown,
+        CF.gateHardwareDown)
         return false
     grace := false
     if CF.gateRawRegistered && CF.gateRawArmed {
@@ -1049,7 +1008,7 @@ CFGateIsHeld() {
 
 ; RI_MOUSE_{LEFT/RIGHT/MIDDLE/BUTTON_4/BUTTON_5}_DOWN/UP.
 ; Un événement Up a priorité sur Down pour ne jamais garder un clic coincé.
-CFGateRawButtonFlags(flags) {
+CFGateRawButtonFlags(flags, device := 1) {
     global CF
     if !CF.armed || !CF.cfg.mouseGate || !CF.gateRawRegistered
         return
@@ -1058,9 +1017,19 @@ CFGateRawButtonFlags(flags) {
         : gate = "MButton" ? 0x10 : gate = "XButton1" ? 0x40
         : gate = "XButton2" ? 0x100 : 0
     upFlag := downFlag << 1
-    if !downFlag
+    if !downFlag || !(flags & (downFlag | upFlag))
         return
+    same := CFGateSameButton()
+    if !CFGateAcceptRawSource(same, device, CF.gateHardwareDevice) {
+        if CF.gateDebugEnabled && !device
+            CF.gateRawNullIgnored += 1
+        return
+    }
     if flags & upFlag {
+        if same && CF.gateHardwareKnown {
+            CF.gateHardwareDown := false
+            CF.gateRawArmed := false
+        }
         if CF.gateDebugEnabled {
             CF.gateRawUps += 1
             if GetKeyState(gate, "P")
@@ -1077,6 +1046,11 @@ CFGateRawButtonFlags(flags) {
     } else if flags & downFlag {
         if CF.gateDebugEnabled
             CF.gateRawDowns += 1
+        if same {
+            CF.gateHardwareDevice := device
+            CF.gateHardwareKnown := true
+            CF.gateHardwareDown := true
+        }
         CF.gateRawArmed := true
         CF.gateRawPhysicalUpSince := 0
         CF.gateRawDownAt := CFNowMs()
@@ -1122,7 +1096,9 @@ CFGateRawMessage(wParam, lParam, msg, hwnd) {
     flags := NumGet(raw, headerSize + 4, "UShort")
     if CF.gateDebugEnabled && flags
         CF.gateRawLastFlags := flags
-    CFGateRawButtonFlags(flags)
+    ; RAWINPUTHEADER.hDevice : différencie la souris matérielle des
+    ; messages synthétiques sans périphérique identifié.
+    CFGateRawButtonFlags(flags, NumGet(raw, 8, "Ptr"))
     ; Retour implicite : DefWindowProc nettoie RIM_INPUT.
 }
 
@@ -1134,6 +1110,9 @@ CFGateProbeStart() {
     CF.gateWakeSignal := false
     CF.gateEventKnown := false
     CF.gateRawArmed := false
+    CF.gateHardwareKnown := false
+    CF.gateHardwareDown := false
+    CF.gateHardwareDevice := 0
     CF.gateRawPhysicalUpSince := 0
     CF.gateRawDownAt := 0
     CF.gateProbeQpc := 0
@@ -1206,6 +1185,9 @@ CFGateProbeStop() {
     CF.gateWakeSignal := false
     CF.gateEventKnown := false
     CF.gateRawArmed := false
+    CF.gateHardwareKnown := false
+    CF.gateHardwareDown := false
+    CF.gateHardwareDevice := 0
     CF.gateRawDownAt := 0
     CF.gateRawPhysicalUpSince := 0
     CF.gateRawFailed := false
@@ -1277,9 +1259,10 @@ ActivationDown(*) {
     CF.gateRawLastFlags := 0
     CF.gateRawParseErrors := 0
     CF.gateRawUpsWhilePhysicalHeld := 0
-    CF.gateSafetyPhase := 0
-    CF.gateSafetySince := 0
-    CF.gateSafetyTripped := false
+    CF.gateRawNullIgnored := 0
+    CF.gateHardwareKnown := false
+    CF.gateHardwareDown := false
+    CF.gateHardwareDevice := 0
     CF.gateRawArmed := false
     CF.gateRawDownAt := 0
     CF.gateRawPhysicalUpSince := 0
@@ -1335,9 +1318,6 @@ StopAll(message) {
     CF.armed := false
     CF.gateWaiting := false
     CF.gateMethodCurrent := "inactive"
-    CF.gateSafetyTripped := false
-    CF.gateSafetyPhase := 0
-    CF.gateSafetySince := 0
     CFGateProbeStop()
     CFEngineSetTimer(false)
     CFStatsSetTimer(false)
@@ -1390,10 +1370,6 @@ EngineTick(firstFromActivation := false) {
         return
     }
     if CF.cfg.mouseGate && !CFGateIsHeld() {
-        if CF.gateSafetyTripped {
-            StopAll("Arrêt de sécurité : relâchement confirmé après pause sans clic. Passe en Classique si le bouton est encore maintenu.")
-            return
-        }
         CF.gateWaiting := true
         CF.cpsNow := 0
         CF.nextAt := CFNowMs()
