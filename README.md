@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.7 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.9.8 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.7.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.7)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.8.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.8)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.7.ahk`.
+2. Télécharger `ClickFlow-v1.9.8.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.7`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.8`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,16 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Condition souris réactive aux événements (v1.9.8)
+
+Si le profil est conditionné au maintien d'un bouton de souris et que ce bouton n'est pas tenu, ClickFlow installe temporairement un hook souris Windows. Le callback marque le nouvel appui physique, sans envoyer de clic à l'intérieur du hook. Le cadenceur de haute précision utilise alors une attente native sensible aux messages `MsgWaitForMultipleObjectsEx`, ce qui permet de sortir de l'attente au signal de la souris sans patienter jusqu'au prochain sondage de 8 ms. La première échéance est réinitialisée sur cet appui, tandis que les intervalles des clics suivants conservent le calcul des CPS existant.
+
+Le hook est retiré aussitôt que le clic est envoyé, quand la condition est levée, ou à l'arrêt. Si l'installation du hook échoue, le moteur conserve le contrôle physique de secours toutes les ~8 ms pendant l'attente ; l'option reste donc utilisable sans hook. Le callback ignore les événements injectés, notamment ceux produits par `SendInput`, et respecte le bouton choisi (gauche, droit, central, X1 ou X2). Le raccourci Basculer, l'overlay et l'arrêt d'urgence sont inchangés.
+
+Les diagnostics v1.9.7 restent facultatifs et désactivés par défaut. **Même diagnostics désactivés, le hook de détection du bouton peut s'installer temporairement pendant l'attente** : c'est une partie du fonctionnement, pas une mesure de latence. L'installation d'un hook bas niveau peut être restreinte par certains jeux ou logiciels de protection, et la latence réelle dépend toujours de Windows, de la charge machine et du logiciel cible. Tester si possible hors des jeux avec anti-triche. Le CPU au repos ne change pas.
+
+Pour comparer avant/après, référence initiale relevée par l'utilisateur sur v1.9.7 : **6,2 ms estimés en moyenne sur 10 activations**. Cette estimation est grossière (horloge Windows quantifiée) : interpréter plusieurs essais sur la nouvelle version et ne pas promettre un gain déterministe sur chaque appui.
 
 ## Diagnostic de la condition souris avant optimisation (v1.9.7)
 
