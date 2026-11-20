@@ -788,7 +788,7 @@ ActivationDown(*) {
     ; Premier clic : exécuté dans le callback de la touche lui-même.
     ; EngineTick calcule et programme nextAt pour le clic suivant :
     ; aucun clic double quand le timer de 10 ms démarre.
-    EngineTick()
+    EngineTick(true)
     if CF.armed {
         CFEngineSetTimer(true)
         CFStatsSetTimer(true)
@@ -844,7 +844,7 @@ SetNotice(message) {
     SendStats()
 }
 
-EngineTick() {
+EngineTick(firstFromActivation := false) {
     global CF
     if CF.test.active {
         CFTestTick()
@@ -862,7 +862,11 @@ EngineTick() {
         StopAll("Arrêt : changement de fenêtre détecté.")
         return
     }
-    if CF.cfg.hold = 1 && !GetKeyState(CF.cfg.activation, "P") {
+    ; L'événement ActivationDown prouve déjà que la touche vient d'être
+    ; pressée. Éviter une lecture de l'état physique trop tôt pour le
+    ; premier clic en mode Maintenir. Dès le tick suivant, contrôle normal.
+    if CF.cfg.hold = 1 && !firstFromActivation
+        && !GetKeyState(CF.cfg.activation, "P") {
         StopAll("Arrêt : touche d'activation relâchée.")
         return
     }
