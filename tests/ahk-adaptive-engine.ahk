@@ -217,6 +217,8 @@ try {
     CFGateProbeStart()
     if !CF.gateRawRegistered || !CF.gateRawListener
         throw Error("RegisterRawInputDevices a échoué sur la fenêtre de test.")
+    if !CF.gateRawHwnd || !CF.gateRawWindow || CF.gateRawHwnd = CF.hwnd
+        throw Error("Raw Input n'utilise pas son HWND dédié.")
     if CF.gateHook || CF.gateHookCallback
         throw Error("Un hook bloquant WH_MOUSE_LL a été réinstallé.")
     ; Les 5 boutons reconnus doivent capturer DOWN puis UP.
@@ -243,6 +245,8 @@ try {
         if CF.gateWakeSignal
             throw Error("Un relâchement simultané doit annuler l'appui.")
     }
+    if CF.gateRawDowns != 5 || CF.gateRawUps != 10
+        throw Error("Les compteurs d'appui/relâchement Raw Input sont faux.")
     ; Un nouveau premier clic ne doit pas utiliser un horodatage de
     ; l'ancien appui relâché (régression du faux délai 174805 ms).
     CF.gateProbePending := true
@@ -253,7 +257,7 @@ try {
     ; Aucune notification Raw Input ne doit réactiver le moteur après Stop.
     StopAll("Raw Input terminé.")
     if CF.gateRawRegistered || CF.gateRawListener || CF.gateWakeSignal
-        || CF.gateHook || CF.gateHookCallback
+        || CF.gateRawHwnd || CF.gateRawWindow || CF.gateHook || CF.gateHookCallback
         throw Error("Raw Input reste enregistré après l'arrêt.")
     CF.cfg.gateButton := "RButton"
     CF.cfg.mouseGate := 0

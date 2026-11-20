@@ -511,7 +511,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="shortcut-setting"><div><strong>Fermer vers la zone de notification</strong><p class="subnote">Le X masque ClickFlow. Quitter complètement depuis l'icône près de l'horloge.</p></div><button class="switch" data-preference="closeToTray" aria-label="Fermer vers la zone de notification" aria-pressed="false"></button></div>
    </div></details>
    <details class="settings-group"><summary>Diagnostics et détection souris <small>Choix du moteur et mesures facultatives</small></summary><div class="settings-group-body">
-    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Classique reste la méthode stable par défaut. Automatique utilise Raw Input en priorité et le contrôle physique en secours. Événementielle utilise uniquement Raw Input. Aucune des deux n'installe WH_MOUSE_LL.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="classic" selected>Classique (stable, recommandé)</option><option value="auto">Automatique (Raw Input + secours, expérimental)</option><option value="event">Événementielle Raw Input (expérimental)</option></select></div>
+    <div class="shortcut-setting"><div><strong>Détection du bouton conditionnel</strong><p class="subnote">Classique reste stable et sélectionné par défaut. Automatique utilise Raw Input avec secours physique. Événementielle exige un message Raw Input. Les compteurs ci-dessous permettent de savoir si la souris envoie des événements, même quand aucun clic ne part.</p></div><select id="mouseDetectionMode" class="select settings-select" aria-label="Méthode de détection du bouton de souris"><option value="classic" selected>Classique (stable, recommandé)</option><option value="auto">Automatique (Raw Input + secours, expérimental)</option><option value="event">Événementielle Raw Input (expérimental)</option></select></div>
     <p class="subnote" id="gateMethodSettings" style="margin:6px 0 15px">Aucun clic conditionné enregistré pour cette session.</p>
     <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Aucune mesure quand désactivé. Raw Input n'est utilisé que si tu choisis Automatique ou Événementielle.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
    <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
@@ -1034,8 +1034,23 @@ function updateGateMethodStatus(data) {
     };
     const last=lastLabels[data.gateMethodLast]||lastLabels.none;
     const current=currentLabels[data.gateMethodCurrent]||'État inconnu';
-    const installed=data.gateRawRegistered?'Raw Input enregistré.':'Aucun Raw Input enregistré.';
-    const text='Dernier clic : '+last+'. '+(data.armed?'Actuellement : '+current+'. '+installed:'Moteur au repos.');
+    const registered=!!data.gateRawRegistered;
+    const installed=registered?'Raw Input enregistré.':'Aucun Raw Input enregistré.';
+    const rawCount=Number(data.gateRawMessages)||0;
+    const downs=Number(data.gateRawDowns)||0;
+    const ups=Number(data.gateRawUps)||0;
+    const physical=data.gatePhysicalHeld?'Maintenu':'Relâché';
+    const rawInfo=(data.armed && data.mouseDetectionMode!=='classic')
+        ?' Messages Raw Input reçus : '+rawCount
+            +', appuis : '+downs+', relâchements : '+ups+'. Bouton physique : '+physical+'.'
+            +(registered && rawCount===0
+                ?' ATTENTION : inscrit mais aucun message reçu ; la méthode événementielle ne peut pas déclencher.'
+                :rawCount>0 && downs===0
+                    ?' Messages reçus, mais aucun appui reconnu pour le bouton conditionnel.'
+                    :'')
+            +(data.gateRawFailed?' Erreur Windows : '+Number(data.gateRawError||0)+'.':'')
+        :'';
+    const text='Dernier clic : '+last+'. '+(data.armed?'Actuellement : '+current+'. '+installed+rawInfo:'Moteur au repos.');
     $('gateMethodCps').textContent=text;
     $('gateMethodSettings').textContent=text;
 }
