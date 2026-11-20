@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.9.13 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.9.14 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.13 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.14 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -893,7 +893,7 @@ $('viewToggle').onclick=()=>{
 };
 // WebView2 possède le focus clavier quand on clique sur un bouton des
 // Paramètres. Le navigateur transmet donc la frappe à JavaScript, et non
-// toujours à l'InputHook AutoHotkey global (bug v1.9.13).
+// toujours à l'InputHook AutoHotkey global (bug v1.9.14).
 function shortcutKeyFromEvent(e) {
     if(['Shift','Control','Alt','Meta','AltGraph','Process','Unidentified']
         .includes(e.key))return '';
@@ -957,7 +957,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.13 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.14 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1017,7 +1017,7 @@ function setLiveMonitorActive(active) {
 }
 function updateGateMethodStatus(data) {
     const lastLabels={
-        event:'Événementielle (Raw Input reçu)',
+        event:'Événementielle (activation Raw Input)',
         classic:'Classique (vérification périodique)',
         fallback:'Secours classique (contrôle physique)',
         'already-held':'Bouton déjà maintenu à l’activation',
@@ -1049,9 +1049,13 @@ function updateGateMethodStatus(data) {
             +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
             +'. GetKeyState : '+physical
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
-            +(rawKnown && rawHeld && !data.gatePhysicalHeld
-                ?' Différence Raw Input / GetKeyState : le maintien Raw Input est prioritaire jusqu’au relâchement Raw Input.'
-                :'')
+            +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
+            +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
+            +(rawKnown && !rawHeld && data.gatePhysicalHeld
+                ?' Désaccord détecté : Raw Input signale UP, mais la souris est physiquement maintenue. La vérification physique conserve le maintien.'
+                :rawKnown && rawHeld && !data.gatePhysicalHeld
+                    ?' Désaccord détecté : Raw Input signale DOWN, mais la souris semble relâchée. Le moteur coupe après une brève confirmation.'
+                    :'')
             +(registered && rawCount===0
                 ?' ATTENTION : inscrit mais aucun message reçu ; la méthode événementielle ne peut pas déclencher.'
                 :rawCount>0 && downs===0

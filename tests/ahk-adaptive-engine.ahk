@@ -248,6 +248,34 @@ try {
     if CF.gateRawDowns != 5 || CF.gateRawUps != 10
         throw Error("Les compteurs d'appui/relâchement Raw Input sont faux.")
 
+    ; Régression v1.9.13 sur vrai PC : Raw UP est parfois reçu pendant
+    ; que GetKeyState indique Maintenu. Le moteur ne doit PAS s'arrêter.
+    if !CFGateHeldDecision("event", true, true, false, true, false)
+        throw Error("Raw UP discordant coupe un appui physique maintenu.")
+    if !CFGateHeldDecision("auto", true, true, false, true, false)
+        throw Error("Auto Raw UP discordant coupe un maintien physique.")
+    if CFGateHeldDecision("event", true, true, false, false, false)
+        throw Error("Un relâchement physique confirmé laisse des clics.")
+    if CFGateHeldDecision("event", true, true, true, false, false)
+        throw Error("Raw DOWN bloqué force encore des clics après relâchement.")
+    if !CFGateHeldDecision("event", true, true, true, false, true)
+        throw Error("La courte tolérance de réception ne fonctionne pas.")
+    if CFGateHeldDecision("event", true, false, false, true, false)
+        throw Error("Événementielle accepte un appui sans Raw DOWN.")
+    if !CFGateHeldDecision("auto", false, false, false, true, false)
+        throw Error("Le secours Classique en Auto ne fonctionne plus.")
+    if CFGateHeldDecision("event", false, false, false, true, false)
+        throw Error("Le mode Événementielle ne doit pas cliquer sans Raw Input.")
+
+    ; Reproduire RAW DOWN -> RAW UP discordant ; le verrou d'appui
+    ; conserve l'autorisation jusqu'à une vraie remontée physique.
+    CF.cfg.gateButton := "RButton"
+    CF.gateRawArmed := false
+    CFGateRawButtonFlags(0x4)
+    CFGateRawButtonFlags(0x8)
+    if !CF.gateRawArmed || CF.gateWakeSignal
+        throw Error("Un RAW UP efface prématurément l'autorisation initiale.")
+
     ; Régression matérielle v1.9.12 : après un premier clic valide,
     ; le moteur ne doit pas revenir en attente pendant que Raw Input
     ; indique DOWN, même si GetKeyState physique est faux.
