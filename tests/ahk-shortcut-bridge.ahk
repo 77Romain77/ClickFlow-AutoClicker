@@ -14,6 +14,8 @@ PostShortcutCommand(args*) {
     raw := ""
     for item in args
         raw .= (raw = "" ? "" : Chr(9)) item
+    if StrSplit(raw, Chr(9)).Length < 3
+        throw Error("Le test ne produit pas une commande tabulée : " StrReplace(raw, Chr(9), "|"))
     BackendMessage("", BridgeArgs(raw))
 }
 
