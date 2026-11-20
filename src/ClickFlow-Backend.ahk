@@ -33,7 +33,7 @@ global CF := {
     diagnosticsEnabled: false, gateDetectionMs: "", gateProbeStatus: "",
     gateHook: 0, gateHookCallback: 0, gateProbePending: false, gateProbeQpc: 0,
     gateWakeSignal: false, gateHookFailed: false, gateEventKnown: false,
-    mouseDetectionMode: "auto", gateMethodLast: "none",
+    mouseDetectionMode: "classic", gateMethodLast: "none",
     gateMethodCurrent: "inactive", gateWaiting: false,
     gateEventUptime: 0, gateEventDelayMs: "", gateEventAverageMs: "", gateEventSamples: [],
     mainExpandedW: 1120, mainExpandedH: 800,
@@ -788,32 +788,16 @@ CFPrecisionSleep(milliseconds) {
     milliseconds := Max(1, Min(8, milliseconds))
     if CF.precisionHandle {
         due := Buffer(8, 0)
-        ; Une valeur negative exprime une echeance relative en tranches 100ns.
         NumPut("Int64", -milliseconds * 10000, due)
         if DllCall("Kernel32\SetWaitableTimerEx", "Ptr", CF.precisionHandle,
             "Ptr", due.Ptr, "Int", 0, "Ptr", 0, "Ptr", 0, "Ptr", 0,
             "UInt", 0, "Int") {
-            ; Attente interruptible par les messages quand la souris est
-            ; conditionnée : le hook Windows réveille le moteur sans polling.
-            if CF.armed && CF.cfg.mouseGate && CF.gateHook && !CF.gateWakeSignal {
-                handles := Buffer(A_PtrSize, 0)
-                NumPut("Ptr", CF.precisionHandle, handles)
-                DllCall("User32\MsgWaitForMultipleObjectsEx",
-                    "UInt", 1, "Ptr", handles.Ptr, "UInt", 16,
-                    "UInt", 0x04FF, "UInt", 0x0004, "UInt")
-            } else {
-                ; Timeout de sécurité : pas d'attente infinie.
-                DllCall("Kernel32\WaitForSingleObject", "Ptr", CF.precisionHandle,
-                    "UInt", 16, "UInt")
-            }
+            DllCall("Kernel32\WaitForSingleObject", "Ptr", CF.precisionHandle,
+                "UInt", 16, "UInt")
             return
         }
     }
-    if CF.armed && CF.cfg.mouseGate && CF.gateHook && !CF.gateWakeSignal
-        DllCall("User32\MsgWaitForMultipleObjectsEx", "UInt", 0,
-            "Ptr", 0, "UInt", milliseconds, "UInt", 0x04FF, "UInt", 0x0004, "UInt")
-    else
-        DllCall("Kernel32\Sleep", "UInt", milliseconds)
+    DllCall("Kernel32\Sleep", "UInt", milliseconds)
 }
 
 CFActivationRefreshPressed() {
@@ -884,89 +868,33 @@ CFDiagToggle(enabled) {
     SendStats()
 }
 
-; L'état du dernier événement PHYSIQUE reçu par le hook reste prioritaire.
-; Sans événement observé (bouton déjà maintenu ou hook indisponible),
-; on conserve GetKeyState pour ne pas briser la compatibilité.
+; Stable mode only (v1.9.10): the global WH_MOUSE_LL hook caused
+; input stalls and potentially missed release events. Disable its entire
+; installation path until a separate safe Raw Input implementation is tested.
+; Keep AutoHotkey's normal physical GetKeyState mechanism.
 CFGateIsHeld() {
     global CF
     if !CF.cfg.mouseGate
         return true
-    if CF.mouseDetectionMode != "classic" && CF.gateHook && CF.gateEventKnown
-        return CF.gateWakeSignal
     return !!GetKeyState(CF.cfg.gateButton, "P")
-}
-
-CFGateTrackEvent(msg, mouseData, flags, eventTime) {
-    global CF
-    if !CF.armed || !CF.cfg.mouseGate || (flags & 0x3)
-        return
-    gate := CF.cfg.gateButton
-    down := gate = "LButton" && msg = 0x201
-        || gate = "RButton" && msg = 0x204
-        || gate = "MButton" && msg = 0x207
-    up := gate = "LButton" && msg = 0x202
-        || gate = "RButton" && msg = 0x205
-        || gate = "MButton" && msg = 0x208
-    if !down && !up && (gate = "XButton1" || gate = "XButton2")
-        && (msg = 0x20B || msg = 0x20C) {
-        xButton := (mouseData >> 16) & 0xFFFF
-        if xButton = (gate = "XButton1" ? 1 : 2) {
-            down := msg = 0x20B
-            up := msg = 0x20C
-        }
-    }
-    if up {
-        CF.gateEventKnown := true
-        CF.gateWakeSignal := false
-    } else if down {
-        CF.gateEventKnown := true
-        CF.gateWakeSignal := true
-        if CF.gateProbePending && !CF.gateProbeQpc {
-            CF.gateEventUptime := eventTime
-            CF.gateProbeQpc := CFPerfCounter()
-        }
-    }
-}
-
-CFGateProbeProc(code, msg, data) {
-    global CF
-    if code >= 0 && data && CF.armed && CF.cfg.mouseGate
-        CFGateTrackEvent(msg, NumGet(data, 8, "UInt"),
-            NumGet(data, 12, "UInt"), NumGet(data, 16, "UInt"))
-    return DllCall("User32\CallNextHookEx", "Ptr", CF.gateHook,
-        "Int", code, "UPtr", msg, "Ptr", data, "Ptr")
 }
 
 CFGateProbeStart() {
     global CF
-    if !CF.armed || !CF.cfg.mouseGate || CF.mouseDetectionMode = "classic"
-        || CF.gateHook || CF.gateHookFailed
-        return
-    CF.gateWakeSignal := false
-    CF.gateEventKnown := false
-    CF.gateProbePending := CF.diagnosticsEnabled && CF.firstDispatchMs = ""
+    ; Intentionally do not install WH_MOUSE_LL.
+    CF.gateHookFailed := true
+    CF.gateProbePending := false
     CF.gateProbeQpc := 0
     CF.gateEventUptime := 0
-    if CF.gateProbePending
-        CF.gateProbeStatus := "waiting"
-    callback := CallbackCreate(CFGateProbeProc, "Fast", 3)
-    hook := DllCall("User32\SetWindowsHookExW", "Int", 14,
-        "Ptr", callback, "Ptr", 0, "UInt", 0, "Ptr")
-    if hook {
-        CF.gateHookCallback := callback
-        CF.gateHook := hook
-    } else {
-        CF.gateHookFailed := true
-        CF.gateProbePending := false
-        if CF.diagnosticsEnabled && CF.firstDispatchMs = ""
-            CF.gateProbeStatus := "unavailable"
-        CallbackFree(callback)
-    }
+    if CF.diagnosticsEnabled && CF.firstDispatchMs = ""
+        CF.gateProbeStatus := "unavailable"
 }
 
 CFGateProbeStop() {
     global CF
     CF.gateProbePending := false
+    CF.gateProbeQpc := 0
+    CF.gateEventUptime := 0
     CF.gateWakeSignal := false
     CF.gateEventKnown := false
     if CF.gateHook {
@@ -1032,6 +960,9 @@ ActivationDown(*) {
     CF.gateDetectionMs := ""
     CF.gateEventDelayMs := ""
     CF.gateProbeStatus := ""
+    CF.gateProbeQpc := 0
+    CF.gateEventUptime := 0
+    CF.gateProbePending := false
     CF.gateHookFailed := false
     CF.gateWakeSignal := false
     CF.gateEventKnown := false
@@ -1044,11 +975,7 @@ ActivationDown(*) {
     CF.target := current
     CF.nextAt := CFNowMs()
     CFNaturalReset(CF.cfg)
-    ; La surveillance événementielle reste active pendant TOUTE la session
-    ; conditionnée : il faut observer le relâchement, pas seulement l'appui.
-    ; La méthode classique n'installe pas ce hook supplémentaire.
-    if CF.cfg.mouseGate
-        CFGateProbeStart()
+    ; Mode classique sûr : pas de hook global de souris.
     ; Premier clic sans attente de l'intervalle CPS suivant.
     EngineTick(true)
     ; Montrer l'overlay pendant que la touche d'activation est encore
@@ -1141,48 +1068,23 @@ EngineTick(firstFromActivation := false) {
         CF.gateWaiting := true
         CF.cpsNow := 0
         CF.nextAt := CFNowMs()
-        if CF.mouseDetectionMode = "classic"
-            CF.gateMethodCurrent := "classic"
-        else {
-            CFGateProbeStart()
-            CF.gateMethodCurrent := CF.gateHook ? "event"
-                : CF.gateHookFailed ? (CF.mouseDetectionMode = "auto"
-                    ? "fallback" : "unavailable") : "event"
-        }
+        CF.gateMethodCurrent := "classic"
         return
     }
 
     now := CFNowMs()
     if CF.cfg.mouseGate {
-        if CF.mouseDetectionMode = "event" && !CF.gateHook {
-            CF.gateWaiting := true
-            CF.cpsNow := 0
-            CF.nextAt := now
-            CF.gateMethodCurrent := "unavailable"
-            return
-        }
         if CF.gateWaiting {
-            ; En mode événementiel forcé, ne jamais passer silencieusement
-            ; sur la méthode classique : si le hook échoue, rester en attente.
-            if CF.mouseDetectionMode = "event" && !CF.gateWakeSignal {
-                CF.gateMethodCurrent := CF.gateHookFailed ? "unavailable" : "event"
-                return
-            }
-            ; En Auto, distinguer le vrai réveil hook et le contrôle
-            ; physique de secours, même si un hook était installé.
-            CF.gateMethodLast := CF.mouseDetectionMode = "classic" ? "classic"
-                : CF.gateWakeSignal ? "event" : "fallback"
-            CF.gateMethodCurrent := CF.gateMethodLast
+            CF.gateMethodLast := "classic"
+            CF.gateMethodCurrent := "classic"
             CF.gateWaiting := false
             CF.nextAt := now
         } else if CF.gateMethodLast = "none" {
-            ; Bouton déjà maintenu lors du lancement : aucune attente.
             CF.gateMethodLast := "already-held"
             CF.gateMethodCurrent := "already-held"
         }
-    } else {
+    } else
         CF.gateMethodCurrent := "disabled"
-    }
     if now < CF.nextAt
         return
     intervalMs := GetNextIntervalMs(CF.cfg, now)
@@ -1194,27 +1096,12 @@ EngineTick(firstFromActivation := false) {
     ; la condition souris a retardé son émission après l'activation.
     firstClick := CF.diagnosticsEnabled && CF.firstDispatchMs = ""
     measureStart := firstClick ? (firstFromActivation ? CF.activationCounter : CFPerfCounter()) : 0
-    if firstClick && !firstFromActivation && (CF.cfg.mouseGate || CF.gateProbePending) {
-        if CF.gateProbeQpc > 0 && CF.qpcFrequency > 0 && measureStart >= CF.gateProbeQpc {
-            CF.gateDetectionMs := Round(1000.0 * (measureStart - CF.gateProbeQpc) / CF.qpcFrequency, 2)
-            CF.gateProbeStatus := "measured"
-            ; La structure MSLLHOOKSTRUCT contient aussi le temps de
-            ; l'événement Windows. Il peut être quantifié à ~15,6ms.
-            ; À utiliser comme ESTIMATION et non comme mesure exacte.
-            uptime := DllCall("Kernel32\GetTickCount64", "UInt64")
-            eventDelay := (uptime - CF.gateEventUptime) & 0xFFFFFFFF
-            if eventDelay <= 1000 {
-                CF.gateEventDelayMs := eventDelay
-                CF.gateEventSamples.Push(eventDelay)
-                if CF.gateEventSamples.Length > 10
-                    CF.gateEventSamples.RemoveAt(1)
-                sumDelay := 0
-                for sample in CF.gateEventSamples
-                    sumDelay += sample
-                CF.gateEventAverageMs := Round(sumDelay / CF.gateEventSamples.Length, 1)
-            }
-        } else if CF.gateProbeStatus != "unavailable"
-            CF.gateProbeStatus := "unobserved"
+    ; WH_MOUSE_LL is disabled; no callback timestamp is available.
+    ; Never reuse an earlier timestamp to display fabricated latencies.
+    if firstClick && !firstFromActivation && CF.cfg.mouseGate {
+        CF.gateDetectionMs := ""
+        CF.gateEventDelayMs := ""
+        CF.gateProbeStatus := "unavailable"
     }
     SendInput("{Click " CF.cfg.clickButton "}")
     if firstClick && CF.qpcFrequency > 0 {
