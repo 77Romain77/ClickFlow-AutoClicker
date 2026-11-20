@@ -358,7 +358,7 @@ CFDesktopUpdate() {
     if !CF.desktopReady
         return
     status := CF.armed ? (CF.cfg.mouseGate
-        && !GetKeyState(CF.cfg.gateButton, "P") ? "EN ATTENTE" : "ACTIF")
+        && !CFGateIsHeld() ? "EN ATTENTE" : "ACTIF")
         : "ARRÊTÉ"
     profile := CFProfileById(CF.selectedId)
     name := IsObject(profile) ? profile.name : "Principal"
