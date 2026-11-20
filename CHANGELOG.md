@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.11 - 2026-11-20
+
+- Ajout expérimental de la réception souris Raw Input (WM_INPUT + RIDEV_INPUTSINK) sans hook WH_MOUSE_LL bloquant. Compatibilité de fond avec les fenêtres cibles.
+- Méthodes Classique (stable et par défaut), Automatique (Raw Input avec secours physique) et Événementielle Raw Input (sans repli silencieux). Conservation du réglage.
+- Détection séparée de l'appui et du relâchement pour les 5 boutons. Croisement avec l'état physique pour limiter les clics qui continuent après relâchement.
+- Inscription Raw Input uniquement pendant l'activation conditionnée, retrait à l'arrêt ; attente native interrompue par QS_RAWINPUT, sans cadenceur actif supplémentaire au repos.
+- Nouveau diagnostic logiciel haute précision après réception de WM_INPUT ; les anciennes moyennes estimées avec l'horloge Windows ne sont pas comparables.
+- Tests Windows Raw Input intégrés aux scripts existants sans nouveau workflow ni matrice.
+
+
 ## 1.9.10 - 2026-11-20
 
 - Correctif urgent de stabilité : désactive entièrement le hook souris global `WH_MOUSE_LL` supplémentaire à l'origine probable de freezes et de clics persistants.
