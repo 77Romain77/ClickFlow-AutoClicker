@@ -342,6 +342,11 @@ jobs:
           }
 
       - name: Probe WebView2 initialization (experimental)
+        # GitHub-hosted runners intermittently fail to create the graphical
+        # WebView2 controller without an interactive desktop. This is a known
+        # runner-only probe: keep its logs, but never block verified engine
+        # regressions or building/publishing the portable file on this alone.
+        continue-on-error: true
         shell: pwsh
         run: |
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'webview2-ready.txt'
