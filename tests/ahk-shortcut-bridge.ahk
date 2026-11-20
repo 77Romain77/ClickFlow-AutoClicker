@@ -56,7 +56,7 @@ try {
     PostShortcutCommand("globalHotkey", "begin", "previous")
     PostShortcutCommand("globalHotkey", "cancel")
     if CF.capture || CF.globalKeys["previous"] != ""
-        throw Error("Échap n'annule pas proprement une capture.")
+        throw Error("Échap n'annule pas proprement une capture : capture=" CF.capture " previous=" CF.globalKeys["previous"] " kind=" CF.captureKind " notice=" CF.notice)
     PostShortcutCommand("globalHotkey", "begin", "emergency")
     PostShortcutCommand("globalHotkey", "set", "emergency", "vk7B")
     if CF.emergencyKey != "vk7B" || CF.capture
