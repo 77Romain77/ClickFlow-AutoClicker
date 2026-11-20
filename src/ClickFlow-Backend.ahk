@@ -32,7 +32,7 @@ global CF := {
     firstDispatchMs: "", firstDispatchKind: "", activationCounter: 0, qpcFrequency: 0,
     diagnosticsEnabled: false, gateDetectionMs: "", gateProbeStatus: "",
     gateHook: 0, gateHookCallback: 0, gateProbePending: false, gateProbeQpc: 0,
-    gateWakeSignal: false, gateHookFailed: false,
+    gateWakeSignal: false, gateHookFailed: false, gateEventKnown: false,
     mouseDetectionMode: "auto", gateMethodLast: "none",
     gateMethodCurrent: "inactive", gateWaiting: false,
     gateEventUptime: 0, gateEventDelayMs: "", gateEventAverageMs: "", gateEventSamples: [],
@@ -247,7 +247,7 @@ SendStats() {
     global CF
     if !CF.web
         return
-    waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
+    waiting := CF.armed && CF.cfg.mouseGate && !CFGateIsHeld()
     try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":' (CF.gateHook ? "true" : "false") '}')
 }
 
@@ -843,8 +843,7 @@ CFEngineRun() {
                     CF.test.started + CF.test.duration * 1000 - now)
             } else if CF.armed {
                 untilNext := CF.nextAt - now
-                if CF.cfg.mouseGate && !CF.gateWakeSignal
-                    && !GetKeyState(CF.cfg.gateButton, "P")
+                if CF.cfg.mouseGate && !CFGateIsHeld()
                     untilNext := 8
             } else {
                 break
@@ -885,6 +884,18 @@ CFDiagToggle(enabled) {
     SendStats()
 }
 
+; L'état du dernier événement PHYSIQUE reçu par le hook reste prioritaire.
+; Sans événement observé (bouton déjà maintenu ou hook indisponible),
+; on conserve GetKeyState pour ne pas briser la compatibilité.
+CFGateIsHeld() {
+    global CF
+    if !CF.cfg.mouseGate
+        return true
+    if CF.mouseDetectionMode != "classic" && CF.gateHook && CF.gateEventKnown
+        return CF.gateWakeSignal
+    return !!GetKeyState(CF.cfg.gateButton, "P")
+}
+
 CFGateTrackEvent(msg, mouseData, flags, eventTime) {
     global CF
     if !CF.armed || !CF.cfg.mouseGate || (flags & 0x3)
@@ -905,8 +916,10 @@ CFGateTrackEvent(msg, mouseData, flags, eventTime) {
         }
     }
     if up {
+        CF.gateEventKnown := true
         CF.gateWakeSignal := false
     } else if down {
+        CF.gateEventKnown := true
         CF.gateWakeSignal := true
         if CF.gateProbePending && !CF.gateProbeQpc {
             CF.gateEventUptime := eventTime
@@ -930,6 +943,7 @@ CFGateProbeStart() {
         || CF.gateHook || CF.gateHookFailed
         return
     CF.gateWakeSignal := false
+    CF.gateEventKnown := false
     CF.gateProbePending := CF.diagnosticsEnabled && CF.firstDispatchMs = ""
     CF.gateProbeQpc := 0
     CF.gateEventUptime := 0
@@ -954,6 +968,7 @@ CFGateProbeStop() {
     global CF
     CF.gateProbePending := false
     CF.gateWakeSignal := false
+    CF.gateEventKnown := false
     if CF.gateHook {
         DllCall("User32\UnhookWindowsHookEx", "Ptr", CF.gateHook, "Int")
         CF.gateHook := 0
@@ -1019,6 +1034,7 @@ ActivationDown(*) {
     CF.gateProbeStatus := ""
     CF.gateHookFailed := false
     CF.gateWakeSignal := false
+    CF.gateEventKnown := false
     CF.gateWaiting := false
     CF.gateMethodCurrent := "inactive"
     CF.gateMethodLast := "none"
@@ -1028,12 +1044,13 @@ ActivationDown(*) {
     CF.target := current
     CF.nextAt := CFNowMs()
     CFNaturalReset(CF.cfg)
-    ; Premier clic : exécuté dans le callback de la touche lui-même.
-    ; EngineTick calcule et programme nextAt pour le clic suivant :
-    ; aucun clic double au lancement du cadenceur précis.
+    ; La surveillance événementielle reste active pendant TOUTE la session
+    ; conditionnée : il faut observer le relâchement, pas seulement l'appui.
+    ; La méthode classique n'installe pas ce hook supplémentaire.
+    if CF.cfg.mouseGate
+        CFGateProbeStart()
+    ; Premier clic sans attente de l'intervalle CPS suivant.
     EngineTick(true)
-    ; La condition souris installe elle-même son hook d'attente dans
-    ; EngineTick. Pas de hook si le bouton est déjà tenu au départ.
     ; Montrer l'overlay pendant que la touche d'activation est encore
     ; traitée, avant que le cadenceur haute précision prenne la main.
     CFDesktopUpdate()
@@ -1120,8 +1137,7 @@ EngineTick(firstFromActivation := false) {
         StopAll("Arrêt : touche d'activation relâchée.")
         return
     }
-    if CF.cfg.mouseGate && !CF.gateWakeSignal
-        && !GetKeyState(CF.cfg.gateButton, "P") {
+    if CF.cfg.mouseGate && !CFGateIsHeld() {
         CF.gateWaiting := true
         CF.cpsNow := 0
         CF.nextAt := CFNowMs()
@@ -1138,6 +1154,13 @@ EngineTick(firstFromActivation := false) {
 
     now := CFNowMs()
     if CF.cfg.mouseGate {
+        if CF.mouseDetectionMode = "event" && !CF.gateHook {
+            CF.gateWaiting := true
+            CF.cpsNow := 0
+            CF.nextAt := now
+            CF.gateMethodCurrent := "unavailable"
+            return
+        }
         if CF.gateWaiting {
             ; En mode événementiel forcé, ne jamais passer silencieusement
             ; sur la méthode classique : si le hook échoue, rester en attente.
@@ -1200,8 +1223,9 @@ EngineTick(firstFromActivation := false) {
         if firstFromActivation && CF.cfg.mouseGate
             CF.gateProbeStatus := "already-held"
     }
-    if CF.gateHook
-        CFGateProbeStop() ; ne surveiller que pendant l'attente physique
+    ; Le hook reste actif après ce clic pour capter la sortie du bouton.
+    ; Seule la mesure (premier clic) se termine.
+    CF.gateProbePending := false
     CF.total += 1
     CF.recent.Push(now)
     if CF.floatShown
