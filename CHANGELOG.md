@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.16 - 2026-11-20
+
+- Ajoute une protection contre les clics persistants dans les modes Automatique et Événementielle : un désaccord prolongé entre Raw Input (UP), GetKeyState (DOWN) et GetAsyncKeyState (UP) déclenche l'arrêt complet de la session.
+- Le désaccord doit persister plus de 35 ms pour limiter les faux positifs pendant SendInput. Cet arrêt de sécurité empêche le mode Automatique de redémarrer sur un état AHK resté bloqué.
+- Le mode Classique reste inchangé ; aucun hook WH_MOUSE_LL supplémentaire n'est installé.
+- Ajoute GetAsyncKeyState aux diagnostics détaillés facultatifs pour comprendre les désaccords entre sources.
+- Corrige les deux libellés de version figés sur 1.9.14 en pied de page, maintenant affichés comme 1.9.16.
+- Cette protection nécessite validation avec la souris réelle ; un déclenchement de sécurité pendant un vrai maintien indique un faux positif à analyser.
+
+
 ## 1.9.15 - 2026-11-20
 
 - Ajoute un interrupteur indépendant pour les diagnostics détaillés de détection souris, désactivés par défaut.
