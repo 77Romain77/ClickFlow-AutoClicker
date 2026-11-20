@@ -100,11 +100,23 @@ try {
     StopAll("Condition souris testée.")
     CF.cfg.mouseGate := 0
 
+    ; Le mode Maintenir doit aussi envoyer son premier clic dès le
+    ; callback, avant même la stabilisation de GetKeyState("F6", "P").
+    CF.pressed := false
+    CF.cfg.hold := 1
+    ActivationDown()
+    if CF.total != count + 2
+        throw Error("Le premier clic en mode Maintenir n'est pas immédiat.")
+    ActivationUp()
+    if CF.armed || CF.engineTimerActive
+        throw Error("Le mode Maintenir ne s'arrête pas au relâchement.")
+    CF.cfg.hold := 2
+
     ; Ne jamais cliquer si la fenêtre principale reprend le focus.
     CF.pressed := false
     CF.hwnd := gui.Hwnd
     ActivationDown()
-    if CF.armed || CF.engineTimerActive || CF.total != count + 1
+    if CF.armed || CF.engineTimerActive || CF.total != count + 2
         throw Error("La sécurité de focus a été contournée.")
     CF.hwnd := 0
     CF.pressed := false
@@ -117,7 +129,7 @@ try {
     CFTestTick(CF.test.started + 2000)
     if CF.test.active || CF.engineTimerActive || CF.statsTimerActive
         throw Error("Le timer reste actif après la fin du Test CPS.")
-    if CF.total != count + 1
+    if CF.total != count + 2
         throw Error("Le Test CPS a injecté des clics Windows.")
     CFTestStart(5, 105, 1)
     CFTestStop("annulé")
