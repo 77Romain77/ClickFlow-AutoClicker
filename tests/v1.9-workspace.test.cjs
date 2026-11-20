@@ -11,10 +11,12 @@ assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,7,
     'General, diagnostics, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
 const labels=['Général','Diagnostics et détection souris','Overlay','Raccourcis globaux','Raccourcis Windows',
     'Sauvegarde complète','Maintenance'];
-assert(html.includes('Automatique (Raw Input + secours, expérimental)')
-    && html.includes('Événementielle Raw Input (expérimental)')
-    && html.includes('Classique (stable, recommandé)'),
-    'Raw Input experimental modes and classic default must be visible');
+assert(html.includes('Automatique (Raw Input + secours, recommandé)')
+    && html.includes('Événementielle (Raw Input requis au démarrage)')
+    && html.includes('Classique (vérification périodique)'),
+    'The modes must be explained without experimental labels');
+assert(!html.includes('Raw Input reste expérimental'),
+    'Old experimental label should be removed');
 assert(html.includes("Moteur : ") && html.includes('GetKeyState : ')
     && html.includes('UP Raw pendant maintien physique')
     && html.includes('La vérification physique conserve le maintien'),
@@ -26,7 +28,13 @@ assert(html.includes('id="mouseDetectionMode"') && html.includes('id="gateMethod
 assert(html.includes("send('preference'") && html.includes("overlaySetPreference('mouseDetectionMode'"),
     'Mouse detection mode must be sent to AutoHotkey backend');
 assert.equal((html.match(/data-preference="diagnosticsEnabled"/g)||[]).length,2,
-    'Diagnostic toggle must be visible in Test CPS and Settings');
+    'Latency toggle must be visible in Test CPS and Settings');
+assert.equal((html.match(/data-preference="gateDebugEnabled"/g)||[]).length,2,
+    'Detection debug toggle must be visible in Test CPS and Settings');
+assert(html.includes('id="gateMethodCpsPanel" class="cps-last-wrap hidden"')
+    && html.includes('id="gateMethodSettings"')
+    && html.includes("if(!model.preferences.gateDebugEnabled)return;"),
+    'Detailed detection diagnostics must be optional');
 for(const name of labels)
     assert(settings.includes('<summary>'+name),
         'Missing collapsible settings category '+name);
