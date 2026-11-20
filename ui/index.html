@@ -1012,7 +1012,10 @@ function setLiveMonitorActive(active) {
     }
 }
 function updateLiveMonitor(data) {
-    if(data.firstDispatchMs!==undefined) {
+    if(data.diagnosticsEnabled===false) {
+        $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
+        $('cpsGateLatency').textContent='Délai de détection de la condition souris : non mesuré.';
+    } else if(data.diagnosticsEnabled===true) {
         const delay=data.firstDispatchMs;
         const fromCondition=data.firstDispatchKind==='condition';
         $('cpsFirstDispatch').textContent=delay!==null&&Number.isFinite(Number(delay))
@@ -1021,6 +1024,15 @@ function updateLiveMonitor(data) {
                 +' -> SendInput terminé).'
             :data.armed&&data.waiting?'En attente du bouton de souris configuré pour envoyer le premier clic.'
                 :'Aucune activation réelle mesurée pour cette session.';
+        const gate=data.gateDetectionMs;
+        const status=data.gateProbeStatus||'';
+        $('cpsGateLatency').textContent=status==='measured'&&gate!==null&&Number.isFinite(Number(gate))
+            ?'Délai de détection du bouton : '+Number(gate).toFixed(2)+' ms (callback Windows -> début de SendInput).'
+            :status==='waiting'?'Délai de détection : en attente du bouton de souris...'
+            :status==='already-held'?'Condition souris déjà maintenue lors de l’activation : aucune attente à mesurer.'
+            :status==='unavailable'?'Hook de diagnostic Windows indisponible sur ce PC.'
+            :status==='unobserved'?'Événement souris non horodaté avant le clic : mesure indisponible.'
+            :'Délai de détection de la condition souris : pas encore mesuré.';
     }
     const cps=Number(data.cps)||0;
     const status=data.waiting?'En attente du bouton souris':
@@ -1089,6 +1101,10 @@ function renderSettings() {
         btn.classList.toggle('on',!!model.preferences[field]);
         btn.setAttribute('aria-pressed',String(!!model.preferences[field]));
     });
+    if(!model.preferences.diagnosticsEnabled) {
+        $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
+        $('cpsGateLatency').textContent='Délai de détection de la condition souris : non mesuré.';
+    }
     $('liveMonitorCard').classList.toggle('hidden',
         !(model.compact?model.preferences.compactChart:model.preferences.liveMonitor));
     document.body.classList.toggle('compact-chart',!!model.preferences.compactChart);
