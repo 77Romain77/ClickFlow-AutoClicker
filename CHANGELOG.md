@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 1.9.18 - 2026-11-20
+
+- Corrige la confusion entre le maintien physique et les clics injectés lorsque le bouton de condition et le bouton généré sont identiques.
+- Traite les événements Raw Input par identifiant matériel hDevice : les événements sans identité et les autres périphériques ne changent pas l'état suivi dans ce cas.
+- Un vrai relâchement du périphérique suivi coupe la condition, même si GetKeyState signale encore DOWN. Un nouveau DOWN du même périphérique réarme le moteur.
+- Retire les sécurités GetAsyncKeyState apparues en 1.9.16-1.9.17 qui arrêtaient incorrectement le maintien.
+- Conserve le mode Classique et le comportement habituel avec deux boutons différents.
+- Diagnostics opt-in : compteurs d'événements sans périphérique ignorés et état du bouton matériel suivi.
+- Tests simulant une rafale d'événements sans périphérique à 10 et 50 CPS puis un vrai relâchement et un vrai nouvel appui.
+
+
 ## 1.9.17 - 2026-11-20
 
 - Corrige les arrêts intempestifs sous maintien en mode Événementielle et Automatique observés sur PC réel dans la v1.9.16.
