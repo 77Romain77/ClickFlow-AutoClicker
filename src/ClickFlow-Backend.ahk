@@ -28,6 +28,8 @@ global CF := {
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
     overlayRecent: [], overlayStart: 0,
     engineTimerActive: false, statsTimerActive: false,
+    engineLoopRunning: false, precisionRequested: false,
+    firstDispatchMs: "", activationCounter: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -102,7 +104,7 @@ BackendExit(*) {
     CFTestStop("fermeture")
     CF.armed := false
     CF.pressed := false
-    try SetTimer(EngineTick, 0)
+    try CFEngineSetTimer(false)
     try SetTimer(UpdateStats, 0)
     try SetTimer(SaveSettings, 0)
     try SetTimer(SendState, 0)
@@ -239,7 +241,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"firstDispatchMs":' (CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -746,9 +748,62 @@ CFEngineSetTimer(active) {
     if active = CF.engineTimerActive
         return
     CF.engineTimerActive := active
-    ; Timer 10 ms uniquement pendant les clics ou le banc de test.
-    ; Les hotkeys Windows, elles, restent enregistrées et réactives au repos.
-    SetTimer(EngineTick, active ? 10 : 0)
+    if active {
+        ; Uniquement pendant l'activite, jamais au repos.
+        ; SetTimer AHK peut etre arrondi a 15,6 ms par Windows.
+        if !CF.precisionRequested
+            CF.precisionRequested := DllCall("Winmm\timeBeginPeriod", "UInt", 1, "UInt") = 0
+        if CF.precisionRequested
+            SetTimer(CFEngineRun, -1)
+        else
+            SetTimer(EngineTick, 10) ; repli sans precision garantie
+    } else {
+        SetTimer(CFEngineRun, 0)
+        SetTimer(EngineTick, 0)
+        if CF.precisionRequested {
+            DllCall("Winmm\timeEndPeriod", "UInt", 1, "UInt")
+            CF.precisionRequested := false
+        }
+    }
+}
+
+CFEngineRun() {
+    global CF
+    if !CF.engineTimerActive || CF.engineLoopRunning
+        return
+    CF.engineLoopRunning := true
+    try {
+        while CF.engineTimerActive && !CF.shuttingDown {
+            EngineTick()
+            if !CF.engineTimerActive
+                break
+            now := A_TickCount
+            if CF.test.active {
+                untilNext := Min(CF.test.nextAt - now,
+                    CF.test.started + CF.test.duration * 1000 - now)
+            } else if CF.armed {
+                untilNext := CF.nextAt - now
+                if CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
+                    untilNext := 8
+            } else {
+                break
+            }
+            ; Sommeil natif a resolution 1 ms, sans boucle occupee.
+            ; Sleep(-1) pompe les evenements Windows / raccourcis / UI.
+            DllCall("Kernel32\Sleep", "UInt", Max(1, Min(8, untilNext - 1)))
+            Sleep(-1)
+        }
+    } finally {
+        CF.engineLoopRunning := false
+        if CF.engineTimerActive && !CF.shuttingDown
+            SetTimer(CFEngineRun, -1)
+    }
+}
+
+CFPerfCounter() {
+    ticks := 0
+    DllCall("Kernel32\QueryPerformanceCounter", "Int64*", &ticks, "Int")
+    return ticks
 }
 
 CFStatsSetTimer(active) {
@@ -763,6 +818,7 @@ CFStatsSetTimer(active) {
 
 ActivationDown(*) {
     global CF
+    activationStarted := CFPerfCounter()
     if CF.capture || CF.pressed || CF.test.active
         return
     CF.pressed := true
@@ -779,6 +835,8 @@ ActivationDown(*) {
     }
 
     CF.armed := true
+    CF.activationCounter := activationStarted
+    CF.firstDispatchMs := ""
     CF.overlayStart := A_TickCount
     CF.overlayUntil := 0
     CF.overlayRecent := []
@@ -787,7 +845,7 @@ ActivationDown(*) {
     CFNaturalReset(CF.cfg)
     ; Premier clic : exécuté dans le callback de la touche lui-même.
     ; EngineTick calcule et programme nextAt pour le clic suivant :
-    ; aucun clic double quand le timer de 10 ms démarre.
+    ; aucun clic double au lancement du cadenceur précis.
     EngineTick(true)
     if CF.armed {
         CFEngineSetTimer(true)
@@ -885,6 +943,12 @@ EngineTick(firstFromActivation := false) {
     ; Les clics sont envoyes a la position actuelle du curseur.
     ; SendInput n'intercepte pas les clics manuels et n'injecte rien dans le jeu.
     SendInput("{Click " CF.cfg.clickButton "}")
+    if firstFromActivation {
+        frequency := 0
+        DllCall("Kernel32\QueryPerformanceFrequency", "Int64*", &frequency, "Int")
+        if frequency > 0
+            CF.firstDispatchMs := Round(1000 * (CFPerfCounter() - CF.activationCounter) / frequency, 2)
+    }
     CF.total += 1
     CF.recent.Push(now)
     if CF.floatShown
