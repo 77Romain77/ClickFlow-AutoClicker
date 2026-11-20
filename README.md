@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.10 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.11 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.10.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.10)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.11.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.11)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.10.ahk`.
+2. Télécharger `ClickFlow-v1.9.11.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.10`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.11`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,20 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Détection Raw Input expérimentale sans hook bloquant (v1.9.11)
+
+Cette version propose à nouveau trois méthodes dans Paramètres > Diagnostics et détection souris :
+
+- **Classique (par défaut, recommandé)** : comportement stable de v1.9.10 avec GetKeyState et le cadenceur CPS haute précision, aucun enregistrement Raw Input supplémentaire.
+- **Automatique (expérimental)** : écoute les messages souris WM_INPUT via Windows Raw Input (RIDEV_INPUTSINK) lorsque la condition souris est active ; si l'enregistrement échoue ou que l'appui n'a pas été reçu, la lecture physique classique sert de secours. L'interface distingue le dernier chemin réellement utilisé.
+- **Événementielle Raw Input (expérimental)** : demande une notification Raw Input pour activer la condition, sans repli silencieux si l'enregistrement échoue. Si la touche était déjà maintenue au lancement, la relâcher puis appuyer de nouveau pour l'essai.
+
+**Aucun hook global WH_MOUSE_LL additionnel** n'est installé : l'ancien mécanisme ayant provoqué des freezes reste définitivement retiré. Les messages de la souris sont envoyés par Windows à la fenêtre principale du programme, y compris quand elle est en arrière-plan. La surveillance est activée uniquement pendant une session conditionnée en mode Raw Input et supprimée à l'arrêt. Pendant l'activation, l'état du bouton physique GetKeyState est également consulté pour empêcher les clics si une notification de relâchement arrive tardivement. Le même état de condition pilote l'overlay.
+
+La fonction MsgWaitForMultipleObjectsEx rend l'attente du timer réactive aux messages Raw Input, mais ne promet pas un délai fixe : les résultats dépendent de Windows, des périphériques et des logiciels. Si Raw Input devient indisponible, le mode Automatique se rabat sur Classique ; le mode Événementielle reste en attente. Les performances d'entrée et le bon fonctionnement dans un jeu doivent être validés sur la machine utilisateur. Tester d'abord dans une application autorisant les clics automatisés, avec l'arrêt d'urgence actif.
+
+**Diagnostics :** la mesure après réception d'un message Raw Input utilise QueryPerformanceCounter, pas l'ancienne valeur horodatée par paliers de ~16 ms. La moyenne affichée n'est donc **pas comparable** à l'ancienne moyenne 6,2 ms des v1.9.7-1.9.9. Elle mesure seulement le temps logiciel depuis la réception du message jusqu'au début de SendInput, et pas le temps total depuis l'appui matériel.
 
 ## Correctif de stabilité de la souris (v1.9.10)
 

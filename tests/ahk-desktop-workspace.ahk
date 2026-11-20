@@ -65,11 +65,18 @@ try {
     if CF.mouseDetectionMode != "classic"
         || IniRead(CF.configFile, "General", "MouseDetectionMode", "") != "classic"
         throw Error("Le choix Classique n'est pas conservé.")
-    for disabledMode in ["event", "auto", "invalid"] {
-        CFDesktopSetPreference("mouseDetectionMode", disabledMode)
-        if CF.mouseDetectionMode != "classic" || CF.gateHook || CF.gateHookCallback
-            throw Error("Une méthode événementielle non sécurisée a été acceptée.")
+    for mode in ["event", "auto"] {
+        CFDesktopSetPreference("mouseDetectionMode", mode)
+        if CF.mouseDetectionMode != mode
+            || IniRead(CF.configFile, "General", "MouseDetectionMode", "") != mode
+            throw Error("La méthode Raw Input n'est pas enregistrée : " mode)
+        if CF.gateHook || CF.gateHookCallback || CF.gateRawRegistered
+            throw Error("Raw Input est actif au repos.")
     }
+    CFDesktopSetPreference("mouseDetectionMode", "invalid")
+    if CF.mouseDetectionMode != "auto"
+        throw Error("Une méthode invalide a été acceptée.")
+    CFDesktopSetPreference("mouseDetectionMode", "classic")
     CFDesktopSetPreference("floatShown", "1")
     if CF.overlayVisible
         throw Error("L'overlay devrait rester masqué au repos.")

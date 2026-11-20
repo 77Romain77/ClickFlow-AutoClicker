@@ -11,8 +11,10 @@ assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,7,
     'General, diagnostics, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
 const labels=['Général','Diagnostics et détection souris','Overlay','Raccourcis globaux','Raccourcis Windows',
     'Sauvegarde complète','Maintenance'];
-assert(html.includes('value="event" disabled') && html.includes('value="auto" disabled'),
-    'Unsafe event-based modes must be disabled during the hotfix');
+assert(html.includes('Automatique (Raw Input + secours, expérimental)')
+    && html.includes('Événementielle Raw Input (expérimental)')
+    && html.includes('Classique (stable, recommandé)'),
+    'Raw Input experimental modes and classic default must be visible');
 assert(html.includes('id="mouseDetectionMode"') && html.includes('id="gateMethodCps"')
     && html.includes('id="gateMethodSettings"'), 'Mouse detection selector and real method status must be visible');
 assert(html.includes("send('preference'") && html.includes("overlaySetPreference('mouseDetectionMode'"),
