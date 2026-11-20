@@ -28,6 +28,8 @@ global CF := {
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
     overlayRecent: [], overlayStart: 0,
     engineTimerActive: false, statsTimerActive: false,
+    engineLoopRunning: false, precisionRequested: false, precisionHandle: 0,
+    firstDispatchMs: "", activationCounter: 0, qpcFrequency: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -102,7 +104,7 @@ BackendExit(*) {
     CFTestStop("fermeture")
     CF.armed := false
     CF.pressed := false
-    try SetTimer(EngineTick, 0)
+    try CFEngineSetTimer(false)
     try SetTimer(UpdateStats, 0)
     try SetTimer(SaveSettings, 0)
     try SetTimer(SendState, 0)
@@ -239,7 +241,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"firstDispatchMs":' (CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -746,9 +748,102 @@ CFEngineSetTimer(active) {
     if active = CF.engineTimerActive
         return
     CF.engineTimerActive := active
-    ; Timer 10 ms uniquement pendant les clics ou le banc de test.
-    ; Les hotkeys Windows, elles, restent enregistrées et réactives au repos.
-    SetTimer(EngineTick, active ? 10 : 0)
+    if active {
+        ; Timer Windows haute resolution natif : pas d'arrondi SetTimer AHK
+        ; ni de demande 1 ms globale, et utilisable en fenetre masquee.
+        CF.precisionHandle := DllCall("Kernel32\CreateWaitableTimerExW",
+            "Ptr", 0, "Ptr", 0, "UInt", 0x2, "UInt", 0x1F0003, "Ptr")
+        if !CF.precisionHandle {
+            ; Repli pour d'anciens Windows si ce timer n'est pas disponible.
+            CF.precisionRequested := DllCall("Winmm\timeBeginPeriod", "UInt", 1, "UInt") = 0
+        }
+        if CF.precisionHandle || CF.precisionRequested
+            SetTimer(CFEngineRun, -1)
+        else
+            SetTimer(EngineTick, 10)
+    } else {
+        SetTimer(CFEngineRun, 0)
+        SetTimer(EngineTick, 0)
+        if CF.precisionHandle {
+            DllCall("Kernel32\CancelWaitableTimer", "Ptr", CF.precisionHandle)
+            DllCall("Kernel32\CloseHandle", "Ptr", CF.precisionHandle)
+            CF.precisionHandle := 0
+        }
+        if CF.precisionRequested {
+            DllCall("Winmm\timeEndPeriod", "UInt", 1, "UInt")
+            CF.precisionRequested := false
+        }
+    }
+}
+
+CFPrecisionSleep(milliseconds) {
+    global CF
+    milliseconds := Max(1, Min(8, milliseconds))
+    if CF.precisionHandle {
+        due := Buffer(8, 0)
+        ; Une valeur negative exprime une echeance relative en tranches 100ns.
+        NumPut("Int64", -milliseconds * 10000, due)
+        if DllCall("Kernel32\SetWaitableTimerEx", "Ptr", CF.precisionHandle,
+            "Ptr", due.Ptr, "Int", 0, "Ptr", 0, "Ptr", 0, "Ptr", 0,
+            "UInt", 0, "Int") {
+            ; Timeout de securite : pas d'attente infinie si Windows echoue.
+            DllCall("Kernel32\WaitForSingleObject", "Ptr", CF.precisionHandle,
+                "UInt", 16, "UInt")
+            return
+        }
+    }
+    DllCall("Kernel32\Sleep", "UInt", milliseconds)
+}
+
+CFEngineRun() {
+    global CF
+    if !CF.engineTimerActive || CF.engineLoopRunning
+        return
+    CF.engineLoopRunning := true
+    try {
+        while CF.engineTimerActive && !CF.shuttingDown {
+            EngineTick()
+            if !CF.engineTimerActive
+                break
+            now := CFNowMs()
+            if CF.test.active {
+                untilNext := Min(CF.test.nextAt - now,
+                    CF.test.started + CF.test.duration * 1000 - now)
+            } else if CF.armed {
+                untilNext := CF.nextAt - now
+                if CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
+                    untilNext := 8
+            } else {
+                break
+            }
+            ; Attente native, sans busy spin. Sleep(-1) rend les raccourcis,
+            ; l'arret d'urgence et les messages WebView2 interruptibles.
+            CFPrecisionSleep(untilNext - 1)
+            Sleep(-1)
+        }
+    } finally {
+        CF.engineLoopRunning := false
+        if CF.engineTimerActive && !CF.shuttingDown
+            SetTimer(CFEngineRun, -1)
+    }
+}
+
+CFPerfCounter() {
+    ticks := 0
+    DllCall("Kernel32\QueryPerformanceCounter", "Int64*", &ticks, "Int")
+    return ticks
+}
+
+CFNowMs() {
+    global CF
+    if !CF.qpcFrequency {
+        frequency := 0
+        DllCall("Kernel32\QueryPerformanceFrequency", "Int64*", &frequency, "Int")
+        if frequency <= 0
+            throw Error("Horloge haute resolution Windows indisponible.")
+        CF.qpcFrequency := frequency
+    }
+    return 1000.0 * CFPerfCounter() / CF.qpcFrequency
 }
 
 CFStatsSetTimer(active) {
@@ -763,6 +858,7 @@ CFStatsSetTimer(active) {
 
 ActivationDown(*) {
     global CF
+    activationStarted := CFPerfCounter()
     if CF.capture || CF.pressed || CF.test.active
         return
     CF.pressed := true
@@ -779,15 +875,17 @@ ActivationDown(*) {
     }
 
     CF.armed := true
+    CF.activationCounter := activationStarted
+    CF.firstDispatchMs := ""
     CF.overlayStart := A_TickCount
     CF.overlayUntil := 0
     CF.overlayRecent := []
     CF.target := current
-    CF.nextAt := A_TickCount
+    CF.nextAt := CFNowMs()
     CFNaturalReset(CF.cfg)
     ; Premier clic : exécuté dans le callback de la touche lui-même.
     ; EngineTick calcule et programme nextAt pour le clic suivant :
-    ; aucun clic double quand le timer de 10 ms démarre.
+    ; aucun clic double au lancement du cadenceur précis.
     EngineTick(true)
     if CF.armed {
         CFEngineSetTimer(true)
@@ -872,11 +970,11 @@ EngineTick(firstFromActivation := false) {
     }
     if CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P") {
         CF.cpsNow := 0
-        CF.nextAt := A_TickCount
+        CF.nextAt := CFNowMs()
         return
     }
 
-    now := A_TickCount
+    now := CFNowMs()
     if now < CF.nextAt
         return
     intervalMs := GetNextIntervalMs(CF.cfg, now)
@@ -885,10 +983,16 @@ EngineTick(firstFromActivation := false) {
     ; Les clics sont envoyes a la position actuelle du curseur.
     ; SendInput n'intercepte pas les clics manuels et n'injecte rien dans le jeu.
     SendInput("{Click " CF.cfg.clickButton "}")
+    if firstFromActivation {
+        frequency := 0
+        DllCall("Kernel32\QueryPerformanceFrequency", "Int64*", &frequency, "Int")
+        if frequency > 0
+            CF.firstDispatchMs := Round(1000 * (CFPerfCounter() - CF.activationCounter) / frequency, 2)
+    }
     CF.total += 1
     CF.recent.Push(now)
     if CF.floatShown
-        CF.overlayRecent.Push(now)
+        CF.overlayRecent.Push(A_TickCount) ; l'overlay reste sur son horloge historique
     ; Evite les rafales de rattrapage apres une interruption.
     CF.nextAt := now + intervalMs
 }
@@ -912,7 +1016,7 @@ GetNextCps(cfg := 0, now := "") {
     if !IsObject(cfg)
         cfg := CF.cfg
     if now = ""
-        now := A_TickCount
+        now := CFNowMs()
     minimum := cfg.min
     maximum := cfg.max
     if cfg.mode = 1
@@ -948,7 +1052,7 @@ GetNextIntervalMs(cfg := 0, now := "") {
     if !IsObject(cfg)
         cfg := CF.cfg
     if now = ""
-        now := A_TickCount
+        now := CFNowMs()
     cps := GetNextCps(cfg, now)
     if cfg.mode != 3
         return Max(10, Round(1000 / cps))
@@ -988,10 +1092,10 @@ GetNextIntervalMs(cfg := 0, now := "") {
 
 UpdateStats() {
     global CF
-    now := A_TickCount
+    now := CFNowMs()
     while CF.recent.Length && CF.recent[1] < now - 1000
         CF.recent.RemoveAt(1)
-    windowStart := now - CF.overlayAverageSeconds * 1000
+    windowStart := A_TickCount - CF.overlayAverageSeconds * 1000
     while CF.overlayRecent.Length && CF.overlayRecent[1] < windowStart
         CF.overlayRecent.RemoveAt(1)
     SendStats()
