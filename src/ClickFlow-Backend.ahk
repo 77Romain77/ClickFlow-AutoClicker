@@ -27,6 +27,7 @@ global CF := {
     overlayMonitor: 1, overlayPosition: "tm",
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
     overlayRecent: [], overlayStart: 0,
+    engineTimerActive: false, statsTimerActive: false,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -79,8 +80,11 @@ BackendInit(hwnd, web) {
     RegisterEmergency()
     RegisterActivation()
     CFGlobalRegister()
-    SetTimer(EngineTick, 10)
-    SetTimer(UpdateStats, 200)
+    ; Au repos le moteur est ENTIÈREMENT désactivé. La télémétrie
+    ; ne se réveille qu'une fois par seconde, puis 5 fois/s en activité.
+    CF.engineTimerActive := false
+    CF.statsTimerActive := false
+    SetTimer(UpdateStats, 1000)
     OnExit(BackendExit)
     SaveSettings()
     CFDesktopInit()
@@ -736,6 +740,27 @@ UnregisterActivation() {
     try Hotkey("~*" CF.cfg.activation " Up", "Off")
 }
 
+CFEngineSetTimer(active) {
+    global CF
+    active := !!active
+    if active = CF.engineTimerActive
+        return
+    CF.engineTimerActive := active
+    ; Timer 10 ms uniquement pendant les clics ou le banc de test.
+    ; Les hotkeys Windows, elles, restent enregistrées et réactives au repos.
+    SetTimer(EngineTick, active ? 10 : 0)
+}
+
+CFStatsSetTimer(active) {
+    global CF
+    active := !!active
+    if active = CF.statsTimerActive
+        return
+    CF.statsTimerActive := active
+    ; Statistiques : 200 ms en activité et 1000 ms au repos.
+    SetTimer(UpdateStats, active ? 200 : 1000)
+}
+
 ActivationDown(*) {
     global CF
     if CF.capture || CF.pressed || CF.test.active
@@ -760,6 +785,14 @@ ActivationDown(*) {
     CF.target := current
     CF.nextAt := A_TickCount
     CFNaturalReset(CF.cfg)
+    ; Premier clic : exécuté dans le callback de la touche lui-même.
+    ; EngineTick calcule et programme nextAt pour le clic suivant :
+    ; aucun clic double quand le timer de 10 ms démarre.
+    EngineTick(true)
+    if CF.armed {
+        CFEngineSetTimer(true)
+        CFStatsSetTimer(true)
+    }
     CFDesktopUpdate()
     SetNotice(CF.emergencyKey != ""
         ? "Clics actifs. " DisplayKey(CF.emergencyKey) " pour arrêter."
@@ -787,14 +820,22 @@ StopAll(message) {
     wasArmed := CF.armed
     CFTestStop(message)
     CF.armed := false
-    if wasArmed
+    CFEngineSetTimer(false)
+    CFStatsSetTimer(false)
+    if wasArmed {
         CF.overlayUntil := A_TickCount + 2200
+        ; Avec les statistiques au repos à 1 Hz, garder néanmoins
+        ; l'extinction visuelle de l'overlay à environ 2,2 secondes.
+        if CF.floatShown && !CF.overlayAlwaysVisible
+            SetTimer(CFDesktopUpdate, -2300)
+    }
     CF.overlayRecent := []
     CF.overlayStart := 0
     CF.target := 0
     CF.nextAt := 0
     CF.cpsNow := 0
     SetNotice(message)
+    CFDesktopUpdate()
 }
 
 SetNotice(message) {
@@ -803,7 +844,7 @@ SetNotice(message) {
     SendStats()
 }
 
-EngineTick() {
+EngineTick(firstFromActivation := false) {
     global CF
     if CF.test.active {
         CFTestTick()
@@ -821,7 +862,11 @@ EngineTick() {
         StopAll("Arrêt : changement de fenêtre détecté.")
         return
     }
-    if CF.cfg.hold = 1 && !GetKeyState(CF.cfg.activation, "P") {
+    ; L'événement ActivationDown prouve déjà que la touche vient d'être
+    ; pressée. Éviter une lecture de l'état physique trop tôt pour le
+    ; premier clic en mode Maintenir. Dès le tick suivant, contrôle normal.
+    if CF.cfg.hold = 1 && !firstFromActivation
+        && !GetKeyState(CF.cfg.activation, "P") {
         StopAll("Arrêt : touche d'activation relâchée.")
         return
     }

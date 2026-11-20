@@ -256,6 +256,22 @@ jobs:
             throw "Profile CPS test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
+      - name: Verify adaptive timers, immediate first click and idle CPU (Windows)
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-adaptive-engine.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError adaptive-engine.err -RedirectStandardOutput adaptive-engine.out
+          if (-not $p.WaitForExit(25000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Adaptive engine/first click test timed out.'
+          }
+          $out = if (Test-Path adaptive-engine.out) { Get-Content adaptive-engine.out -Raw } else { '' }
+          $err = if (Test-Path adaptive-engine.err) { Get-Content adaptive-engine.err -Raw } else { '' }
+          Write-Host "Adaptive engine/idle CPU metrics: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Adaptive engine regression failed: exit=$($p.ExitCode) stdout=$out stderr=$err"
+          }
+
       - name: Verify natural cadence, jitter, hesitations and intensity levels
         shell: pwsh
         run: |
@@ -379,9 +395,9 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.9.2.ahk
-          if (!(Test-Path 'ClickFlow-v1.9.2.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v1.9.2.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.9.3.ahk
+          if (!(Test-Path 'ClickFlow-v1.9.3.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.9.3.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
       - name: Verify independent shortcut management and manual deletion
         shell: pwsh
@@ -443,7 +459,7 @@ jobs:
           $legacyIni = Join-Path $appDir 'shortcuts.ini'
           Set-Content -Path $legacyIni -Value ('[Shortcuts]' + [Environment]::NewLine + 'Enabled=1') -Encoding ascii
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v1.9.2.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.9.3.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -457,7 +473,7 @@ jobs:
           if (Test-Path $desktopLink) { throw 'Desktop shortcut recreated despite user deletion.' }
           if (!(Test-Path $startLink)) { throw 'Start menu shortcut vanished unexpectedly.' }
           Write-Host 'Legacy Enabled=1 did not recreate a manually deleted Desktop shortcut.'
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.9.2'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.9.3'
           # Le nettoyage a lieu après la connexion, via un timer AHK.
           for ($i = 0; $i -lt 40; $i++) {
             $remaining = @($legacyDirs | Where-Object { Test-Path (Join-Path $appRoot $_) })
@@ -517,17 +533,17 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.9.2-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.9.3-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v1.9.2-win-x64
-          path: ClickFlow-WebView2-v1.9.2-win-x64.zip
+          name: ClickFlow-WebView2-v1.9.3-win-x64
+          path: ClickFlow-WebView2-v1.9.3-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v1.9.2-single-file
-          path: ClickFlow-v1.9.2.ahk
+          name: ClickFlow-v1.9.3-single-file
+          path: ClickFlow-v1.9.3.ahk
 
       - name: Publish stable release
         if: >-

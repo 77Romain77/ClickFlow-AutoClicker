@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.2 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.9.3 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.2.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.2)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.3.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.3)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.2.ahk`.
+2. Télécharger `ClickFlow-v1.9.3.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.2`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.3`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -44,17 +44,25 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
 
-## Correction de la capture des raccourcis (v1.9.2)
+## Performance et latence du premier clic (v1.9.3)
+
+Le moteur AutoHotkey n'effectue plus de vérifications de clic toutes les 10 ms lorsqu'il est au repos. Il active ce timer uniquement pendant les clics ou un Test CPS, puis le désactive immédiatement à l'arrêt. Les statistiques sont actualisées toutes les 1000 ms au repos, contre 200 ms pendant une session active.
+
+Le premier clic est envoyé directement dans le callback de la touche d'activation (Maintenir comme Basculer), une fois les contrôles de fenêtre et de condition souris validés, sans attendre le timer. Le clic suivant est programmé à partir de cet envoi, pour conserver les CPS du profil et éviter les doubles clics. Si la condition souris n'est pas remplie, aucun premier clic n'est injecté tant qu'elle n'est pas satisfaite.
+
+L'overlay conserve son délai de disparition d'environ 2,2 s après l'arrêt. Les raccourcis globaux, les sauvegardes, les profils et les réglages ne changent pas. Un test Windows mesure l'activité CPU du moteur au repos et vérifie le départ immédiat, la cadence et les arrêts.
+
+## Correction de la capture des raccourcis (v1.9.3)
 
 Dans **Paramètres > Raccourcis globaux**, clique sur la touche d'une action puis appuie sur la touche souhaitée **dans la fenêtre ClickFlow**. La frappe est lue directement par l'interface WebView2 et transmise au moteur AutoHotkey pour vérification et sauvegarde. La liste ne reste plus bloquée sur "Appuyez...". Appuie sur **Échap** pour annuler, ou sur **Aucun** pour supprimer la touche. Pour l'arrêt d'urgence, ce dernier choix désactive réellement le raccourci et laisse les commandes d'arrêt de l'interface et de la zone de notification opérationnelles.
 
-## Arrêt d'urgence facultatif (v1.9.2)
+## Arrêt d'urgence facultatif (v1.9.3)
 
 Dans **Paramètres > Raccourcis globaux**, l'arrêt d'urgence figure maintenant avec les autres actions. Sa touche initiale reste **F12** pour les installations existantes, mais le bouton **Aucun** permet de ne définir aucune touche. La modification est la même que celle affichée sur le tableau de bord, et la préférence est conservée après redémarrage et restauration d'une sauvegarde complète.
 
 Attention : lorsque le raccourci d'urgence est désactivé, il reste possible d'arrêter les clics avec le bouton **Arrêter les clics** de l'interface, ou depuis l'icône ClickFlow dans la zone de notification Windows. Les autres raccourcis globaux restent facultatifs et non attribués par défaut.
 
-## Nouveautés v1.9.2 : raccourcis, sauvegarde et organisation
+## Nouveautés v1.9.3 : raccourcis, sauvegarde et organisation
 
 Dans **Paramètres > Raccourcis globaux**, tu peux attribuer une touche à chacune des actions suivantes : profil suivant, profil précédent, basculer l'overlay, ouvrir l'interface et ouvrir le Test CPS. **Toutes les actions sont sur "Aucun" par défaut** et ne font rien tant que tu ne leur attribues pas une touche. Pour retirer une touche, clique sur **Aucun**. Échap annule la capture. ClickFlow refuse les collisions avec les autres actions et les touches des profils. L'arrêt d'urgence est affiché dans cette même section : F12 par défaut, mais il peut aussi être mis sur Aucun.
 
@@ -64,17 +72,17 @@ Dans **Paramètres > Overlay**, les nouvelles options **Taille** (mini, standard
 
 L'onglet **Paramètres** est désormais réparti en six catégories repliables : Général, Overlay, Raccourcis globaux, Raccourcis Windows, Sauvegarde complète et Maintenance.
 
-## Durée personnalisable des CPS moyens (v1.9.2)
+## Durée personnalisable des CPS moyens (v1.9.3)
 
 Dans **Paramètres > Overlay**, le champ **Période CPS moyens** accepte une durée entière de **1 à 60 secondes**. La valeur initiale est de **5 secondes**. Elle est sauvegardée dans `settings.ini` et conservée entre les lancements. L'overlay affiche la moyenne calculée à partir des clics réellement envoyés sur la période choisie (ou depuis le début de l'activation si la session est plus courte).
 
 Le réglage change uniquement le calcul de la moyenne dans l'overlay. Il ne modifie ni la cadence des profils, ni la taille de l'overlay, ni le moniteur CPS du tableau de bord. Les mesures restent en mémoire et ne sont pas archivées.
 
-## Lisibilité de l'overlay (v1.9.2)
+## Lisibilité de l'overlay (v1.9.3)
 
 Le statut et les CPS moyens sont maintenant placés sur **une seule ligne compacte** (216 x 34 pixels). L'overlay a des coins discrètement arrondis et une police ajustée à la mise à l'échelle Windows, de façon à éviter les textes coupés sans augmenter inutilement sa taille. Les six positions, le déplacement libre, la transparence de 0 à 100 % et le comportement automatique sont inchangés.
 
-## Overlay de statut (v1.9.2)
+## Overlay de statut (v1.9.3)
 
 L'ancienne mini-fenêtre flottante et sa courbe GDI sont supprimées. À la place, ClickFlow propose un **overlay discret** sans barre de titre, visible au-dessus des fenêtres classiques et des jeux en mode fenêtré ou sans bordure (le plein écran exclusif n'est pas garanti). Il affiche uniquement le statut **ACTIF / EN ATTENTE / ARRÊTÉ** et les **CPS moyens sur les 5 dernières secondes**, calculés à partir des clics réellement envoyés par ClickFlow. Aucun score ni historique n'est conservé sur le disque.
 
@@ -124,7 +132,7 @@ Un petit script AutoHotkey temporaire attend la fermeture complète de ClickFlow
 
 ## Profils et mises à jour
 
-Depuis v1.9.2, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
+Depuis v1.9.3, les profils sont conservés dans un dossier `%APPDATA%\ClickFlow\profiles`, sous la forme `profile-1.ini`, `profile-2.ini`, etc. Le fichier `%APPDATA%\ClickFlow\settings.ini` contient les préférences globales (touche d'arrêt d'urgence, mode de fenêtre) et l'identifiant du profil sélectionné.
 
 **Migration automatique :** les profils de la v1.1.0 et des anciennes versions sont lus une seule fois depuis `settings.ini`, puis enregistrés dans des fichiers indépendants. Les anciennes sections et les sauvegardes restent disponibles par précaution. Les fichiers exportés se réimportent individuellement, sans écraser les profils déjà présents. Si un nom existe déjà, ClickFlow ajoute un suffixe numérique.
 
