@@ -1049,30 +1049,29 @@ function updateGateMethodStatus(data) {
     const rawInfo=(data.armed && data.mouseDetectionMode!=='classic')
         ?' Messages Raw Input reçus : '+rawCount
             +', appuis : '+downs+', relâchements : '+ups
-            +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
-            +'. GetKeyState : '+physical
+            +'. Dernier état Raw Input : '+(rawKnown?(rawHeld?'Appuyé':'Relâché'):'Aucun événement')
+            +'. GetKeyState (contrôle du maintien) : '+physical
             +'. GetAsyncKeyState (indicatif) : '+(data.gateAsyncHeld?'Maintenu':'Relâché')
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
             +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
-            +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
+            +'. Relâchements Raw Input reçus pendant un état maintenu : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
             +'. Raw Input sans périphérique ignoré : '+Number(data.gateRawNullIgnored||0)+'.'
-            +'. Appui matériel reconnu : '+(data.gateHardwareKnown?(data.gateHardwareDown?'Maintenu':'Relâché'):'Non confirmé')+'.'
+            +(data.gateHardwareKnown?'. Bouton matériel suivi : '+(data.gateHardwareDown?'Appuyé':'Relâché')+'.':'')
             +(rawKnown && !rawHeld && data.gatePhysicalHeld
-                ?' Désaccord détecté : Raw Input signale UP, mais la souris est physiquement maintenue. La vérification physique conserve le maintien.'
+                ?' États différents : Raw Input indique relâché et GetKeyState indique maintenu. Le relâchement d\'un périphérique identifié reste prioritaire.'
                 :rawKnown && rawHeld && !data.gatePhysicalHeld
-                    ?' Désaccord détecté : Raw Input signale DOWN, mais la souris semble relâchée. Le moteur coupe après une brève confirmation.'
+                    ?' États différents : Raw Input indique appuyé et GetKeyState indique relâché. Le maintien est vérifié avant les clics suivants.'
                     :'')
             +(registered && rawCount===0
-                ?' ATTENTION : inscrit mais aucun message reçu ; la méthode événementielle ne peut pas déclencher.'
+                ?' Aucun message Raw Input compté depuis l\'activation des diagnostics.'
                 :rawCount>0 && downs===0
-                    ?' Messages reçus, mais aucun appui reconnu pour le bouton conditionnel.'
+                    ?' Aucun appui du bouton surveillé compté depuis l\'activation des diagnostics.'
                     :'')
             +(data.gateRawFailed?' Erreur Windows : '+Number(data.gateRawError||0)+'.':'')
         :'';
-    const lastSafetyStop=String(data.notice||'').startsWith('Arrêt de sécurité');
     const text='Dernier clic : '+last+'. '+(data.armed
         ?'Actuellement : '+current+'. '+installed+rawInfo
-        :'Moteur au repos.'+(lastSafetyStop?' '+data.notice:''));
+        :'Moteur au repos.');
     $('gateMethodCps').textContent=text;
     $('gateMethodSettings').textContent=text;
 }
@@ -1080,13 +1079,13 @@ function updateLiveMonitor(data) {
     updateGateMethodStatus(data);
     if(data.diagnosticsEnabled===false) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
-        $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
-        $('cpsEventLatency').textContent='Réception Raw Input -> envoi : non mesuré.';
+        $('cpsGateLatency').textContent='Délai après événement Windows : non mesuré.';
+        $('cpsEventLatency').textContent='Moyenne Raw Input : non mesurée.';
     } else if(data.diagnosticsEnabled===true) {
         const delay=data.firstDispatchMs;
         const fromCondition=data.firstDispatchKind==='condition';
         $('cpsFirstDispatch').textContent=delay!==null&&Number.isFinite(Number(delay))
-            ?'Premier clic : '+Number(delay).toFixed(2)+' ms de délai logiciel ('
+            ?'Premier clic envoyé : '+Number(delay).toFixed(2)+' ms de traitement logiciel ('
                 +(fromCondition?'condition souris détectée':'raccourci reçu')
                 +' -> SendInput terminé).'
             :data.armed&&data.waiting?'En attente du bouton de souris configuré pour envoyer le premier clic.'
@@ -1094,18 +1093,17 @@ function updateLiveMonitor(data) {
         const gate=data.gateDetectionMs;
         const status=data.gateProbeStatus||'';
         $('cpsGateLatency').textContent=status==='measured'&&gate!==null&&Number.isFinite(Number(gate))
-            ?'Délai après réception Raw Input : '+Number(gate).toFixed(2)+' ms (message Windows -> début de SendInput).'
-            :status==='waiting'?'Délai de détection : en attente du bouton de souris...'
+            ?'Réaction après Raw Input : '+Number(gate).toFixed(2)+' ms (réception Windows -> début de SendInput).'
+            :status==='waiting'?'Réaction Raw Input : en attente du bouton de souris...'
             :status==='already-held'?'Condition souris déjà maintenue lors de l’activation : aucune attente à mesurer.'
-            :status==='unavailable'?'Non mesurable : aucun événement Raw Input disponible (ou mode Classique).'
+            :status==='unavailable'?'Mesure Raw Input indisponible dans ce mode ou sur cet appareil.'
             :status==='unobserved'?'Événement souris non horodaté avant le clic : mesure indisponible.'
-            :'Délai après callback : pas encore mesuré.';
+            :'Réaction après Raw Input : pas encore mesurée.';
         const eventMs=data.gateEventDelayMs,avgMs=data.gateEventAverageMs;
         $('cpsEventLatency').textContent=status==='measured'&&eventMs!==null&&Number.isFinite(Number(eventMs))
-            ?'Réception Raw Input -> envoi : '+Number(eventMs).toFixed(2)
-                +' ms (moyenne '+Number(avgMs).toFixed(2)
-                +' ms sur '+Number(data.gateEventSamples||1)+' activation(s), mesure logicielle).'
-            :'Réception Raw Input -> envoi : non mesuré.';
+            ?'Moyenne Raw Input : '+Number(avgMs).toFixed(2)
+                +' ms sur '+Number(data.gateEventSamples||1)+' activation(s) (réception Windows -> début de SendInput).'
+            :'Moyenne Raw Input : non mesurée.';
     }
     const cps=Number(data.cps)||0;
     const status=data.waiting?'En attente du bouton souris':
@@ -1178,8 +1176,8 @@ function renderSettings() {
     $('gateMethodSettings').classList.toggle('hidden',!model.preferences.gateDebugEnabled);
     if(!model.preferences.diagnosticsEnabled) {
         $('cpsFirstDispatch').textContent='Diagnostics désactivés. Active le bouton ci-dessus avant de lancer ton profil.';
-        $('cpsGateLatency').textContent='Délai après callback : non mesuré.';
-        $('cpsEventLatency').textContent='Réception Raw Input -> envoi : non mesuré.';
+        $('cpsGateLatency').textContent='Délai après événement Windows : non mesuré.';
+        $('cpsEventLatency').textContent='Moyenne Raw Input : non mesurée.';
     }
     $('liveMonitorCard').classList.toggle('hidden',
         !(model.compact?model.preferences.compactChart:model.preferences.liveMonitor));
