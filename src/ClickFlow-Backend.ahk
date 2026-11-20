@@ -1511,6 +1511,7 @@ SaveSettings(*) {
         IniWrite(CF.minimizeToTray ? 1 : 0, CF.configFile, "General", "MinimizeToTray")
         IniWrite(CF.floatShown ? 1 : 0, CF.configFile, "General", "FloatShown")
         IniWrite(CF.liveMonitor ? 1 : 0, CF.configFile, "General", "LiveMonitor")
+        IniWrite(CF.diagnosticsEnabled ? 1 : 0, CF.configFile, "General", "DiagnosticsEnabled")
         IniWrite(CF.compactChart ? 1 : 0, CF.configFile, "General", "CompactChart")
         IniWrite(CF.floatShown ? 1 : 0, CF.configFile, "General", "OverlayEnabled")
         IniWrite(CF.overlayAlwaysVisible ? 1 : 0, CF.configFile, "General", "OverlayAlwaysVisible")

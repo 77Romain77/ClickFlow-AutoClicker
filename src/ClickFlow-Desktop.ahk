@@ -17,6 +17,7 @@ CFDesktopReadPreferences() {
     CF.floatShown := IniRead(file, "General", "OverlayEnabled",
         IniRead(file, "General", "FloatShown", "0")) = "1"
     CF.liveMonitor := IniRead(file, "General", "LiveMonitor", "1") != "0"
+    CF.diagnosticsEnabled := IniRead(file, "General", "DiagnosticsEnabled", "0") = "1"
     CF.compactChart := IniRead(file, "General", "CompactChart", "1") != "0"
     CF.overlayAlwaysVisible := IniRead(file, "General", "OverlayAlwaysVisible", "0") = "1"
     CF.overlayOpacity := CFDesktopInt(IniRead(file, "General",
@@ -52,6 +53,7 @@ CFDesktopPreferencesJson() {
         . ',"minimizeToTray":' (CF.minimizeToTray ? "true" : "false")
         . ',"floatShown":' (CF.floatShown ? "true" : "false")
         . ',"liveMonitor":' (CF.liveMonitor ? "true" : "false")
+        . ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false")
         . ',"compactChart":' (CF.compactChart ? "true" : "false")
         . ',"overlayAlwaysVisible":' (CF.overlayAlwaysVisible ? "true" : "false")
         . ',"overlayOpacity":' CF.overlayOpacity
@@ -479,6 +481,8 @@ CFDesktopSetPreference(field, value) {
             CFDesktopSetFloat(enabled, false)
         case "liveMonitor":
             CF.liveMonitor := enabled
+        case "diagnosticsEnabled":
+            CFDiagToggle(enabled)
         case "compactChart":
             CF.compactChart := enabled
         case "overlayAlwaysVisible":
