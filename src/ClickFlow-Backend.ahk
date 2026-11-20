@@ -34,6 +34,10 @@ global CF := {
     gateHook: 0, gateHookCallback: 0, gateProbePending: false, gateProbeQpc: 0,
     gateWakeSignal: false, gateHookFailed: false, gateEventKnown: false,
     gateRawRegistered: false, gateRawListener: false, gateRawFailed: false,
+    gateRawWindow: 0, gateRawHwnd: 0, gateRawError: 0,
+    gateRawMessages: 0, gateRawMousePackets: 0,
+    gateRawDowns: 0, gateRawUps: 0, gateRawLastFlags: 0,
+    gateRawParseErrors: 0,
     mouseDetectionMode: "classic", gateMethodLast: "none",
     gateMethodCurrent: "inactive", gateWaiting: false,
     gateEventUptime: 0, gateEventDelayMs: "", gateEventAverageMs: "", gateEventSamples: [],
@@ -249,7 +253,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !CFGateIsHeld()
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"diagnosticsEnabled":' (CF.diagnosticsEnabled ? "true" : "false") ',"firstDispatchMs":' (!CF.diagnosticsEnabled || CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) ',"gateDetectionMs":' (!CF.diagnosticsEnabled || CF.gateDetectionMs = "" ? "null" : CF.gateDetectionMs) ',"gateEventDelayMs":' (!CF.diagnosticsEnabled || CF.gateEventDelayMs = "" ? "null" : CF.gateEventDelayMs) ',"gateEventAverageMs":' (!CF.diagnosticsEnabled || CF.gateEventAverageMs = "" ? "null" : CF.gateEventAverageMs) ',"gateEventSamples":' CF.gateEventSamples.Length ',"gateProbeStatus":' JsonQuote(CF.gateProbeStatus) ',"mouseDetectionMode":' JsonQuote(CF.mouseDetectionMode) ',"gateMethodCurrent":' JsonQuote(CF.gateMethodCurrent) ',"gateMethodLast":' JsonQuote(CF.gateMethodLast) ',"gateHookInstalled":false,"gateRawRegistered":' (CF.gateRawRegistered ? "true" : "false") ',"gateRawFailed":' (CF.gateRawFailed ? "true" : "false") ',"gateRawError":' CF.gateRawError ',"gateRawMessages":' CF.gateRawMessages ',"gateRawMousePackets":' CF.gateRawMousePackets ',"gateRawDowns":' CF.gateRawDowns ',"gateRawUps":' CF.gateRawUps ',"gateRawLastFlags":' CF.gateRawLastFlags ',"gateRawParseErrors":' CF.gateRawParseErrors ',"gatePhysicalHeld":' (CF.cfg.mouseGate && GetKeyState(CF.cfg.gateButton, "P") ? "true" : "false") '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -921,6 +925,7 @@ CFGateRawButtonFlags(flags) {
     if !downFlag
         return
     if flags & upFlag {
+        CF.gateRawUps += 1
         CF.gateWakeSignal := false
         CF.gateEventKnown := true
         if CF.gateProbePending {
@@ -930,6 +935,7 @@ CFGateRawButtonFlags(flags) {
             CF.gateEventUptime := 0
         }
     } else if flags & downFlag {
+        CF.gateRawDowns += 1
         CF.gateWakeSignal := true
         CF.gateEventKnown := true
         if CF.gateProbePending && !CF.gateProbeQpc
@@ -939,26 +945,37 @@ CFGateRawButtonFlags(flags) {
 
 CFGateRawMessage(wParam, lParam, msg, hwnd) {
     global CF
-    if CF.shuttingDown || !CF.gateRawRegistered || hwnd != CF.hwnd || !lParam
+    ; Cette fenêtre AHK privée reçoit les WM_INPUT indépendamment des
+    ; contrôleurs WebView2 de la fenêtre principale.
+    if CF.shuttingDown || !CF.gateRawRegistered
+        || hwnd != CF.gateRawHwnd || !lParam
         return
+    CF.gateRawMessages += 1
     bytes := 0
     headerSize := A_PtrSize = 8 ? 24 : 16
     rc := DllCall("User32\GetRawInputData", "Ptr", lParam, "UInt", 0x10000003,
         "Ptr", 0, "UInt*", &bytes, "UInt", headerSize, "UInt")
-    if rc != 0xFFFFFFFF && bytes >= headerSize + 6 && bytes <= 65536 {
-        raw := Buffer(bytes, 0)
-        size := bytes
-        read := DllCall("User32\GetRawInputData", "Ptr", lParam,
-            "UInt", 0x10000003, "Ptr", raw.Ptr,
-            "UInt*", &size, "UInt", headerSize, "UInt")
-        if read != 0xFFFFFFFF && size >= headerSize + 6
-            && NumGet(raw, 0, "UInt") = 0 {
-            ; RAWINPUTHEADER (24 octets en x64) + RAWMOUSE.usFlags (2),
-            ; padding (2), puis RAWMOUSE.usButtonFlags (2).
-            CFGateRawButtonFlags(NumGet(raw, headerSize + 4, "UShort"))
-        }
+    if rc = 0xFFFFFFFF || bytes < headerSize + 6 || bytes > 65536 {
+        CF.gateRawParseErrors += 1
+        return
     }
-    ; Retour implicite : DefWindowProc s'occupe du nettoyage RIM_INPUT.
+    raw := Buffer(bytes, 0)
+    size := bytes
+    read := DllCall("User32\GetRawInputData", "Ptr", lParam,
+        "UInt", 0x10000003, "Ptr", raw.Ptr,
+        "UInt*", &size, "UInt", headerSize, "UInt")
+    if read = 0xFFFFFFFF || size < headerSize + 6 {
+        CF.gateRawParseErrors += 1
+        return
+    }
+    if NumGet(raw, 0, "UInt") != 0 ; RIM_TYPEMOUSE = 0
+        return
+    CF.gateRawMousePackets += 1
+    flags := NumGet(raw, headerSize + 4, "UShort")
+    if flags
+        CF.gateRawLastFlags := flags
+    CFGateRawButtonFlags(flags)
+    ; Retour implicite : DefWindowProc nettoie RIM_INPUT.
 }
 
 CFGateProbeStart() {
@@ -970,18 +987,26 @@ CFGateProbeStart() {
     CF.gateEventKnown := false
     CF.gateProbeQpc := 0
     CF.gateEventUptime := 0
-    ; RawInputDevice : usage page générique 1, usage souris 2,
-    ; RIDEV_INPUTSINK 0x100 pour une application en arrière-plan.
-    if !CF.hwnd {
-        CF.gateRawFailed := true
-        CF.gateProbeStatus := "unavailable"
-        return
+    CF.gateRawError := 0
+    if !CF.gateRawWindow {
+        ; HWND privé caché : distinct de WebView2, pour ne pas dépendre de
+        ; la distribution des messages de la fenêtre d'interface.
+        try {
+            CF.gateRawWindow := Gui("+ToolWindow -Caption", "ClickFlow Raw Input")
+            CF.gateRawHwnd := CF.gateRawWindow.Hwnd
+        } catch {
+            CF.gateRawWindow := 0
+            CF.gateRawHwnd := 0
+            CF.gateRawFailed := true
+            CF.gateProbeStatus := "unavailable"
+            return
+        }
     }
     device := Buffer(8 + A_PtrSize, 0)
     NumPut("UShort", 1, device, 0)
     NumPut("UShort", 2, device, 2)
-    NumPut("UInt", 0x100, device, 4)
-    NumPut("Ptr", CF.hwnd, device, 8)
+    NumPut("UInt", 0x100, device, 4) ; RIDEV_INPUTSINK
+    NumPut("Ptr", CF.gateRawHwnd, device, 8)
     if !CF.gateRawListener {
         OnMessage(0x00FF, CFGateRawMessage)
         CF.gateRawListener := true
@@ -994,22 +1019,22 @@ CFGateProbeStart() {
         if CF.gateProbePending
             CF.gateProbeStatus := "waiting"
     } else {
+        CF.gateRawError := DllCall("Kernel32\GetLastError", "UInt")
         CF.gateRawFailed := true
         CF.gateProbePending := false
         CF.gateProbeStatus := "unavailable"
-        OnMessage(0x00FF, CFGateRawMessage, 0)
-        CF.gateRawListener := false
+        CFGateProbeStop()
+        CF.gateRawFailed := true
     }
 }
 
 CFGateProbeStop() {
     global CF
-    ; Désinscription AVANT de retirer le handler WM_INPUT.
     if CF.gateRawRegistered {
         device := Buffer(8 + A_PtrSize, 0)
         NumPut("UShort", 1, device, 0)
         NumPut("UShort", 2, device, 2)
-        NumPut("UInt", 0x00000001, device, 4) ; RIDEV_REMOVE
+        NumPut("UInt", 1, device, 4) ; RIDEV_REMOVE, hwndTarget = NULL
         NumPut("Ptr", 0, device, 8)
         DllCall("User32\RegisterRawInputDevices",
             "Ptr", device.Ptr, "UInt", 1, "UInt", device.Size, "Int")
@@ -1019,6 +1044,11 @@ CFGateProbeStop() {
         OnMessage(0x00FF, CFGateRawMessage, 0)
         CF.gateRawListener := false
     }
+    if CF.gateRawWindow {
+        try CF.gateRawWindow.Destroy()
+        CF.gateRawWindow := 0
+    }
+    CF.gateRawHwnd := 0
     CF.gateProbePending := false
     CF.gateProbeQpc := 0
     CF.gateEventUptime := 0
@@ -1085,6 +1115,13 @@ ActivationDown(*) {
     CF.gateProbePending := false
     CF.gateHookFailed := false
     CF.gateRawFailed := false
+    CF.gateRawError := 0
+    CF.gateRawMessages := 0
+    CF.gateRawMousePackets := 0
+    CF.gateRawDowns := 0
+    CF.gateRawUps := 0
+    CF.gateRawLastFlags := 0
+    CF.gateRawParseErrors := 0
     CF.gateWakeSignal := false
     CF.gateEventKnown := false
     CF.gateWaiting := false

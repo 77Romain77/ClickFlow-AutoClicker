@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.12 - 2026-11-20
+
+- Correctif expérimental de la condition souris Raw Input v1.9.11 qui ne déclenche pas sur certaines machines.
+- Raw Input reçu sur une fenêtre AHK privée et invisible au lieu de la fenêtre principale WebView2.
+- Compteurs visibles des messages Raw Input, appuis et relâchements reconnus, état physique et dernière erreur d'enregistrement : distingue inscription réussie et vrais événements reçus.
+- Nettoyage complet de la fenêtre dédiée, de l'inscription Raw Input et du callback à l'arrêt du profil.
+- Tests légers sur la séparation de HWND et les compteurs d'appui/relâchement, sans nouveau workflow GitHub Actions.
+- Classique reste stable et sélectionné par défaut ; aucune réactivation de WH_MOUSE_LL. Essai matériel réel encore nécessaire.
+
+
 ## 1.9.11 - 2026-11-20
 
 - Ajout expérimental de la réception souris Raw Input (WM_INPUT + RIDEV_INPUTSINK) sans hook WH_MOUSE_LL bloquant. Compatibilité de fond avec les fenêtres cibles.

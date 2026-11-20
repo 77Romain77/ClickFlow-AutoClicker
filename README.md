@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.11 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.12 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.11.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.11)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.12.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.12)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.11.ahk`.
+2. Télécharger `ClickFlow-v1.9.12.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.11`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.12`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,16 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Correction du déclenchement conditionnel Raw Input (v1.9.12)
+
+Retour utilisateur : après l'essai de la v1.9.11, le conditionnement à un bouton de souris fonctionne en Classique mais pas en mode Raw Input. La v1.9.11 enregistrait directement les notifications WM_INPUT sur la fenêtre WebView2 principale sans compter les messages livrés. L'enregistrement API réussi ne prouve donc pas qu'un appui a été reçu par le moteur.
+
+Cette révision isole l'abonnement souris Raw Input dans **une fenêtre AutoHotkey dédiée et invisible**, indépendante du contrôleur graphique WebView2, pendant les sessions conditionnées uniquement. Elle conserve une protection croisée avec GetKeyState lors de l'envoi. À l'arrêt, elle désinscrit les périphériques, supprime le handler et détruit la fenêtre de réception. Aucun hook WH_MOUSE_LL supplémentaire n'est réintroduit.
+
+**Diagnostic visible sans activer les mesures de latence :** l'onglet Test CPS et les paramètres indiquent le nombre de messages WM_INPUT reçus, les appuis/relâchements du bouton sélectionné reconnus et la lecture du bouton physique. Si le nombre d'appuis reste à zéro malgré la pression réelle de la souris, l'interface distingue le cas « enregistré, mais aucun message reçu » du cas « messages reçus, mais aucun appui reconnu ». Une valeur d'erreur Windows est affichée si l'abonnement échoue.
+
+Classique reste le choix stable par défaut. Les deux modes Raw Input restent **expérimentaux** : la nouvelle fenêtre de réception a passé les tests d'enregistrement et de décodage simulé, mais seul un essai physique en dehors d'un jeu avec protections pourra confirmer la réception des vrais événements sur le PC. En cas de non-déclenchement, repasser en Classique et relever les nouveaux compteurs.
 
 ## Détection Raw Input expérimentale sans hook bloquant (v1.9.11)
 

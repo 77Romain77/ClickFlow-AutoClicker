@@ -15,6 +15,8 @@ assert(html.includes('Automatique (Raw Input + secours, expérimental)')
     && html.includes('Événementielle Raw Input (expérimental)')
     && html.includes('Classique (stable, recommandé)'),
     'Raw Input experimental modes and classic default must be visible');
+assert(html.includes('Messages Raw Input reçus') && html.includes('aucun message reçu'),
+    'Raw Input status must report missing real events instead of only registration');
 assert(html.includes('id="mouseDetectionMode"') && html.includes('id="gateMethodCps"')
     && html.includes('id="gateMethodSettings"'), 'Mouse detection selector and real method status must be visible');
 assert(html.includes("send('preference'") && html.includes("overlaySetPreference('mouseDetectionMode'"),
