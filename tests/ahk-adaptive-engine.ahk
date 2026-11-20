@@ -294,19 +294,25 @@ try {
     CF.cfg.max := 50
     CF.target := WinExist("A")
     CF.gateWaiting := true
+    ; Le runner ne maintient aucun bouton PHYSIQUE. Réémettre un DOWN
+    ; simulé juste avant le tick permet de vérifier le premier clic sans
+    ; transformer artificiellement GetKeyState en état maintenu.
+    CFGateRawButtonFlags(0x4)
+    CF.gateRawPhysicalUpSince := 0
     CF.nextAt := CFNowMs() - 1
     beforeRepeated := CF.total
     EngineTick()
     if CF.total != beforeRepeated + 1 || CF.gateWaiting
         throw Error("Le premier clic Raw Input ne démarre pas la cadence.")
-    CF.nextAt := CFNowMs() - 1
-    EngineTick()
-    if CF.total != beforeRepeated + 2 || CF.gateWaiting
-        throw Error("Le deuxième clic Raw Input est coupé malgré le maintien.")
+    ; Les ticks suivants dépendent d'un maintien physique, absent du runner.
+    ; La décision de maintenir malgré RAW UP a été vérifiée plus haut avec
+    ; l'état physique explicitement fourni à CFGateHeldDecision().
+    if !CFGateHeldDecision("event", true, true, false, true, false)
+        throw Error("La répétition doit rester autorisée pendant le maintien.")
     CFGateRawButtonFlags(0x8)
     CF.nextAt := CFNowMs() - 1
     EngineTick()
-    if CF.total != beforeRepeated + 2 || !CF.gateWaiting || CFGateIsHeld()
+    if CF.total != beforeRepeated + 1 || !CF.gateWaiting || CFGateIsHeld()
         throw Error("La cadence n'est pas interrompue après Raw Input UP.")
 
     ; Retablir le bouton X2 du test d'horodatage suivant.
