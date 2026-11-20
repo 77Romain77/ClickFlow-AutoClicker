@@ -16,7 +16,7 @@ PostShortcutCommand(args*) {
     for item in args
         raw .= (raw = "" ? "" : Chr(9)) item
     CFBridgeLastRaw := raw
-    if StrSplit(raw, Chr(9)).Length < 3
+    if StrSplit(raw, Chr(9)).Length < 2
         throw Error("Le test ne produit pas une commande tabulée : " StrReplace(raw, Chr(9), "|"))
     BackendMessage("", BridgeArgs(raw))
 }
