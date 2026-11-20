@@ -229,7 +229,7 @@ body.compact #page-dashboard{display:block!important}
 /* Préférences supplémentaires de la mini-fenêtre. */
 .settings-select{width:150px;min-height:37px}
 
-/* v1.9.4 : panneau compact autonome, plus petit et sans grandes cartes. */
+/* v1.9.5 : panneau compact autonome, plus petit et sans grandes cartes. */
 .compact-panel{display:none}
 body.compact{font-size:11px}
 body.compact main{max-width:520px;padding:9px 11px 14px}
@@ -353,7 +353,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.4 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.5 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -495,7 +495,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div class="cps-progress"><div id="cpsProgressFill"></div></div>
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
    <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div><div id="cpsPrecision" class="subnote" style="margin-top:7px">Aucune mesure de précision.</div></div>
-    <div class="cps-last-wrap" style="margin-top:11px"><strong>Diagnostic du premier clic réel</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Active un profil depuis une autre fenêtre pour mesurer le délai logiciel du premier clic.</div><p class="subnote" style="margin-top:5px">Mesure entre la réception du raccourci par ClickFlow et le retour de SendInput. Ce n'est pas la latence physique de la souris ni celle de l'application cible.</p></div>
+    <div class="cps-last-wrap" style="margin-top:11px"><strong>Diagnostic du premier clic réel</strong><div id="cpsFirstDispatch" class="subnote" style="margin-top:7px">Active un profil depuis une autre fenêtre pour mesurer le délai logiciel du premier clic.</div><p class="subnote" style="margin-top:5px">Mesure du premier clic émis : depuis le raccourci sans condition, ou depuis la détection de la condition souris. La durée d'attente du bouton est exclue. Ce n'est pas la latence physique de la souris ni celle de l'application cible.</p></div>
    <p id="cpsDescription" class="subnote" style="margin-top:13px">Le test de profil reprend la cadence réelle calculée par le moteur ClickFlow (fixe, aléatoire ou naturelle), sans injecter de clics dans Windows. La touche d'activation et la condition souris ne sont pas nécessaires pour ce banc de test. Aucun score n'est enregistré.</p>
   </div>
  </section>
@@ -887,7 +887,7 @@ $('viewToggle').onclick=()=>{
 };
 // WebView2 possède le focus clavier quand on clique sur un bouton des
 // Paramètres. Le navigateur transmet donc la frappe à JavaScript, et non
-// toujours à l'InputHook AutoHotkey global (bug v1.9.4).
+// toujours à l'InputHook AutoHotkey global (bug v1.9.5).
 function shortcutKeyFromEvent(e) {
     if(['Shift','Control','Alt','Meta','AltGraph','Process','Unidentified']
         .includes(e.key))return '';
@@ -951,7 +951,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.4 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.5 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1012,9 +1012,13 @@ function setLiveMonitorActive(active) {
 function updateLiveMonitor(data) {
     if(data.firstDispatchMs!==undefined) {
         const delay=data.firstDispatchMs;
+        const fromCondition=data.firstDispatchKind==='condition';
         $('cpsFirstDispatch').textContent=delay!==null&&Number.isFinite(Number(delay))
-            ?'Derniere activation : '+Number(delay).toFixed(2)+' ms de délai logiciel (raccourci reçu -> SendInput terminé).'
-            :'Aucune activation réelle mesurée pour cette session.';
+            ?'Premier clic : '+Number(delay).toFixed(2)+' ms de délai logiciel ('
+                +(fromCondition?'condition souris détectée':'raccourci reçu')
+                +' -> SendInput terminé).'
+            :data.armed&&data.waiting?'En attente du bouton de souris configuré pour envoyer le premier clic.'
+                :'Aucune activation réelle mesurée pour cette session.';
     }
     const cps=Number(data.cps)||0;
     const status=data.waiting?'En attente du bouton souris':

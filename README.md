@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.4 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.9.5 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.4.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.4)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.5.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.5)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.4.ahk`.
+2. Télécharger `ClickFlow-v1.9.5.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.4`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.5`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,10 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Diagnostic du premier clic conditionné (v1.9.5)
+
+Lorsque le profil utilise "Conditionner à un bouton de souris", le diagnostic mesure désormais le premier clic réellement envoyé après validation de cette condition. Sans condition, il conserve la mesure depuis la réception du raccourci. Avec condition, l'intervalle affiché commence à la détection par ClickFlow du bouton maintenu : l'attente volontaire avant le maintien n'est pas incluse. L'affichage indique le type de mesure et montre "En attente" tant qu'aucun clic n'a été envoyé.
 
 ## Précision du cadenceur et diagnostic (v1.9.4)
 

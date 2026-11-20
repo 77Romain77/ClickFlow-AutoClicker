@@ -29,7 +29,7 @@ global CF := {
     overlayRecent: [], overlayStart: 0,
     engineTimerActive: false, statsTimerActive: false,
     engineLoopRunning: false, precisionRequested: false, precisionHandle: 0,
-    firstDispatchMs: "", activationCounter: 0, qpcFrequency: 0,
+    firstDispatchMs: "", firstDispatchKind: "", activationCounter: 0, qpcFrequency: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -241,7 +241,7 @@ SendStats() {
     if !CF.web
         return
     waiting := CF.armed && CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P")
-    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"firstDispatchMs":' (CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) '}')
+    try CF.web.PostWebMessageAsString('{"type":"stats","armed":' (CF.armed ? "true" : "false") ',"waiting":' (waiting ? "true" : "false") ',"capturing":' (CF.capture ? "true" : "false") ',"captureKind":' JsonQuote(CF.captureKind) ',"cps":' CF.recent.Length ',"total":' CF.total ',"hotkey":' JsonQuote(DisplayKey(CF.cfg.activation)) ',"notice":' JsonQuote(CF.notice) ',"firstDispatchMs":' (CF.firstDispatchMs = "" ? "null" : CF.firstDispatchMs) ',"firstDispatchKind":' JsonQuote(CF.firstDispatchKind) '}')
 }
 
 NormalizeName(name, ignoreId := 0) {
@@ -877,6 +877,7 @@ ActivationDown(*) {
     CF.armed := true
     CF.activationCounter := activationStarted
     CF.firstDispatchMs := ""
+    CF.firstDispatchKind := ""
     CF.overlayStart := A_TickCount
     CF.overlayUntil := 0
     CF.overlayRecent := []
@@ -982,12 +983,14 @@ EngineTick(firstFromActivation := false) {
 
     ; Les clics sont envoyes a la position actuelle du curseur.
     ; SendInput n'intercepte pas les clics manuels et n'injecte rien dans le jeu.
+    ; Mesurer une seule fois le premier clic réellement envoyé, même si
+    ; la condition souris a retardé son émission après l'activation.
+    firstClick := CF.firstDispatchMs = ""
+    measureStart := firstClick ? (firstFromActivation ? CF.activationCounter : CFPerfCounter()) : 0
     SendInput("{Click " CF.cfg.clickButton "}")
-    if firstFromActivation {
-        frequency := 0
-        DllCall("Kernel32\QueryPerformanceFrequency", "Int64*", &frequency, "Int")
-        if frequency > 0
-            CF.firstDispatchMs := Round(1000 * (CFPerfCounter() - CF.activationCounter) / frequency, 2)
+    if firstClick && CF.qpcFrequency > 0 {
+        CF.firstDispatchMs := Round(1000 * (CFPerfCounter() - measureStart) / CF.qpcFrequency, 2)
+        CF.firstDispatchKind := firstFromActivation ? "activation" : "condition"
     }
     CF.total += 1
     CF.recent.Push(now)
