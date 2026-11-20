@@ -1051,6 +1051,7 @@ function updateGateMethodStatus(data) {
             +', appuis : '+downs+', relâchements : '+ups
             +'. Raw Input : '+(rawKnown?(rawHeld?'Maintenu':'Relâché'):'Aucun événement')
             +'. GetKeyState : '+physical
+            +'. GetAsyncKeyState : '+(data.gateAsyncHeld?'Maintenu':'Relâché')
             +'. Moteur : '+(engineHeld?'Condition remplie':'En attente')+'.'
             +'. Appui Raw autorisé : '+(data.gateRawArmed?'Oui':'Non')
             +'. UP Raw pendant maintien physique : '+Number(data.gateRawUpsWhilePhysicalHeld||0)+'.'
