@@ -65,6 +65,8 @@ try {
         throw Error("Les timers actifs ne démarrent pas avec l'activation.")
     if CF.total != 1 || CF.recent.Length != 1
         throw Error("Le premier clic ne part pas immédiatement pendant ActivationDown.")
+    if CF.firstDispatchMs = "" || CF.firstDispatchKind != "activation"
+        throw Error("Le diagnostic immédiat ne mesure pas le premier clic.")
     firstDelay := CF.recent[1] - before
     if firstDelay < 0 || firstDelay > 150
         throw Error("Latence anormale dans le callback de départ : " firstDelay " ms.")
@@ -106,15 +108,23 @@ try {
     ActivationDown()
     if !CF.armed || CF.total != count + 1
         throw Error("La condition souris n'empêche pas le premier clic.")
-    StopAll("Condition souris testée.")
+    if CF.firstDispatchMs != "" || CF.firstDispatchKind != ""
+        throw Error("Une mesure a ete creee sans aucun premier clic.")
+    ; Simule la condition devenue vraie, sans injecter un bouton physique
+    ; sur le runner CI : le premier clic ulterieur doit etre mesure.
     CF.cfg.mouseGate := 0
+    EngineTick()
+    if CF.total != count + 2 || CF.firstDispatchMs = ""
+        || CF.firstDispatchKind != "condition" || CF.firstDispatchMs < 0
+        throw Error("Le premier clic apres attente souris n'est pas mesure.")
+    StopAll("Condition souris testée.")
 
     ; Le mode Maintenir doit aussi envoyer son premier clic dès le
     ; callback, avant même la stabilisation de GetKeyState("F6", "P").
     CF.pressed := false
     CF.cfg.hold := 1
     ActivationDown()
-    if CF.total != count + 2
+    if CF.total != count + 3
         throw Error("Le premier clic en mode Maintenir n'est pas immédiat.")
     ActivationUp()
     if CF.armed || CF.engineTimerActive
@@ -125,7 +135,7 @@ try {
     CF.pressed := false
     CF.hwnd := targetGui.Hwnd
     ActivationDown()
-    if CF.armed || CF.engineTimerActive || CF.total != count + 2
+    if CF.armed || CF.engineTimerActive || CF.total != count + 3
         throw Error("La sécurité de focus a été contournée.")
     CF.hwnd := 0
     CF.pressed := false
@@ -138,7 +148,7 @@ try {
     CFTestTick(CF.test.started + 2000)
     if CF.test.active || CF.engineTimerActive || CF.statsTimerActive
         throw Error("Le timer reste actif après la fin du Test CPS.")
-    if CF.total != count + 2
+    if CF.total != count + 3
         throw Error("Le Test CPS a injecté des clics Windows.")
     CFTestStart(5, 105, 1)
     CFTestStop("annulé")

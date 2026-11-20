@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.9.5 - 2026-11-20
+
+- Corrige la mesure du premier clic si l'activation est conditionnée au maintien d'un bouton de souris.
+- La mesure commence après détection de la condition, sans inclure l'attente volontaire du bouton.
+- Diagnostic explicite de l'état "En attente du bouton de souris" et origine de la mesure (activation / condition).
+- Régression ajoutée au test Windows existant, sans nouveau job ni nouveau workflow.
+
+
 ## 1.9.4 - 2026-11-20
 
 - Cadenceur haute précision : remplace la vérification AutoHotkey périodique par un timer Windows natif haute résolution et QueryPerformanceCounter, utilisés uniquement pendant l'activité et fermé immédiatement à l'arrêt (secours timeBeginPeriod uniquement si indisponible).
