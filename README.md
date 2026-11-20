@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.12 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.13 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.12.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.12)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.13.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.13)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.12.ahk`.
+2. Télécharger `ClickFlow-v1.9.13.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.12`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.13`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,16 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Régression du maintien conditionnel Raw Input (v1.9.13)
+
+La v1.9.12 reçoit bien le premier appui Raw Input (mesure utilisateur : 0,18 ms à partir de WM_INPUT), mais l'utilisateur observe une interruption des clics suivants et le retour à « En attente » pendant le maintien. Le code combinait le flag DOWN de Raw Input avec `GetKeyState(..., "P")` à **chaque tick**, et pouvait ainsi interrompre la condition après des clics synthétiques `SendInput`.
+
+**Correction :** dès qu'un vrai événement DOWN ou UP a été observé par Raw Input, son état devient la référence pour Automatique et Événementielle jusqu'au prochain événement du bouton sélectionné. Le UP Raw Input coupe immédiatement le flux de clics. Avant le premier événement, Automatique garde le contrôle classique de secours et Événementielle attend un événement explicite. Classique reste inchangé et sélectionné par défaut.
+
+Les compteurs Test CPS indiquent maintenant séparément « Raw Input : Maintenu/Relâché », « GetKeyState : Maintenu/Relâché » et **« Moteur : Condition remplie/En attente »**, y compris lorsque le chronométrage est désactivé. Un désaccord est signalé au lieu de masquer la source. Les tests existants couvrent deux clics successifs sous un DOWN Raw Input simulé puis l'arrêt après UP, sans vrai bouton physique sur le runner.
+
+**Sécurité :** la méthode événementielle reste expérimentale. Un événement de relâchement Raw Input non livré pourrait maintenir l'état à « enfoncé » ; l'arrêt d'urgence et l'arrêt au changement de fenêtre restent nécessaires. Tester hors jeu dans une application où l'automatisation est autorisée. En cas de doute, sélectionner Classique.
 
 ## Correction du déclenchement conditionnel Raw Input (v1.9.12)
 
