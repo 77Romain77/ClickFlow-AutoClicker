@@ -52,6 +52,28 @@ try {
     CFDesktopSetPreference("floatShown", "1")
     if CF.overlayVisible
         throw Error("L'overlay devrait rester masqué au repos.")
+    ; Vérifier l'affichage automatique pendant une vraie activation,
+    ; avant de passer au mode permanent dans le reste du banc.
+    target := Gui("+AlwaysOnTop", "ClickFlow target overlay test")
+    target.Show("w240 h100")
+    WinActivate("ahk_id " target.Hwnd)
+    if !WinWaitActive("ahk_id " target.Hwnd, , 2)
+        throw Error("Fenêtre cible de l'overlay inactive.")
+    CF.cfg.hold := 2
+    CF.pressed := false
+    ActivationDown()
+    if !CF.armed || !CF.overlayVisible || CF.overlayAlwaysVisible
+        throw Error("L'overlay ne s'affiche pas pendant une activation normale.")
+    ActivationUp()
+    ActivationDown()
+    if CF.armed || CF.engineTimerActive
+        throw Error("Le profil Basculer ne s'arrête pas au deuxième appui.")
+    target.Destroy()
+    WinActivate("ahk_id " g.Hwnd)
+    CF.overlayUntil := 0
+    CFDesktopUpdate()
+    if CF.overlayVisible
+        throw Error("L'overlay reste visible après la fin de la session.")
     CFDesktopSetPreference("overlayAlwaysVisible", "1")
     if !CF.overlayVisible || !IsObject(CF.overlayGui)
         throw Error("L'overlay ne s'affiche pas en mode permanent.")

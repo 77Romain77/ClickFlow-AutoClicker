@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.9.6 - 2026-11-20
+
+- Réarme le mode Basculer en contrôlant aussi le relâchement physique du raccourci pendant la session, afin que le deuxième appui puisse arrêter les clics.
+- Affiche l'overlay automatique dès l'activation et restaure une fenêtre overlay masquée par Windows sans activer l'option permanente.
+- Tests de régression étendus pour le deuxième appui et l'overlay d'activation, dans les scripts Windows déjà présents.
+- Conserve le moteur haute précision, les performances au repos, les profils et les diagnostics.
+
+
 ## 1.9.5 - 2026-11-20
 
 - Corrige la mesure du premier clic si l'activation est conditionnée au maintien d'un bouton de souris.

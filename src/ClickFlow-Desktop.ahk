@@ -316,8 +316,14 @@ CFOverlayShow(visible) {
     global CF
     if visible && !IsObject(CF.overlayGui)
         CFOverlayCreate()
-    if CF.overlayVisible = !!visible
+    if CF.overlayVisible = !!visible {
+        ; Une fenêtre affichée puis masquée par Windows peut désynchroniser
+        ; le booléen local. La restaurer sans toucher au mode permanent.
+        if visible && IsObject(CF.overlayGui)
+            && !DllCall("User32\IsWindowVisible", "Ptr", CF.overlayGui.Hwnd, "Int")
+            CF.overlayGui.Show("NA")
         return
+    }
     CF.overlayVisible := !!visible
     if visible {
         CFOverlayPlace()

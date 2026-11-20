@@ -99,6 +99,14 @@ try {
         throw Error("La réactivation n'envoie pas exactement un premier clic.")
     if CF.nextAt - CF.recent[CF.recent.Length] != 200
         throw Error("L'intervalle de la nouvelle session n'est pas respecté.")
+    ; Simuler un Up AHK manqué : l'état physique du raccourci est déjà
+    ; relâché, le moteur doit réarmer Basculer avant le deuxième appui.
+    CFActivationRefreshPressed()
+    if CF.pressed
+        throw Error("La touche reste bloquée après son relâchement physique.")
+    ActivationDown()
+    if CF.armed || CF.engineTimerActive
+        throw Error("Le deuxième appui ne stoppe pas le mode Basculer.")
     StopAll("Deuxième session terminée.")
 
     ; Lorsque la condition souris est inactive, aucun clic initial.
