@@ -28,7 +28,7 @@ global CF := {
     overlayX: -99999, overlayY: -99999, overlayUntil: 0,
     overlayRecent: [], overlayStart: 0,
     engineTimerActive: false, statsTimerActive: false,
-    engineLoopRunning: false, precisionRequested: false,
+    engineLoopRunning: false, precisionRequested: false, precisionHandle: 0,
     firstDispatchMs: "", activationCounter: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
@@ -749,22 +749,50 @@ CFEngineSetTimer(active) {
         return
     CF.engineTimerActive := active
     if active {
-        ; Uniquement pendant l'activite, jamais au repos.
-        ; SetTimer AHK peut etre arrondi a 15,6 ms par Windows.
-        if !CF.precisionRequested
+        ; Timer Windows haute resolution natif : pas d'arrondi SetTimer AHK
+        ; ni de demande 1 ms globale, et utilisable en fenetre masquee.
+        CF.precisionHandle := DllCall("Kernel32\CreateWaitableTimerExW",
+            "Ptr", 0, "Ptr", 0, "UInt", 0x2, "UInt", 0x1F0003, "Ptr")
+        if !CF.precisionHandle {
+            ; Repli pour d'anciens Windows si ce timer n'est pas disponible.
             CF.precisionRequested := DllCall("Winmm\timeBeginPeriod", "UInt", 1, "UInt") = 0
-        if CF.precisionRequested
+        }
+        if CF.precisionHandle || CF.precisionRequested
             SetTimer(CFEngineRun, -1)
         else
-            SetTimer(EngineTick, 10) ; repli sans precision garantie
+            SetTimer(EngineTick, 10)
     } else {
         SetTimer(CFEngineRun, 0)
         SetTimer(EngineTick, 0)
+        if CF.precisionHandle {
+            DllCall("Kernel32\CancelWaitableTimer", "Ptr", CF.precisionHandle)
+            DllCall("Kernel32\CloseHandle", "Ptr", CF.precisionHandle)
+            CF.precisionHandle := 0
+        }
         if CF.precisionRequested {
             DllCall("Winmm\timeEndPeriod", "UInt", 1, "UInt")
             CF.precisionRequested := false
         }
     }
+}
+
+CFPrecisionSleep(milliseconds) {
+    global CF
+    milliseconds := Max(1, Min(8, milliseconds))
+    if CF.precisionHandle {
+        due := Buffer(8, 0)
+        ; Une valeur negative exprime une echeance relative en tranches 100ns.
+        NumPut("Int64", -milliseconds * 10000, due)
+        if DllCall("Kernel32\SetWaitableTimerEx", "Ptr", CF.precisionHandle,
+            "Ptr", due.Ptr, "Int", 0, "Ptr", 0, "Ptr", 0, "Ptr", 0,
+            "UInt", 0, "Int") {
+            ; Timeout de securite : pas d'attente infinie si Windows echoue.
+            DllCall("Kernel32\WaitForSingleObject", "Ptr", CF.precisionHandle,
+                "UInt", 16, "UInt")
+            return
+        }
+    }
+    DllCall("Kernel32\Sleep", "UInt", milliseconds)
 }
 
 CFEngineRun() {
@@ -788,9 +816,9 @@ CFEngineRun() {
             } else {
                 break
             }
-            ; Sommeil natif a resolution 1 ms, sans boucle occupee.
-            ; Sleep(-1) pompe les evenements Windows / raccourcis / UI.
-            DllCall("Kernel32\Sleep", "UInt", Max(1, Min(8, untilNext - 1)))
+            ; Attente native, sans busy spin. Sleep(-1) rend les raccourcis,
+            ; l'arret d'urgence et les messages WebView2 interruptibles.
+            CFPrecisionSleep(untilNext - 1)
             Sleep(-1)
         }
     } finally {
