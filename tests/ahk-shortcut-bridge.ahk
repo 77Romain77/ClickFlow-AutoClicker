@@ -11,9 +11,11 @@ class BridgeArgs {
     }
 }
 PostShortcutCommand(args*) {
+    global CFBridgeLastRaw
     raw := ""
     for item in args
         raw .= (raw = "" ? "" : Chr(9)) item
+    CFBridgeLastRaw := raw
     if StrSplit(raw, Chr(9)).Length < 3
         throw Error("Le test ne produit pas une commande tabulée : " StrReplace(raw, Chr(9), "|"))
     BackendMessage("", BridgeArgs(raw))
@@ -41,7 +43,7 @@ try {
     ; Tester les commandes réellement envoyées par l'interface WebView2.
     PostShortcutCommand("globalHotkey", "begin", "next")
     if !CF.capture || CF.captureKind != "global:next"
-        throw Error("La commande begin n'est pas reçue. CF.capture=" CF.capture " notice=" CF.notice " kind=" CF.captureKind)
+        throw Error("La commande begin n'est pas reçue. CF.capture=" CF.capture " notice=" CF.notice " kind=" CF.captureKind " payload=" StrReplace(CFBridgeLastRaw, Chr(9), "|") " cmd=" StrSplit(CFBridgeLastRaw, Chr(9))[1])
     PostShortcutCommand("globalHotkey", "set", "next", "vk78")
     if CF.capture || GetKeyVK(CF.globalKeys["next"]) != GetKeyVK("F9")
         throw Error("La touche F9 envoyée par WebView2 n'est pas configurée.")
