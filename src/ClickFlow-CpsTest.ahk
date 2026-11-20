@@ -34,6 +34,8 @@ CFTestStart(duration, runId, profileId) {
     CF.test := {active: true, run: runId + 0, duration: duration,
         started: now, nextAt: now, lastFlush: now, pending: [],
         clicks: [], profile: profile.name, cfg: CopyConfig(profile.cfg)}
+    CFEngineSetTimer(true)
+    CFStatsSetTimer(true)
     CFTestPost('{"type":"cpsTest","state":"started","run":' CF.test.run
         ',"duration":' duration ',"profile":' JsonQuote(profile.name) '}')
 }
@@ -45,6 +47,10 @@ CFTestStop(reason := "stopped") {
     runId := CF.test.run
     CF.test.active := false
     CF.test.pending := []
+    if !CF.armed {
+        CFEngineSetTimer(false)
+        CFStatsSetTimer(false)
+    }
     CFTestPost('{"type":"cpsTest","state":"stopped","run":' runId
         ',"reason":' JsonQuote(reason) '}')
 }
@@ -75,6 +81,10 @@ CFTestFinish() {
         return
     CFTestFlush()
     test.active := false
+    if !CF.armed {
+        CFEngineSetTimer(false)
+        CFStatsSetTimer(false)
+    }
     ; Toute la chronologie est renvoyée pour garantir une courbe exacte
     ; même si WebView2 a regroupé ou retardé des messages en cours de test.
     CFTestPost('{"type":"cpsTest","state":"finished","run":' test.run
