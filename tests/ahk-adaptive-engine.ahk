@@ -205,6 +205,11 @@ try {
         throw Error("Le mode classique doit attendre sans hook.")
     StopAll("Test classique terminé.")
 
+    ; Les compteurs ne sont actifs que pendant le diagnostic détaillé.
+    CFGateDebugToggle(true)
+    if !CF.gateDebugEnabled
+        throw Error("Le suivi détaillé de la souris ne s'active pas.")
+
     ; Enregistrer réellement un périphérique Raw Input avec un HWND AHK
     ; secondaire, sans injecter de clic physique ni allonger les benchmarks.
     rawWindow := Gui("+ToolWindow", "ClickFlow test Raw Input")
@@ -247,6 +252,10 @@ try {
     }
     if CF.gateRawDowns != 5 || CF.gateRawUps != 10
         throw Error("Les compteurs d'appui/relâchement Raw Input sont faux.")
+    CFGateDebugToggle(false)
+    if CF.gateDebugEnabled || CF.gateRawDowns || CF.gateRawUps
+        throw Error("Les compteurs Raw Input restent actifs après désactivation.")
+    ; Les tests de maintien ci-dessous se déroulent sans suivi détaillé.
 
     ; Régression v1.9.13 sur vrai PC : Raw UP est parfois reçu pendant
     ; que GetKeyState indique Maintenu. Le moteur ne doit PAS s'arrêter.
