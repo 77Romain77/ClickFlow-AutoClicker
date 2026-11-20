@@ -29,7 +29,7 @@ global CF := {
     overlayRecent: [], overlayStart: 0,
     engineTimerActive: false, statsTimerActive: false,
     engineLoopRunning: false, precisionRequested: false, precisionHandle: 0,
-    firstDispatchMs: "", activationCounter: 0,
+    firstDispatchMs: "", activationCounter: 0, qpcFrequency: 0,
     mainExpandedW: 1120, mainExpandedH: 800,
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
@@ -805,7 +805,7 @@ CFEngineRun() {
             EngineTick()
             if !CF.engineTimerActive
                 break
-            now := A_TickCount
+            now := CFNowMs()
             if CF.test.active {
                 untilNext := Min(CF.test.nextAt - now,
                     CF.test.started + CF.test.duration * 1000 - now)
@@ -832,6 +832,18 @@ CFPerfCounter() {
     ticks := 0
     DllCall("Kernel32\QueryPerformanceCounter", "Int64*", &ticks, "Int")
     return ticks
+}
+
+CFNowMs() {
+    global CF
+    if !CF.qpcFrequency {
+        frequency := 0
+        DllCall("Kernel32\QueryPerformanceFrequency", "Int64*", &frequency, "Int")
+        if frequency <= 0
+            throw Error("Horloge haute resolution Windows indisponible.")
+        CF.qpcFrequency := frequency
+    }
+    return 1000.0 * CFPerfCounter() / CF.qpcFrequency
 }
 
 CFStatsSetTimer(active) {
@@ -869,7 +881,7 @@ ActivationDown(*) {
     CF.overlayUntil := 0
     CF.overlayRecent := []
     CF.target := current
-    CF.nextAt := A_TickCount
+    CF.nextAt := CFNowMs()
     CFNaturalReset(CF.cfg)
     ; Premier clic : exécuté dans le callback de la touche lui-même.
     ; EngineTick calcule et programme nextAt pour le clic suivant :
@@ -958,11 +970,11 @@ EngineTick(firstFromActivation := false) {
     }
     if CF.cfg.mouseGate && !GetKeyState(CF.cfg.gateButton, "P") {
         CF.cpsNow := 0
-        CF.nextAt := A_TickCount
+        CF.nextAt := CFNowMs()
         return
     }
 
-    now := A_TickCount
+    now := CFNowMs()
     if now < CF.nextAt
         return
     intervalMs := GetNextIntervalMs(CF.cfg, now)
@@ -1004,7 +1016,7 @@ GetNextCps(cfg := 0, now := "") {
     if !IsObject(cfg)
         cfg := CF.cfg
     if now = ""
-        now := A_TickCount
+        now := CFNowMs()
     minimum := cfg.min
     maximum := cfg.max
     if cfg.mode = 1
@@ -1040,7 +1052,7 @@ GetNextIntervalMs(cfg := 0, now := "") {
     if !IsObject(cfg)
         cfg := CF.cfg
     if now = ""
-        now := A_TickCount
+        now := CFNowMs()
     cps := GetNextCps(cfg, now)
     if cfg.mode != 3
         return Max(10, Round(1000 / cps))
@@ -1080,7 +1092,7 @@ GetNextIntervalMs(cfg := 0, now := "") {
 
 UpdateStats() {
     global CF
-    now := A_TickCount
+    now := CFNowMs()
     while CF.recent.Length && CF.recent[1] < now - 1000
         CF.recent.RemoveAt(1)
     windowStart := now - CF.overlayAverageSeconds * 1000

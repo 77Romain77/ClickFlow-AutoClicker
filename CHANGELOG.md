@@ -2,7 +2,7 @@
 
 ## 1.9.4 - 2026-11-20
 
-- Cadenceur haute précision : remplace la vérification AutoHotkey périodique par un timer Windows natif haute résolution, créé uniquement pendant l'activité et fermé immédiatement à l'arrêt (secours timeBeginPeriod uniquement si indisponible).
+- Cadenceur haute précision : remplace la vérification AutoHotkey périodique par un timer Windows natif haute résolution et QueryPerformanceCounter, utilisés uniquement pendant l'activité et fermé immédiatement à l'arrêt (secours timeBeginPeriod uniquement si indisponible).
 - Réduit la perte de CPS aux cadences rapides (notamment 50 et 100), tout en conservant le premier clic immédiat, les protections et la consommation minimale au repos.
 - Diagnostic dans Test CPS : cible fixe, écart, intervalle moyen réel du cadenceur ; délai logiciel du premier clic réel mesuré via QueryPerformanceCounter, clairement distingué de la latence physique.
 - Tests automatisés Windows courts aux cadences 10, 50 et 100 CPS, ajoutés au job existant.

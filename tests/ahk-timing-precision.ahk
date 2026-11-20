@@ -44,9 +44,9 @@ try {
         if index = 1 {
             probes := []
             Loop 8 {
-                probeBefore := A_TickCount
+                probeBefore := CFNowMs()
                 CFPrecisionSleep(3)
-                probes.Push(A_TickCount - probeBefore)
+                probes.Push(Round(CFNowMs() - probeBefore, 2))
             }
             FileAppend("Timer probe: " CFPrecisionJoin(probes) " ms (highres=" (CF.precisionHandle ? "yes" : "no") "). ", "*", "UTF-8")
         }

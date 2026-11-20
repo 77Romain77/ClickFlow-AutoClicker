@@ -28,7 +28,7 @@ CFTestStart(duration, runId, profileId) {
 
     ; Le test est exclusif au fonctionnement normal du moteur.
     StopAll("Test CPS du profil " profile.name " : démarrage.")
-    now := A_TickCount
+    now := CFNowMs()
     duration += 0
     CFNaturalReset(profile.cfg)
     CF.test := {active: true, run: runId + 0, duration: duration,
@@ -69,7 +69,7 @@ CFTestFlush() {
         return
     ticks := CFTestArrayJson(test.pending)
     test.pending := []
-    test.lastFlush := A_TickCount
+    test.lastFlush := CFNowMs()
     CFTestPost('{"type":"cpsTest","state":"ticks","run":' test.run
         ',"ticks":' ticks '}')
 }
@@ -98,7 +98,7 @@ CFTestTick(now := "") {
     if !test.active || CF.shuttingDown
         return
     if now = ""
-        now := A_TickCount
+        now := CFNowMs()
     if now - test.started >= test.duration * 1000 {
         CFTestFinish()
         return

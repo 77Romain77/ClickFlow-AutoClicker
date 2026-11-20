@@ -46,7 +46,7 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 
 ## Précision du cadenceur et diagnostic (v1.9.4)
 
-Le moteur passe d'un timer AutoHotkey périodique (arrondi par Windows à 10-15,6 ms) à une boucle coopérative utilisant un timer natif haute résolution Windows, créé uniquement pendant les clics ou le Test CPS, puis fermé à l'arrêt. Cela évite de changer la résolution générale des timers. Sur les anciens systèmes où ce timer n'est pas disponible, le moteur utilise temporairement timeBeginPeriod(1) en secours. Aucun timer moteur actif au repos. Les raccourcis et l'interface restent traités entre de courtes attentes, normalement de 8 ms ou moins, sous réserve de la charge système.
+Le moteur passe d'un timer AutoHotkey périodique (arrondi par Windows à 10-15,6 ms) à une boucle coopérative utilisant un timer natif haute résolution Windows et l'horloge QueryPerformanceCounter, créé uniquement pendant les clics ou le Test CPS, puis fermé à l'arrêt. Cela évite de changer la résolution générale des timers. Sur les anciens systèmes où ce timer n'est pas disponible, le moteur utilise temporairement timeBeginPeriod(1) en secours. Aucun timer moteur actif au repos. Les raccourcis et l'interface restent traités entre de courtes attentes, normalement de 8 ms ou moins, sous réserve de la charge système.
 
 Dans Test CPS, le dernier résultat d'un profil fixe indique la cible, l'écart mesuré et l'intervalle moyen, sans clics Windows. Le champ "Diagnostic du premier clic réel" mesure l'intervalle logiciel depuis la réception du raccourci jusqu'au retour de SendInput lors d'une activation réelle dans une autre fenêtre. Ce n'est **pas** une mesure du délai matériel ni de la réaction du jeu. Aucun diagnostic n'est enregistré sur disque.
 
