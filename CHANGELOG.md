@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.9.14 - 2026-11-20
+
+- Ajoute un historique borné (20 événements) du moteur conditionné en mode diagnostic : RAW_DOWN/UP, attentes, reprises, clics envoyés, ticks et motif de StopAll.
+- Garde l'historique en mémoire après l'arrêt pour pouvoir diagnostiquer un seul clic sans capturer l'interface pendant le maintien. Affiche un champ copiable dans Test CPS.
+- Aucune modification à la détection et au cadenceur dans cette version. Le mode Classique reste stable et par défaut. Pas de journal sur disque.
+- Test Windows court pour vérifier que l'historique de pression, relâchement et arrêt reste disponible. Aucun nouveau workflow GitHub Actions.
+
+
 ## 1.9.13 - 2026-11-20
 
 - Corrige l'arrêt des clics répétés pendant qu'un bouton conditionnel Raw Input reste maintenu : ne combine plus chaque DOWN Raw Input avec GetKeyState pouvant fluctuer pendant SendInput.
