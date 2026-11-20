@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.7 - 2026-11-20
+
+- Ajoute un interrupteur de diagnostics facultatifs et désactivés par défaut dans Test CPS et Paramètres, synchronisé et enregistré.
+- Mesure une estimation du délai entre le callback Windows du bouton conditionnel et le déclenchement du premier clic, avant toute optimisation de ce délai.
+- Mesure de référence conservée pour le premier clic immédiat ; aucune mesure coûteuse ni hook de diagnostic lorsque l'interrupteur est désactivé.
+- Hook de diagnostic installé seulement pendant l'attente de la condition souris, libéré au premier clic, à l'arrêt et à la fermeture. Information d'indisponibilité si aucun événement n'a été horodaté.
+- Régressions légères ajoutées aux tests Windows existants, sans nouveau workflow.
+
+
 ## 1.9.6 - 2026-11-20
 
 - Réarme le mode Basculer en contrôlant aussi le relâchement physique du raccourci pendant la session, afin que le deuxième appui puisse arrêter les clics.

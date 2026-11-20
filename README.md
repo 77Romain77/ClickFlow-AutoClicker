@@ -1,21 +1,21 @@
 # ClickFlow - AutoCliker
 
-**Version stable 1.9.6 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.9.7 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.6.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.6)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.7.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.7)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.6.ahk`.
+2. Télécharger `ClickFlow-v1.9.7.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.6`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.7`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
@@ -43,6 +43,14 @@ Le ZIP source accompagné de l'ensemble des composants est fourni comme alternat
 - Animation lumineuse et léger effet sonore sur les clics du test, avec bouton pour désactiver le son.
 - Seul le **dernier résultat terminé** est affiché pendant la session. Aucun score ni historique n'est sauvegardé sur le disque.
 - Icône dédiée et raccourcis Windows facultatifs. Le menu **À propos** permet de les gérer.
+
+## Diagnostic de la condition souris avant optimisation (v1.9.7)
+
+Dans l'onglet Test CPS (et aussi dans Paramètres > Diagnostics), un interrupteur permet d'activer ou de désactiver les diagnostics. Ils sont désactivés par défaut, état conservé dans settings.ini. **Quand ils sont désactivés**, aucun hook Windows de mesure n'est installé et le premier clic n'est plus chronométré : la mesure n'ajoute donc pas de travail pendant le jeu. Le Test CPS, le moniteur et l'overlay continuent à fonctionner.
+
+Lorsque les diagnostics sont activés, ClickFlow mesure le délai d'envoi logiciel du premier clic. Si le profil attend un bouton souris, un hook Windows est installé seulement durant cette attente et libéré dès le premier clic ou l'arrêt. Il horodate la **réception du callback souris par ClickFlow**, pas l'appui physique : la différence entre cette réception et le début de SendInput est une mesure indicative et une **borne inférieure** du délai de réaction complet. Le délai avant que Windows livre le callback ne peut pas être déduit de ce nombre. Si aucun événement valide n'est observé, l'interface affiche « mesure indisponible » au lieu d'inventer une valeur.
+
+Cette version **n'optimise pas encore la détection** : elle ajoute uniquement l'instrumentation facultative pour permettre un test avant/après sur le même PC. Le hook ne provoque pas le clic. Évite de laisser les diagnostics activés dans les jeux avec anti-triche.
 
 ## Stabilité du mode Basculer et de l'overlay (v1.9.6)
 
