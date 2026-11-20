@@ -413,9 +413,9 @@ jobs:
       - name: Create single-file AutoHotkey launcher
         shell: pwsh
         run: |
-          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.9.16.ahk
-          if (!(Test-Path 'ClickFlow-v1.9.16.ahk')) { throw "Single script missing" }
-          if ((Get-Item 'ClickFlow-v1.9.16.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
+          python tools/build_single_ahk.py --root stage --output ClickFlow-v1.9.17.ahk
+          if (!(Test-Path 'ClickFlow-v1.9.17.ahk')) { throw "Single script missing" }
+          if ((Get-Item 'ClickFlow-v1.9.17.ahk').Length -lt 50000) { throw "Single script unexpectedly small" }
 
       - name: Verify independent shortcut management and manual deletion
         shell: pwsh
@@ -477,7 +477,7 @@ jobs:
           $legacyIni = Join-Path $appDir 'shortcuts.ini'
           Set-Content -Path $legacyIni -Value ('[Shortcuts]' + [Environment]::NewLine + 'Enabled=1') -Encoding ascii
           $env:CLICKFLOW_WEBVIEW_SMOKE_FILE = Join-Path (Get-Location) 'one-file-probe'
-          $bundle = (Resolve-Path 'ClickFlow-v1.9.16.ahk').Path
+          $bundle = (Resolve-Path 'ClickFlow-v1.9.17.ahk').Path
           $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $bundle -PassThru -RedirectStandardError one-file.err -RedirectStandardOutput one-file.out
           $bridge = $env:CLICKFLOW_WEBVIEW_SMOKE_FILE + '.bridge'
           for ($i=0; $i -lt 40 -and !(Test-Path $bridge); $i++) {
@@ -491,7 +491,7 @@ jobs:
           if (Test-Path $desktopLink) { throw 'Desktop shortcut recreated despite user deletion.' }
           if (!(Test-Path $startLink)) { throw 'Start menu shortcut vanished unexpectedly.' }
           Write-Host 'Legacy Enabled=1 did not recreate a manually deleted Desktop shortcut.'
-          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.9.16'
+          $cache = Join-Path $env:LOCALAPPDATA 'ClickFlow/Runtime-1.9.17'
           # Le nettoyage a lieu après la connexion, via un timer AHK.
           for ($i = 0; $i -lt 40; $i++) {
             $remaining = @($legacyDirs | Where-Object { Test-Path (Join-Path $appRoot $_) })
@@ -551,17 +551,17 @@ jobs:
       - name: Package complete ClickFlow preview folder
         shell: pwsh
         run: |
-          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.9.16-win-x64.zip' -CompressionLevel Optimal
+          Compress-Archive -Path 'stage/*' -DestinationPath 'ClickFlow-WebView2-v1.9.17-win-x64.zip' -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-WebView2-v1.9.16-win-x64
-          path: ClickFlow-WebView2-v1.9.16-win-x64.zip
+          name: ClickFlow-WebView2-v1.9.17-win-x64
+          path: ClickFlow-WebView2-v1.9.17-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClickFlow-v1.9.16-single-file
-          path: ClickFlow-v1.9.16.ahk
+          name: ClickFlow-v1.9.17-single-file
+          path: ClickFlow-v1.9.17.ahk
 
       - name: Publish stable release
         if: >-
