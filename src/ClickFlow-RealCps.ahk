@@ -59,19 +59,176 @@ CFRealCanSend(focused, inside, held, running) {
     return focused && inside && held && running
 }
 
-CFRealInside() {
+CFRealPointInside(x, y) {
     global CF
     test := CF.realTest
-    if !IsObject(test.gui) || !IsObject(test.zone)
+    if !test.run || !IsObject(test.zone)
         return false
-    pt := Buffer(8, 0)
-    if !DllCall("User32\GetCursorPos", "Ptr", pt.Ptr, "Int")
+    bounds := Buffer(16, 0)
+    if !DllCall("User32\\GetWindowRect", "Ptr", test.zone.Hwnd,
+        "Ptr", bounds.Ptr, "Int")
         return false
-    if !DllCall("User32\ScreenToClient", "Ptr", test.gui.Hwnd, "Ptr", pt.Ptr, "Int")
+    return x >= NumGet(bounds, 0, "Int")
+        && y >= NumGet(bounds, 4, "Int")
+        && x < NumGet(bounds, 8, "Int")
+        && y < NumGet(bounds, 12, "Int")
+}
+
+CFRealInside() {
+    point := Buffer(8, 0)
+    if !DllCall("User32\\GetCursorPos", "Ptr", point.Ptr, "Int")
         return false
-    x := NumGet(pt, 0, "Int"), y := NumGet(pt, 4, "Int")
-    test.zone.GetPos(&zx, &zy, &zw, &zh)
-    return x >= zx && x < zx+zw && y >= zy && y < zy+zh
+    return CFRealPointInside(NumGet(point, 0, "Int"),
+        NumGet(point, 4, "Int"))
+}
+
+; Le contrôle Text de la fenêtre ne transmet pas systématiquement
+; WM_*BUTTONDOWN à notre OnMessage. Un hook souris bas niveau, limité à
+; la durée du test, détecte les vrais appuis et ignore les clics injectés.
+; Le callback ne fait aucune injection : il signale l'état et programme
+; une intervention courte dans le thread AHK normal.
+CFRealHookCallback(nCode, wParam, lParam) {
+    global CF
+    if nCode >= 0 && CF.realTest.run && lParam {
+        msg := wParam & 0xFFFF
+        test := CF.realTest
+        if msg = CFRealMouseMessageId(test.trigger, true)
+            || msg = CFRealMouseMessageId(test.trigger, false) {
+            flags := NumGet(lParam, 12, "UInt")
+            extra := NumGet(lParam, A_PtrSize = 8 ? 24 : 20, "UPtr")
+            if !(flags & 0x1) && !CFRealInfoIsTagged(extra) {
+                x := NumGet(lParam, 0, "Int")
+                y := NumGet(lParam, 4, "Int")
+                CFRealPhysicalMessage(msg, flags, extra, x, y)
+            }
+        }
+    }
+    return DllCall("User32\\CallNextHookEx", "Ptr", 0, "Int", nCode,
+        "UPtr", wParam, "Ptr", lParam, "Ptr")
+}
+
+CFRealPhysicalMessage(msg, flags, extra, x, y) {
+    global CF
+    test := CF.realTest
+    if !test.run || (flags & 0x1) || CFRealInfoIsTagged(extra)
+        return false
+    down := CFRealMouseMessageId(test.trigger, true)
+    up := CFRealMouseMessageId(test.trigger, false)
+    if msg = down {
+        if !CFRealPointInside(x, y) || test.held
+            return false
+        test.held := true
+        test.pendingStart := true
+        test.physical += 1
+        test.pendingAttempts := 0
+        SetTimer(CFRealBeginPending, -1)
+        SetTimer(CFRealUpdateStatus, -1)
+        return true
+    }
+    if msg = up && test.held {
+        ; Même si le clic automatique utilise le même bouton, seul
+        ; ce véritable UP (LLMHF_INJECTED absent) termine le maintien.
+        test.held := false
+        test.pendingStart := false
+        SetTimer(CFRealReleasePending, -1)
+        return true
+    }
+    return false
+}
+
+CFRealBeginPending(*) {
+    global CF
+    test := CF.realTest
+    if !test.run || !test.held || !test.pendingStart
+        return
+    if !CFRealInside() {
+        CFRealEnd("Curseur sorti de la zone de test.")
+        return
+    }
+    if WinExist("A") != test.gui.Hwnd {
+        ; Le tout premier clic peut activer la fenêtre APRÈS le passage
+        ; du hook. Quelques réessais courts suffisent, sans voler le focus.
+        if ++test.pendingAttempts <= 8 {
+            SetTimer(CFRealBeginPending, -15)
+        } else {
+            test.pendingStart := false
+            test.held := false
+            CFRealUpdateStatus()
+        }
+        return
+    }
+    test.pendingStart := false
+    now := CFNowMs()
+    if !test.active {
+        test.started := now
+        test.endAt := now + test.duration * 1000
+        test.active := true
+        test.lastFlush := now
+        CFNaturalReset(test.cfg)
+        CFRealPost("started", ',"duration":' test.duration
+            ',"profile":' JsonQuote(test.profile)
+            ',"trigger":' JsonQuote(test.trigger))
+        SetTimer(CFRealTick, 50)
+    }
+    test.nextAt := now
+    if test.cfg.mode = 4
+        CFRapidBurstReset(test.cfg)
+    CFRealUpdateStatus()
+    ; Démarrer le moteur hors du hook et préserver le premier clic.
+    CFRealTick()
+    if test.run && test.active && test.held
+        CFEngineSetTimer(true)
+}
+
+CFRealReleasePending(*) {
+    global CF
+    test := CF.realTest
+    if !test.run
+        return
+    if !test.held && !CF.armed && !CF.test.active
+        CFEngineSetTimer(false)
+    CFRealFlush()
+    CFRealUpdateStatus()
+}
+
+CFRealUpdateStatus(*) {
+    global CF
+    test := CF.realTest
+    if !test.run || !IsObject(test.status)
+        return
+    label := !test.active
+        ? (test.held ? "APPUI PHYSIQUE DÉTECTÉ" : "PRÊT - En attente du premier appui")
+        : (test.held ? "TEST EN COURS - Maintien détecté"
+            : "PAUSE - Appui relâché, maintiens pour reprendre")
+    test.status.Text := label
+    if IsObject(test.counters)
+        test.counters.Text := Format(
+            "Appuis physiques : {}     Envoyés : {}     Reçus : {}     Restant : {} s",
+            test.physical, test.sent, test.received,
+            test.active ? Round(Max(0, test.endAt-CFNowMs())/1000, 1) : test.duration)
+    if IsObject(test.zoneHint)
+        test.zoneHint.Text := test.held
+            ? "MAINTIEN DÉTECTÉ - CLICS EN COURS"
+            : "MAINTIENS TON BOUTON ICI POUR DÉMARRER"
+}
+
+CFRealWindowTheme(windowGui, closeButton) {
+    ; Windows 11 : titre natif foncé assorti à ClickFlow. Repli
+    ; automatique sur la barre Windows standard si DWM ne le permet pas.
+    dark := Buffer(4, 0)
+    NumPut("Int", 1, dark, 0)
+    try DllCall("Dwmapi\\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
+        "UInt", 20, "Ptr", dark.Ptr, "UInt", 4, "Int")
+    caption := Buffer(4, 0)
+    NumPut("UInt", 0x241B12, caption, 0)
+    try DllCall("Dwmapi\\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
+        "UInt", 35, "Ptr", caption.Ptr, "UInt", 4, "Int")
+    textColor := Buffer(4, 0)
+    NumPut("UInt", 0xF7F7F7, textColor, 0)
+    try DllCall("Dwmapi\\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
+        "UInt", 36, "Ptr", textColor.Ptr, "UInt", 4, "Int")
+    try DllCall("UxTheme\\SetWindowTheme", "Ptr", closeButton.Hwnd,
+        "WStr", "DarkMode_Explorer", "Ptr", 0, "Int")
 }
 
 CFRealPost(state, more := "") {
@@ -94,9 +251,7 @@ CFRealFlush() {
     test.lastSent := test.sent
     CFRealPost("ticks", ',"ticks":' events
         ',"sent":' test.sent ',"received":' test.received)
-    if IsObject(test.status)
-        test.status.Text := Format("Envoyés : {} | Reçus : {} | {} s restantes",
-            test.sent, test.received, Round(Max(0, test.endAt-CFNowMs())/1000, 1))
+    CFRealUpdateStatus()
 }
 
 CFRealEnd(reason := "arrêté", completed := false) {
@@ -106,7 +261,17 @@ CFRealEnd(reason := "arrêté", completed := false) {
     test := CF.realTest
     test.held := false
     test.active := false
+    test.pendingStart := false
     try SetTimer(CFRealTick, 0)
+    try SetTimer(CFRealBeginPending, 0)
+    try SetTimer(CFRealReleasePending, 0)
+    try SetTimer(CFRealUpdateStatus, 0)
+    if test.hook
+        DllCall("User32\\UnhookWindowsHookEx", "Ptr", test.hook, "Int")
+    if test.callback
+        CallbackFree(test.callback)
+    test.hook := 0
+    test.callback := 0
     if !CF.armed && !CF.test.active
         CFEngineSetTimer(false)
     if completed {
@@ -159,35 +324,9 @@ CFRealMouse(wParam, lParam, msg, hwnd) {
         }
         return
     }
-    if msg = CFRealMouseMessageId(test.trigger, true) {
-        if !CFRealInside() || WinExist("A") != test.gui.Hwnd
-            return
-        if !test.active {
-            test.started := CFNowMs()
-            test.endAt := test.started + test.duration*1000
-            test.active := true
-            test.lastFlush := test.started
-            CFNaturalReset(test.cfg)
-            CFRealPost("started", ',"duration":' test.duration
-                ',"profile":' JsonQuote(test.profile)
-                ',"trigger":' JsonQuote(test.trigger))
-            SetTimer(CFRealTick, 50)
-        }
-        if !test.held {
-            test.held := true
-            test.nextAt := CFNowMs()
-            if test.cfg.mode = 4
-                CFRapidBurstReset(test.cfg)
-            CFRealTick()
-            if test.active && test.held
-                CFEngineSetTimer(true)
-        }
-    } else if msg = CFRealMouseMessageId(test.trigger, false) {
-        test.held := false
-        if !CF.armed && !CF.test.active
-            CFEngineSetTimer(false)
-        CFRealFlush()
-    }
+    ; L'appui physique est reçu par WH_MOUSE_LL, pas par le contrôle
+    ; statique. WM_* ne sert plus qu'à mesurer les clics injectés.
+
 }
 
 CFRealOpen(duration, runId, profileId) {
@@ -209,34 +348,59 @@ CFRealOpen(duration, runId, profileId) {
     trigger := cfg.mouseGate
         && HasValue(["LButton","RButton","MButton"], cfg.gateButton)
         ? cfg.gateButton : "LButton"
-    ; Au lieu du raccourci global du profil, l'appui est limité à la zone.
-    windowGui := Gui("+MinSize540x415", "ClickFlow - Réception réelle des clics")
-    windowGui.BackColor := "162640"
-    windowGui.SetFont("s11 cF3F7FF", "Segoe UI")
-    windowGui.AddText("x22 y15 w495 h32 Center", "Test réel : " profile.name)
-    windowGui.SetFont("s9 cB8D1F0")
-    windowGui.AddText("x22 y47 w495 h48 Center",
-        "Appuie et maintiens " (trigger = "LButton" ? "le clic gauche"
-            : trigger = "RButton" ? "le clic droit" : "le clic milieu")
-        " dans la zone. Seuls les clics du profil reçus ici sont comptés.")
-    zone := windowGui.AddText("x24 y112 w492 h185 Border Center 0x100 Background213B60",
-        "ZONE DE RÉCEPTION WINDOWS" "`n"
-        "Garde le curseur dans ce rectangle pendant le maintien.")
-    status := windowGui.AddText("x22 y311 w495 h45 Center", "Prêt : attends ton premier appui physique.")
-    close := windowGui.AddButton("x195 y365 w150 h33", "Fermer / arrêter")
+    ; Fenêtre à barre de titre Windows native, contenu sombre ClickFlow.
+    windowGui := Gui("+MinSize620x505", "ClickFlow - Réception réelle")
+    windowGui.BackColor := "101D32"
+    windowGui.SetFont("s16 w700 cF0F6FF", "Segoe UI")
+    windowGui.AddText("x30 y22 w560 h34", "Réception réelle")
+    windowGui.SetFont("s10 cB4C9E8", "Segoe UI")
+    windowGui.AddText("x30 y65 w560 h32",
+        "Profil : " profile.name "  |  " trigger " maintenu  |  "
+        duration " s")
+    windowGui.SetFont("s10 w600 c75B6FF", "Segoe UI")
+    status := windowGui.AddText("x30 y112 w560 h40 +0x100 Center Background1B3454",
+        "PRÊT - En attente du premier appui")
+    windowGui.SetFont("s9 cC1D5EF", "Segoe UI")
+    counters := windowGui.AddText("x30 y158 w560 h43 Center Background142943",
+        "Appuis physiques : 0     Envoyés : 0     Reçus : 0")
+    windowGui.SetFont("s11 w700 cEAF2FF", "Segoe UI")
+    ; Le contrôle est volontairement statique : le hook reçoit les vrais
+    ; boutons même lorsque Windows ne lui adresse pas WM_LBUTTONDOWN.
+    zone := windowGui.AddText("x30 y217 w560 h184 Center Border 0x100 Background223E64",
+        "ZONE DE RÉCEPTION" "`n`n"
+        "Place le curseur ici et maintiens ton bouton.")
+    windowGui.SetFont("s10 c8EE8D1", "Segoe UI")
+    zoneHint := windowGui.AddText("x30 y412 w560 h25 Center",
+        "MAINTIENS TON BOUTON ICI POUR DÉMARRER")
+    windowGui.SetFont("s10 cEAF2FF", "Segoe UI")
+    close := windowGui.AddButton("x399 y451 w191 h37", "Fermer / arrêter")
     close.OnEvent("Click", CFRealClose)
     windowGui.OnEvent("Close", CFRealClose)
     windowGui.OnEvent("Escape", CFRealClose)
     CF.realTest := {run: runId+0, active:false, held:false,
-        gui:windowGui, zone:zone, status:status, cfg:cfg, profile:profile.name,
+        pendingStart:false, pendingAttempts:0, physical:0,
+        hook:0, callback:0,
+        gui:windowGui, zone:zone, status:status, counters:counters,
+        zoneHint:zoneHint, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
         started:0, endAt:0, nextAt:0,
         sent:0, received:0, lastSent:0, clicks:[],pending:[],lastFlush:0,
         anyMouse:0, lastMsg:0, lastHwnd:0, lastExtra:0}
-    ; Les handlers sont filtrés par hwnd : pas d'effet hors de la fenêtre.
+    ; Seuls les clics injectés identifiés sont comptabilisés.
     for message in [0x201,0x202,0x204,0x205,0x207,0x208]
         OnMessage(message, CFRealMouse)
-    windowGui.Show("w540 h415")
+    windowGui.Show("w620 h505")
+    CFRealWindowTheme(windowGui, close)
+    test := CF.realTest
+    test.callback := CallbackCreate(CFRealHookCallback, "Fast", 3)
+    module := DllCall("Kernel32\\GetModuleHandleW", "Ptr", 0, "Ptr")
+    test.hook := DllCall("User32\\SetWindowsHookExW",
+        "Int", 14, "Ptr", test.callback, "Ptr", module,
+        "UInt", 0, "Ptr")
+    if !test.hook {
+        CFRealEnd("Impossible d'installer la détection physique.")
+        throw Error("Impossible d'installer le hook souris physique Windows.")
+    }
     CFRealPost("opened", ',"profile":' JsonQuote(profile.name)
         ',"trigger":' JsonQuote(trigger)
         ',"button":' JsonQuote(cfg.clickButton))
@@ -264,6 +428,7 @@ CFRealTick(now := "") {
     if !test.held {
         if test.pending.Length || test.lastSent != test.sent
             CFRealFlush()
+        CFRealUpdateStatus()
         return
     }
     ; Le WM_*BUTTONUP physique non marqué est la référence.
