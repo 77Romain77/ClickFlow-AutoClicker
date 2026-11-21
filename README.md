@@ -1,23 +1,31 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.24 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.25 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.24.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.24)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.25.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.25)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.24.ahk`.
+2. Télécharger `ClickFlow-v1.9.25.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.24`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.25`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Cadence ancrée sur la chronologie prévue (v1.9.25)
+
+Après un test réel de 30 secondes à 12,3 CPS, la moyenne était à environ 12,2 CPS : les intervalles de 82,17 ms sur les 60 derniers clics restaient légèrement supérieurs aux 81,30 ms attendus. Le moteur ajoutait chaque période depuis l'heure réelle (en retard) du dernier clic, ce qui accumulait une dérive même avec la compensation des fractions de milliseconde.
+
+Le nouveau cadenceur ancre les échéances sur la chronologie planifiée : une légère imprécision de réveil Windows ne se cumule plus. Il conserve la compensation fractionnaire de la v1.9.24, le premier clic immédiat et le fonctionnement identique du moteur réel et du Test CPS. Si un retard devient trop important, il réinitialise la phase et conserve un délai de sécurité avant le prochain clic : **aucune rafale de rattrapage**.
+
+Les contrôles du maintien physique, de Raw Input, des raccourcis et de l'arrêt restent inchangés. La cadence moyenne devrait se rapprocher de la cible, mais le matériel Windows et les applications peuvent encore produire de la gigue. Un nouveau test de 30 secondes sur le PC utilisateur est recommandé pour vérifier le résultat réel.
 
 ## Cadence à fractions de millisecondes et simulation visuelle (v1.9.24)
 
