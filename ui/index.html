@@ -209,6 +209,18 @@ body.compact #naturalIntensityHint{display:none}
 #compactModeSeg,#compactRapidPresetSeg{grid-template-columns:repeat(2,minmax(0,1fr))}
 #compactRapid .compact-segment button{min-width:0;font-size:10px}
 #compactRapid .rapid-custom label{min-width:80px}
+#rapidPresetSeg button.active{background:#285eac;border-color:#85bfff;color:#fff;box-shadow:inset 0 0 0 1px #85bfff,0 0 0 2px #356cba44}
+#compactRapidPresetSeg button.active{background:#285eac;border:1px solid #85bfff;color:#fff;box-shadow:inset 0 0 0 1px #85bfff}
+.rapid-estimates{margin-top:16px;padding:14px 16px;background:#101f34;border:1px solid #314b6c;border-radius:12px;display:grid;gap:12px}
+.rapid-estimate-item{display:flex;flex-direction:column;gap:4px}
+.rapid-estimate-item+.rapid-estimate-item{border-top:1px solid #2c405d;padding-top:12px}
+.rapid-estimate-label{font-size:12px;color:#bad0ed}
+.rapid-estimate-value{font-size:21px;font-weight:750;letter-spacing:-.3px;color:#f4f8ff;font-variant-numeric:tabular-nums}
+.rapid-estimates .subnote{margin:0;line-height:1.45}
+#compactRapid .rapid-estimates{padding:10px;gap:8px;margin-top:8px}
+#compactRapid .rapid-estimate-value{font-size:16px}
+#compactRapid .rapid-estimate-item+.rapid-estimate-item{padding-top:8px}
+
 .quick-fields label.hidden{display:none!important}
 body.compact .seg button{min-height:35px;font-size:12px}
 body.compact .key-row{display:none}
@@ -417,6 +429,11 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
       <label>Entre les rafales (%)<input id="compactRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
       <label>Entre les clics (%)<input id="compactRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
      </div>
+     <div class="rapid-estimates">
+      <div class="rapid-estimate-item"><span class="rapid-estimate-label">Cadence de base par rafale</span><strong id="compactRapidBurstRange" class="rapid-estimate-value">9.00 - 11.00 CPS</strong></div>
+      <div class="rapid-estimate-item"><span class="rapid-estimate-label">Cadence avec micro-variations</span><strong id="compactRapidClickRange" class="rapid-estimate-value">8.55 - 11.55 CPS</strong></div>
+      <p class="subnote">Estimation théorique, avant les délais de Windows.</p>
+     </div>
     </div>
    </section>
    <section class="compact-tile compact-shortcuts-tile">
@@ -452,6 +469,11 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
       <div id="rapidCustom" class="rapid-custom hidden">
        <label>Variation entre les rafales (%)<input id="rapidBetween" class="input" type="number" min="0" max="10" step="0.5" value="10"></label>
        <label>Variation entre les clics (%)<input id="rapidWithin" class="input" type="number" min="0" max="5" step="0.5" value="5"></label>
+      </div>
+      <div class="rapid-estimates" aria-live="polite">
+       <div class="rapid-estimate-item"><span class="rapid-estimate-label">Plage possible de cadence de base par rafale</span><strong id="rapidBurstRange" class="rapid-estimate-value">9.00 - 11.00 CPS</strong></div>
+       <div class="rapid-estimate-item"><span class="rapid-estimate-label">Plage théorique de cadence entre les clics</span><strong id="rapidClickRange" class="rapid-estimate-value">8.55 - 11.55 CPS</strong></div>
+       <p class="subnote">Les micro-variations entre les clics s'ajoutent à la plage par rafale. Valeurs estimées, avant les arrondis et les délais de Windows.</p>
       </div>
      </div>
      <div class="mutedline">La précision réelle dépend des minuteries de Windows et de l'application cible.</div>
@@ -646,7 +668,12 @@ function toast(message) {
     toastTimer = setTimeout(() => e.classList.remove('visible'), 2500);
 }
 function selectedButtons(container,attr,val) {
-    document.querySelectorAll('#'+container+' [data-'+attr+']').forEach(x => x.classList.toggle('active', x.dataset[attr] === val));
+    const attribute=attr.replace(/[A-Z]/g,letter=>'-'+letter.toLowerCase());
+    document.querySelectorAll('#'+container+' [data-'+attribute+']').forEach(button=>{
+        const selected=button.dataset[attr]===val;
+        button.classList.toggle('active',selected);
+        button.setAttribute('aria-pressed',String(selected));
+    });
 }
 function setSwitch(id,enabled) {
     $(id).classList.toggle('on',!!enabled);
@@ -655,6 +682,23 @@ function setSwitch(id,enabled) {
 function clamp(v) {return Math.max(1,Math.min(100,Math.round(Number(v)||1)));}
 const rapidPresets={precision:[2,1],balanced:[4,2],soft:[6,3],custom:null};
 const rapidPercents=c=>rapidPresets[c.rapidPreset]||[Number(c.rapidBetween??10),Number(c.rapidWithin??5)];
+// Même limites CPS que le moteur : une variation par rafale, puis une
+// micro-variation par intervalle. Ce sont des bornes théoriques avant
+// l'arrondi des intervalles et les délais réels de Windows.
+function rapidEstimatedRanges(cfg) {
+    const [between,within]=rapidPercents(cfg);
+    const target=Number(cfg.rapidTarget??10);
+    const bound=cps=>Math.max(1,Math.min(100,cps));
+    const burstMin=bound(target*(1-between/100));
+    const burstMax=bound(target*(1+between/100));
+    return {burstMin,burstMax,clickMin:bound(burstMin*(1-within/100)),
+        clickMax:bound(burstMax*(1+within/100))};
+}
+function rapidEstimateText(cfg) {
+    const p=rapidEstimatedRanges(cfg);
+    return {burst:p.burstMin.toFixed(2)+' - '+p.burstMax.toFixed(2)+' CPS',
+        click:p.clickMin.toFixed(2)+' - '+p.clickMax.toFixed(2)+' CPS'};
+}
 const rapidClamp=(v,max)=>Math.max(0,Math.min(max,Math.round(Number(v)*2)/2||0));
 const rapidTargetClamp=v=>Math.max(1,Math.min(100,Math.round((Number(v)||1)*10)/10));
 const rpmToCps=rpm=>Math.round((rpm/60)*10)/10;
@@ -699,6 +743,9 @@ function updateRanges() {
     $('rapidWithin').value=c.rapidWithin??5;
     const v=rapidPercents(c);
     $('rapidHint').textContent='±'+v[0]+' % entre les rafales, ±'+v[1]+' % entre les clics. Aucun ralentissement volontaire ni accélération au démarrage.';
+    const ranges=rapidEstimateText(c);
+    $('rapidBurstRange').textContent=ranges.burst;
+    $('rapidClickRange').textContent=ranges.click;
 }
 function render() {
     const c=config();
@@ -743,6 +790,9 @@ function renderCompactPanel() {
     $('compactRapidRpm').value=c.rapidRpm||'';
     $('compactRapidBetween').value=c.rapidBetween??10;
     $('compactRapidWithin').value=c.rapidWithin??5;
+    const ranges=rapidEstimateText(c);
+    $('compactRapidBurstRange').textContent=ranges.burst;
+    $('compactRapidClickRange').textContent=ranges.click;
     $('compactMinLabel').textContent=c.mode==='rapid'?'CPS cible':c.mode==='fixed'?'CPS fixe':'CPS min';
     $('compactMin').step=c.mode==='rapid'?'0.1':'1';
     $('compactMin').value=c.mode==='rapid'?(c.rapidTarget??10):c.min;
