@@ -338,9 +338,9 @@ EditConfig(field, value) {
         case "focus":
             cfg.focusStop := value = "1" ? 1 : 0
         case "min", "max":
-            if !RegExMatch(value, "^\d{1,3}$")
+            if !RegExMatch(value, "^\d{1,3}(?:\.\d)?$")
                 return
-            n := Max(1, Min(100, value + 0))
+            n := Round(Max(1, Min(100, value + 0)) * 10) / 10
             cfg.%field% := n
             if cfg.min > cfg.max {
                 if field = "min"
@@ -693,8 +693,9 @@ CFApplyQuickSettings(id, mode, minimum, maximum, variation,
     profile := CFProfileById(id + 0)
     if !profile
         throw Error("Profil introuvable.")
-    if !RegExMatch(minimum, "^\d{1,3}$") || !RegExMatch(maximum, "^\d{1,3}$")
-        throw Error("Indique des CPS compris entre 1 et 100.")
+    if !RegExMatch(minimum, "^\d{1,3}(?:\.\d)?$")
+        || !RegExMatch(maximum, "^\d{1,3}(?:\.\d)?$")
+        throw Error("Indique des CPS de 1 à 100 avec une décimale au maximum.")
     low := minimum + 0
     high := maximum + 0
     if low < 1 || high > 100 || high < low
@@ -718,8 +719,8 @@ CFApplyQuickSettings(id, mode, minimum, maximum, variation,
     }
     StopAll("Profil ajusté depuis le Test CPS.")
     profile.cfg.mode := mode = "fixed" ? 1 : mode = "random" ? 2 : mode = "natural" ? 3 : 4
-    profile.cfg.min := low
-    profile.cfg.max := high
+    profile.cfg.min := Round(low * 10) / 10
+    profile.cfg.max := Round(high * 10) / 10
     profile.cfg.variation := variation = "low" ? 1 : variation = "medium" ? 2 : 3
     if mode = "rapid" {
         profile.cfg.rapidTarget := Round((rapidTarget + 0) * 10) / 10
@@ -1831,13 +1832,13 @@ ReadConfig(file, section, base) {
     cfg := CopyConfig(base)
     if !FileExist(file)
         return cfg
-    for field in ["mode", "variation", "min", "max", "rapidPreset", "rapidRpm",
+    for field in ["mode", "variation", "rapidPreset", "rapidRpm",
         "hold", "mouseGate", "focusStop"] {
         value := IniRead(file, section, field, cfg.%field%)
         if RegExMatch(value, "^\d+$")
             cfg.%field% := value + 0
     }
-    for field in ["rapidTarget", "rapidBetween", "rapidWithin"] {
+    for field in ["min", "max", "rapidTarget", "rapidBetween", "rapidWithin"] {
         value := IniRead(file, section, field, cfg.%field%)
         if RegExMatch(value, "^\d{1,3}(?:\.\d+)?$")
             cfg.%field% := value + 0
@@ -1854,8 +1855,8 @@ ReadConfig(file, section, base) {
     cfg.rapidBetween := Round(Max(0, Min(10, cfg.rapidBetween)) * 2) / 2
     cfg.rapidWithin := Round(Max(0, Min(5, cfg.rapidWithin)) * 2) / 2
     cfg.variation := Max(1, Min(3, cfg.variation))
-    cfg.min := Max(1, Min(100, cfg.min))
-    cfg.max := Max(cfg.min, Min(100, cfg.max))
+    cfg.min := Round(Max(1, Min(100, cfg.min)) * 10) / 10
+    cfg.max := Round(Max(cfg.min, Min(100, cfg.max)) * 10) / 10
     cfg.hold := Max(1, Min(2, cfg.hold))
     cfg.mouseGate := cfg.mouseGate ? 1 : 0
     cfg.focusStop := cfg.focusStop ? 1 : 0
