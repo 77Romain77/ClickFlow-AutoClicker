@@ -256,12 +256,15 @@ CFRealFlush() {
     test := CF.realTest
     if !test.active || !test.run
         return
-    if !test.pending.Length && test.lastSent = test.sent
+    if !test.pending.Length && !test.pendingSent.Length && test.lastSent = test.sent
         return
     events := CFTestArrayJson(test.pending)
+    sentEvents := CFTestArrayJson(test.pendingSent)
     test.pending := []
+    test.pendingSent := []
     test.lastSent := test.sent
     CFRealPost("ticks", ',"ticks":' events
+        ',"sentTicks":' sentEvents
         ',"sent":' test.sent ',"received":' test.received)
     CFRealUpdateStatus()
 }
@@ -314,7 +317,8 @@ CFRealEnd(reason := "arrêté", completed := false) {
             ',"profile":' JsonQuote(test.profile)
             ',"sent":' test.sent
             ',"received":' test.received
-            ',"ticks":' CFTestArrayJson(test.clicks) '}')
+            ',"ticks":' CFTestArrayJson(test.clicks)
+            ',"sentTicks":' CFTestArrayJson(test.sentTicks) '}')
         CF.realResult := {run: test.run, json: resultJson}
         if !CF.shuttingDown
             CFTestPost(resultJson)
@@ -355,7 +359,9 @@ CFRealMouse(wParam, lParam, msg, hwnd) {
                 test.clicks.Push(offset)
                 test.pending.Push(offset)
                 test.received += 1
-                if CFNowMs()-test.lastFlush >= 55 || test.pending.Length >= 12 {
+                ; Réduire les échanges WebView2 : le récepteur natif
+                ; reste léger même pendant les tests continus à 100 CPS.
+                if CFNowMs()-test.lastFlush >= 120 || test.pending.Length >= 16 {
                     test.lastFlush := CFNowMs()
                     CFRealFlush()
                 }
@@ -423,7 +429,8 @@ CFRealOpen(duration, runId, profileId) {
         zoneHint:zoneHint, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
         started:0, endAt:0, nextAt:0,
-        sent:0, received:0, lastSent:0, clicks:[],pending:[],lastFlush:0,
+        sent:0, received:0, lastSent:0, clicks:[],pending:[],
+        sentTicks:[], pendingSent:[], lastFlush:0,
         anyMouse:0, lastMsg:0, lastHwnd:0, lastExtra:0}
     ; Seuls les clics injectés identifiés sont comptabilisés.
     for message in [0x201,0x202,0x203,0x204,0x205,0x206,0x207,0x208,0x209]
@@ -489,8 +496,13 @@ CFRealTick(now := "") {
         return
     }
     test.sent += 1
+    ; Horodatage indépendant à l'envoi (QPC). À comparer à l'instant
+    ; de traitement des messages WM_* dans CFRealMouse.
+    sentOffset := Max(0, CFNowMs()-test.started)
+    test.sentTicks.Push(sentOffset)
+    test.pendingSent.Push(sentOffset)
     test.nextAt := CFNextDeadline(test.nextAt, now, period)
-    if now-test.lastFlush >= 100 {
+    if now-test.lastFlush >= 160 {
         test.lastFlush := now
         CFRealFlush()
     }
