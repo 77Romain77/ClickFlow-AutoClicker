@@ -36,6 +36,7 @@ const context={
     config:()=>model.profiles.find(x=>x.id===model.selected).settings,
     $:get,send:(...args)=>commands.push(args),drawLiveMonitor:()=>{},
     setTimeout:()=>{},
+    rapidEstimateText:c=>({burst:'9.00 - 11.00 CPS',click:'8.55 - 11.55 CPS'}),
     document:{
         createElement:()=>element(),
         querySelectorAll:selector=>selector==='[data-compact-mode]'?buttons.filter(x=>x.kind==='mode')
@@ -78,6 +79,8 @@ assert.equal(model.profiles[0].settings.mode,'rapid');
 assert.equal(get('compactMinLabel').textContent,'CPS cible');
 assert.equal(get('compactMaxWrap').classList.contains('hidden'),true);
 assert.equal(get('compactRapid').classList.contains('hidden'),false);
+assert.equal(get('compactRapidBurstRange').textContent,'9.00 - 11.00 CPS');
+assert.equal(get('compactRapidClickRange').textContent,'8.55 - 11.55 CPS');
 buttons.find(x=>x.dataset.compactRapid==='precision').onclick();
 assert.equal(model.profiles[0].settings.rapidPreset,'precision');
 get('compactRapidRpmApply').onclick();
