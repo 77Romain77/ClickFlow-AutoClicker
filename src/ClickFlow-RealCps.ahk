@@ -309,12 +309,12 @@ CFRealEnd(reason := "arrêté", completed := false) {
     if completed {
         ; Mémoriser le message AVANT la fermeture de la GUI native.
         ; Si WebView2 perd cette notification, la commande status la renvoie.
-        resultJson := '{"type":"cpsReal","state":"finished","run":' test.run
+        resultJson := ('{"type":"cpsReal","state":"finished","run":' test.run
             ',"duration":' test.duration
             ',"profile":' JsonQuote(test.profile)
             ',"sent":' test.sent
             ',"received":' test.received
-            ',"ticks":' CFTestArrayJson(test.clicks) '}'
+            ',"ticks":' CFTestArrayJson(test.clicks) '}')
         CF.realResult := {run: test.run, json: resultJson}
         if !CF.shuttingDown
             CFTestPost(resultJson)
