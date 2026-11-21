@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.21 - 2026-11-21
+
+- Corrige l'absence de bouton actif lors du choix Précision, Équilibré, Souple ou Personnalisé dans Rapide naturel (attributs HTML data-rapid-preset et data-compact-rapid).
+- Restaure aussi la sélection active des boutons en vue compacte utilisant des attributs composés, avec aria-pressed mis à jour.
+- Ajoute les deux plages CPS recalculées immédiatement selon la cible et les variations : base par rafale et totale théorique par clic, dans les vues complète et compacte.
+- Borne les estimations à 1-100 CPS, comme le moteur, et avertit qu'elles ne tiennent pas compte de l'arrondi de timing Windows.
+- Tests UI automatiques pour la sélection des quatre niveaux et les plages CPS ; moteur et détection souris inchangés.
+
+
 ## 1.9.20 - 2026-11-21
 
 - Ajoute Rapide naturel, quatrième mode pour rafales courtes : CPS cible unique (précision 0,1), nouvelle cadence à chaque maintien, micro-variations par clic et aucune hésitation volontaire.
