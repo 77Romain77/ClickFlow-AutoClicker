@@ -119,7 +119,15 @@ try {
     CFEngineSetTimer(false)
     Sleep(80)
     if test.sent != 2 || test.received != 2
-        throw Error("Un nouvel appui ne reprend pas les clics du profil.")
+        throw Error("Un nouvel appui ne reprend pas les clics du profil :"
+            " sent=" test.sent ", received=" test.received
+            ", active=" test.active ", held=" test.held
+            ", pending=" test.pendingStart ", run=" test.run
+            ", focused=" (WinExist("A") = test.gui.Hwnd)
+            ", inside=" CFRealInside()
+            ", now=" CFNowMs() ", nextAt=" test.nextAt
+            ", endAt=" test.endAt
+            ", lastMsg=" test.lastMsg ", extra=" test.lastExtra)
 
     ; Le curseur hors du rectangle met fin au test sans nouvel envoi.
     MouseMove(NumGet(pt,0,"Int"),NumGet(pt,4,"Int")-120,0)
