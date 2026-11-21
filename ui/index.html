@@ -202,6 +202,12 @@ body.compact #intensityBlock .range-top{margin-top:14px!important}
 body.compact #intensitySeg{margin-top:7px}
 body.compact #intensitySeg button{flex:1;min-height:32px}
 body.compact #naturalIntensityHint{display:none}
+.rapid-custom{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.rapid-custom label{flex:1;min-width:135px;font-size:11px;color:#b7d0eb}
+.rapid-custom input{width:100%;margin-top:5px}.rapid-hint{margin-top:9px}
+#rapidBlock .mini-tab{flex-wrap:wrap}#rapidBlock .mini-tab button{min-width:88px;flex:1}
+#compactRapid .compact-segment{flex-wrap:wrap}#compactRapid .compact-segment button{flex:1 1 40%;min-width:90px}
+#compactRapid .rapid-custom label{min-width:80px}
+.quick-fields label.hidden{display:none!important}
 body.compact .seg button{min-height:35px;font-size:12px}
 body.compact .key-row{display:none}
 body.compact .card .emergency-row{margin-top:10px}
@@ -379,9 +385,10 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
      <button type="button" data-compact-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button>
      <button type="button" data-compact-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button>
      <button type="button" data-compact-mode="natural" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button>
+     <button type="button" data-compact-mode="rapid" data-mode-tip="Rafales courtes, cadence rapide et micro-variations sans hésitations." aria-label="Rapide naturel : rafales courtes et régulières.">Rapide naturel</button>
     </div>
     <div class="compact-numbers">
-     <label>CPS min<input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
+     <label><span id="compactMinLabel">CPS min</span><input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
      <label id="compactMaxWrap">CPS max<input id="compactMax" class="input" type="number" min="1" max="100" aria-label="CPS maximum compact"></label>
     </div>
     <div id="compactIntensity" class="compact-intensity">
@@ -390,6 +397,19 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
       <button type="button" data-compact-intensity="low">Faible</button>
       <button type="button" data-compact-intensity="medium">Moyenne</button>
       <button type="button" data-compact-intensity="high">Élevée</button>
+     </div>
+    </div>
+    <div id="compactRapid" class="compact-intensity hidden">
+     <span class="compact-caption">RAPIDE NATUREL - VARIATIONS</span>
+     <div id="compactRapidPresetSeg" class="compact-segment">
+      <button type="button" data-compact-rapid="precision">Précision</button>
+      <button type="button" data-compact-rapid="balanced">Équilibré</button>
+      <button type="button" data-compact-rapid="soft">Souple</button>
+      <button type="button" data-compact-rapid="custom">Personnalisé</button>
+     </div>
+     <div id="compactRapidCustom" class="rapid-custom hidden">
+      <label>Entre les rafales (%)<input id="compactRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
+      <label>Entre les clics (%)<input id="compactRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
      </div>
     </div>
    </section>
@@ -411,10 +431,18 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="card">
      <div class="card-head"><div><div class="card-title">Fréquence des clics</div><div class="card-description">Configurez votre cadence en quelques secondes.</div></div><span class="number">01 / CPS</span></div>
      <span class="label">Mode de fonctionnement</span>
-     <div class="seg" id="modeSeg"><button data-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button><button data-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button><button data-mode="natural" class="active" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button></div>
+     <div class="seg" id="modeSeg"><button data-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button><button data-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button><button data-mode="natural" class="active" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button><button data-mode="rapid" data-mode-tip="Cadence rapide dès le premier clic, variation par rafale et micro-variations sans hésitations." aria-label="Rapide naturel : rafales régulières et variations légères.">Rapide naturel</button></div>
      <div class="range-group"><div class="range-top"><b id="minLabel">CPS minimum</b><span class="subnote">1 à 100 CPS</span></div><div class="value-row"><input aria-label="CPS minimum" id="minRange" class="range" type="range" min="1" max="100" value="8"><input aria-label="Valeur minimum" id="minNumber" class="input number-input" type="number" min="1" max="100" value="8"></div></div>
      <div class="range-group" id="maxGroup"><div class="range-top"><b>CPS maximum</b><span class="subnote">Valeur supérieure ou égale au minimum</span></div><div class="value-row"><input aria-label="CPS maximum" id="maxRange" class="range" type="range" min="1" max="100" value="14"><input aria-label="Valeur maximum" id="maxNumber" class="input number-input" type="number" min="1" max="100" value="14"></div></div>
      <div id="intensityBlock"><div class="range-top" style="margin-top:20px"><b>Intensité des variations</b></div><div class="mini-tab" id="intensitySeg"><button data-intensity="low">Faible</button><button data-intensity="medium" class="active">Moyenne</button><button data-intensity="high">Élevée</button></div><p class="subnote" id="naturalIntensityHint" style="margin-top:10px"></p></div>
+     <div id="rapidBlock" class="hidden"><div class="range-top" style="margin-top:20px"><b>Variations de Rapide naturel</b></div>
+      <div class="mini-tab" id="rapidPresetSeg"><button data-rapid-preset="precision">Précision</button><button data-rapid-preset="balanced">Équilibré</button><button data-rapid-preset="soft">Souple</button><button data-rapid-preset="custom">Personnalisé</button></div>
+      <p class="subnote rapid-hint" id="rapidHint">Nouvelle cadence à chaque rafale. Aucune hésitation ni accélération artificielle.</p>
+      <div id="rapidCustom" class="rapid-custom hidden">
+       <label>Variation entre les rafales (%)<input id="rapidBetween" class="input" type="number" min="0" max="10" step="0.5" value="10"></label>
+       <label>Variation entre les clics (%)<input id="rapidWithin" class="input" type="number" min="0" max="5" step="0.5" value="5"></label>
+      </div>
+     </div>
      <div class="mutedline">La précision réelle dépend des minuteries de Windows et de l'application cible.</div>
     </div>
     <div class="card">
@@ -465,10 +493,13 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div id="cpsQuickSettings" class="quick-settings">
     <div class="quick-settings-title"><strong>Réglages rapides du profil</strong><span class="subnote">Modifications appliquées uniquement après validation</span></div>
     <div class="quick-fields">
-     <label>Mode<select id="cpsQuickMode" class="select"><option value="fixed">Fixe</option><option value="random">Aléatoire</option><option value="natural">Naturel</option></select></label>
-     <label>CPS min<input id="cpsQuickMin" class="input" type="number" min="1" max="100"></label>
-     <label>CPS max<input id="cpsQuickMax" class="input" type="number" min="1" max="100"></label>
-     <label>Intensité<select id="cpsQuickIntensity" class="select"><option value="low">Faible</option><option value="medium">Moyenne</option><option value="high">Élevée</option></select></label>
+     <label>Mode<select id="cpsQuickMode" class="select"><option value="fixed">Fixe</option><option value="random">Aléatoire</option><option value="natural">Naturel</option><option value="rapid">Rapide naturel</option></select></label>
+     <label id="cpsQuickMinWrap"><span id="cpsQuickMinLabel">CPS min</span><input id="cpsQuickMin" class="input" type="number" min="1" max="100"></label>
+     <label id="cpsQuickMaxWrap">CPS max<input id="cpsQuickMax" class="input" type="number" min="1" max="100"></label>
+     <label id="cpsQuickIntensityWrap">Intensité<select id="cpsQuickIntensity" class="select"><option value="low">Faible</option><option value="medium">Moyenne</option><option value="high">Élevée</option></select></label>
+     <label id="cpsQuickRapidPresetWrap" class="hidden">Variations<select id="cpsQuickRapidPreset" class="select"><option value="precision">Précision</option><option value="balanced">Équilibré</option><option value="soft">Souple</option><option value="custom">Personnalisé</option></select></label>
+     <label id="cpsQuickRapidBetweenWrap" class="hidden">Entre rafales (%)<input id="cpsQuickRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
+     <label id="cpsQuickRapidWithinWrap" class="hidden">Entre clics (%)<input id="cpsQuickRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
     </div>
     <div class="quick-actions"><span id="cpsQuickNotice">Réglages du profil enregistré</span><button id="cpsQuickRevert" class="btn sm quiet" type="button">Annuler</button><button id="cpsQuickApply" class="btn sm primary" type="button">Appliquer au profil</button></div>
    </div>
