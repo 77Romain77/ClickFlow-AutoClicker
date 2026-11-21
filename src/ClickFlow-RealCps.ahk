@@ -118,13 +118,13 @@ CFRealEnd(reason := "arrêté", completed := false) {
     } else {
         CFRealPost("stopped", ',"reason":' JsonQuote(reason) '}')
     }
-    gui := test.gui
+    windowGui := test.gui
     test.run := 0
     test.gui := 0
     test.zone := 0
     for message in [0x201,0x202,0x204,0x205,0x207,0x208]
         try OnMessage(message, CFRealMouse, 0)
-    try gui.Destroy()
+    try windowGui.Destroy()
 }
 
 CFRealClose(*) {
@@ -206,32 +206,32 @@ CFRealOpen(duration, runId, profileId) {
         && HasValue(["LButton","RButton","MButton"], cfg.gateButton)
         ? cfg.gateButton : "LButton"
     ; Au lieu du raccourci global du profil, l'appui est limité à la zone.
-    gui := Gui("+MinSize540x415", "ClickFlow - Réception réelle des clics")
-    gui.BackColor := "162640"
-    gui.SetFont("s11 cF3F7FF", "Segoe UI")
-    gui.AddText("x22 y15 w495 h32 Center", "Test réel : " profile.name)
-    gui.SetFont("s9 cB8D1F0")
-    gui.AddText("x22 y47 w495 h48 Center",
+    windowGui := Gui("+MinSize540x415", "ClickFlow - Réception réelle des clics")
+    windowGui.BackColor := "162640"
+    windowGui.SetFont("s11 cF3F7FF", "Segoe UI")
+    windowGui.AddText("x22 y15 w495 h32 Center", "Test réel : " profile.name)
+    windowGui.SetFont("s9 cB8D1F0")
+    windowGui.AddText("x22 y47 w495 h48 Center",
         "Appuie et maintiens " (trigger = "LButton" ? "le clic gauche"
             : trigger = "RButton" ? "le clic droit" : "le clic milieu")
         " dans la zone. Seuls les clics du profil reçus ici sont comptés.")
-    zone := gui.AddText("x24 y112 w492 h185 Border Center 0x100 Background213B60",
+    zone := windowGui.AddText("x24 y112 w492 h185 Border Center 0x100 Background213B60",
         "ZONE DE RÉCEPTION WINDOWS" "`n"
         "Garde le curseur dans ce rectangle pendant le maintien.")
-    status := gui.AddText("x22 y311 w495 h45 Center", "Prêt : attends ton premier appui physique.")
-    close := gui.AddButton("x195 y365 w150 h33", "Fermer / arrêter")
+    status := windowGui.AddText("x22 y311 w495 h45 Center", "Prêt : attends ton premier appui physique.")
+    close := windowGui.AddButton("x195 y365 w150 h33", "Fermer / arrêter")
     close.OnEvent("Click", CFRealClose)
-    gui.OnEvent("Close", CFRealClose)
-    gui.OnEvent("Escape", CFRealClose)
+    windowGui.OnEvent("Close", CFRealClose)
+    windowGui.OnEvent("Escape", CFRealClose)
     CF.realTest := {run: runId+0, active:false, held:false,
-        gui:gui, zone:zone, status:status, cfg:cfg, profile:profile.name,
+        gui:windowGui, zone:zone, status:status, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
         started:0, endAt:0, nextAt:0,
         sent:0, received:0, lastSent:0, clicks:[],pending:[],lastFlush:0}
     ; Les handlers sont filtrés par hwnd : pas d'effet hors de la fenêtre.
     for message in [0x201,0x202,0x204,0x205,0x207,0x208]
         OnMessage(message, CFRealMouse)
-    gui.Show("w540 h415")
+    windowGui.Show("w540 h415")
     CFRealPost("opened", ',"profile":' JsonQuote(profile.name)
         ',"trigger":' JsonQuote(trigger)
         ',"button":' JsonQuote(cfg.clickButton))
