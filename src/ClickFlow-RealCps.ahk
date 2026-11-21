@@ -65,7 +65,7 @@ CFRealPointInside(x, y) {
     if !test.run || !IsObject(test.zone)
         return false
     bounds := Buffer(16, 0)
-    if !DllCall("User32\\GetWindowRect", "Ptr", test.zone.Hwnd,
+    if !DllCall("User32\GetWindowRect", "Ptr", test.zone.Hwnd,
         "Ptr", bounds.Ptr, "Int")
         return false
     return x >= NumGet(bounds, 0, "Int")
@@ -76,7 +76,7 @@ CFRealPointInside(x, y) {
 
 CFRealInside() {
     point := Buffer(8, 0)
-    if !DllCall("User32\\GetCursorPos", "Ptr", point.Ptr, "Int")
+    if !DllCall("User32\GetCursorPos", "Ptr", point.Ptr, "Int")
         return false
     return CFRealPointInside(NumGet(point, 0, "Int"),
         NumGet(point, 4, "Int"))
@@ -103,7 +103,7 @@ CFRealHookCallback(nCode, wParam, lParam) {
             }
         }
     }
-    return DllCall("User32\\CallNextHookEx", "Ptr", 0, "Int", nCode,
+    return DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode,
         "UPtr", wParam, "Ptr", lParam, "Ptr")
 }
 
@@ -217,17 +217,17 @@ CFRealWindowTheme(windowGui, closeButton) {
     ; automatique sur la barre Windows standard si DWM ne le permet pas.
     dark := Buffer(4, 0)
     NumPut("Int", 1, dark, 0)
-    try DllCall("Dwmapi\\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
+    try DllCall("Dwmapi\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
         "UInt", 20, "Ptr", dark.Ptr, "UInt", 4, "Int")
     caption := Buffer(4, 0)
     NumPut("UInt", 0x241B12, caption, 0)
-    try DllCall("Dwmapi\\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
+    try DllCall("Dwmapi\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
         "UInt", 35, "Ptr", caption.Ptr, "UInt", 4, "Int")
     textColor := Buffer(4, 0)
     NumPut("UInt", 0xF7F7F7, textColor, 0)
-    try DllCall("Dwmapi\\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
+    try DllCall("Dwmapi\DwmSetWindowAttribute", "Ptr", windowGui.Hwnd,
         "UInt", 36, "Ptr", textColor.Ptr, "UInt", 4, "Int")
-    try DllCall("UxTheme\\SetWindowTheme", "Ptr", closeButton.Hwnd,
+    try DllCall("UxTheme\SetWindowTheme", "Ptr", closeButton.Hwnd,
         "WStr", "DarkMode_Explorer", "Ptr", 0, "Int")
 }
 
@@ -267,7 +267,7 @@ CFRealEnd(reason := "arrêté", completed := false) {
     try SetTimer(CFRealReleasePending, 0)
     try SetTimer(CFRealUpdateStatus, 0)
     if test.hook
-        DllCall("User32\\UnhookWindowsHookEx", "Ptr", test.hook, "Int")
+        DllCall("User32\UnhookWindowsHookEx", "Ptr", test.hook, "Int")
     if test.callback
         CallbackFree(test.callback)
     test.hook := 0
@@ -393,8 +393,8 @@ CFRealOpen(duration, runId, profileId) {
     CFRealWindowTheme(windowGui, close)
     test := CF.realTest
     test.callback := CallbackCreate(CFRealHookCallback, "Fast", 3)
-    module := DllCall("Kernel32\\GetModuleHandleW", "Ptr", 0, "Ptr")
-    test.hook := DllCall("User32\\SetWindowsHookExW",
+    module := DllCall("Kernel32\GetModuleHandleW", "Ptr", 0, "Ptr")
+    test.hook := DllCall("User32\SetWindowsHookExW",
         "Int", 14, "Ptr", test.callback, "Ptr", module,
         "UInt", 0, "Ptr")
     if !test.hook {
