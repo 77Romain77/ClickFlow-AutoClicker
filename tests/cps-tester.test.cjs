@@ -75,7 +75,7 @@ const ctx={
     Math,Number,String,Array,console
 };
 vm.runInNewContext(rapidHelpers+'\n'+script+
-    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage,cpsQuickLoad,cpsIntervalStats};',
+    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage,cpsHandleRealMessage,cpsQuickLoad,cpsIntervalStats};',
     ctx,{timeout:3000,filename:'ui/index.html CPS test'});
 const api=ctx.exports,st=api.cpsTest;
 const quickMode=get('cpsQuickMode');
@@ -216,4 +216,49 @@ assert.equal(api.cpsIntervalStats([15]).intervals.length,0);
 assert.equal(api.cpsIntervalStats([0,10,30,60],2).intervals.length,2);
 assert(html.includes('id="cpsIntervalsChart"')&&html.includes('id="cpsIntervalsSummary"'),
     'Click timeline and interval summary must be present in CPS tab');
-console.log('CPS profile scheduling, interval chart, fractional period summary, manual mode and stale message tests passed.');
+// Reception reelle : bouton distinct, profil sélectionné et messages natifs.
+api.cpsSetSource('real');
+assert.equal(st.source,'real');
+assert.equal(get('cpsClickArea').disabled,true,'Native receiver must not use WebView2 hit area');
+assert.equal(get('cpsProfileControls').hidden,false);
+assert.equal(get('cpsQuickSettings').hidden,false);
+assert.equal(get('cpsStartReal').classList.contains('hidden'),false);
+get('cpsStartReal').onclick();
+assert.equal(st.phase,'pending');
+const realStart=sent.at(-1);
+assert.equal(realStart[0],'cpsReal');
+assert.equal(realStart[1],'open');
+const realRun=realStart[3];
+api.cpsHandleRealMessage({state:'opened',run:realRun,profile:'Gaming',trigger:'LButton'});
+assert.equal(st.phase,'pending','Native test starts only on a physical button-down');
+time=8100;
+api.cpsHandleRealMessage({state:'started',run:realRun,profile:'Gaming'});
+assert.equal(st.phase,'running');
+api.cpsHandleRealMessage({state:'ticks',run:realRun,sent:6,received:4,ticks:[0,20,40,60]});
+assert.equal(st.clicks.length,4,'Only received Windows messages should contribute to CPS');
+assert.equal(st.sent,6,'Sent clicks must be tracked separately from received');
+assert.equal(get('cpsRealSent').textContent,'6');
+assert.equal(get('cpsClicks').textContent,'4');
+assert.equal(api.cpsIntervalStats(st.clicks).average,20);
+api.cpsHandleRealMessage({state:'ticks',run:realRun-1,sent:999,received:999,ticks:[70]});
+assert.equal(st.sent,6,'Messages from an old real test must be ignored');
+time=10200;
+api.cpsHandleRealMessage({state:'finished',run:realRun,duration:2,
+    profile:'Gaming',sent:6,received:4,ticks:[0,20,40,60]});
+assert.equal(st.phase,'done');
+assert.equal(st.last.sent,6);
+assert.equal(st.last.clicks,4);
+assert.equal(st.last.source,'real');
+assert(get('cpsLast').textContent.includes('6 envoyés / 4 reçus'));
+assert(get('cpsPrecision').textContent.includes('fenêtre native'));
+get('cpsReset').onclick();
+assert.equal(st.phase,'ready');
+get('cpsStartReal').onclick();
+const abandonedRun=sent.at(-1)[3];
+get('cpsReset').onclick();
+assert.equal(sent.at(-1)[0],'cpsReal');
+assert.equal(sent.at(-1)[1],'stop');
+api.cpsHandleRealMessage({state:'finished',run:abandonedRun,duration:2,
+    profile:'Gaming',sent:100,received:100,ticks:[0]});
+assert.equal(st.phase,'ready','A cancelled native test cannot revive from late messages');
+console.log('CPS simulation, manual clicking and native sent/received Windows test passed.');
