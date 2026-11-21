@@ -1502,8 +1502,8 @@ $('uninstallAll').onclick=()=>{
     else toast('La désinstallation nécessite la version Windows.');
 };
 
-// Test CPS : simulation, clic manuel ou réception Windows native.
-// Les résultats restent exclusivement en mémoire.
+// Test CPS : profil ClickFlow ou souris manuelle, résultats en mémoire seulement.
+// La troisième source utilise une fenêtre native Windows pour la réception réelle.
 const cpsTest = {
     seconds:5, source:'profile', phase:'ready', startedAt:0,
     clicks:[], samples:[], peak:0, timer:0, last:null, run:0,
