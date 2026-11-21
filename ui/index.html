@@ -407,6 +407,10 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
       <button type="button" data-compact-rapid="soft">Souple</button>
       <button type="button" data-compact-rapid="custom">Personnalisé</button>
      </div>
+     <div class="rapid-custom">
+      <label>RPM arme (facultatif)<input id="compactRapidRpm" class="input" type="number" min="60" max="6000" step="1" placeholder="Ex. 750"></label>
+      <button id="compactRapidRpmApply" class="btn quiet" type="button">Calculer CPS</button>
+     </div>
      <div id="compactRapidCustom" class="rapid-custom hidden">
       <label>Entre les rafales (%)<input id="compactRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
       <label>Entre les clics (%)<input id="compactRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
@@ -438,6 +442,11 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
      <div id="rapidBlock" class="hidden"><div class="range-top" style="margin-top:20px"><b>Variations de Rapide naturel</b></div>
       <div class="mini-tab" id="rapidPresetSeg"><button data-rapid-preset="precision">Précision</button><button data-rapid-preset="balanced">Équilibré</button><button data-rapid-preset="soft">Souple</button><button data-rapid-preset="custom">Personnalisé</button></div>
       <p class="subnote rapid-hint" id="rapidHint">Nouvelle cadence à chaque rafale. Aucune hésitation ni accélération artificielle.</p>
+      <div class="rapid-custom">
+       <label>RPM de l'arme (facultatif)<input id="rapidRpm" class="input" type="number" min="60" max="6000" step="1" placeholder="Ex. 750"></label>
+       <button id="rapidRpmApply" class="btn quiet" type="button">Calculer le CPS</button>
+      </div>
+      <p class="subnote">Conversion théorique : RPM / 60 = CPS. Le jeu peut ignorer certains clics envoyés trop tôt.</p>
       <div id="rapidCustom" class="rapid-custom hidden">
        <label>Variation entre les rafales (%)<input id="rapidBetween" class="input" type="number" min="0" max="10" step="0.5" value="10"></label>
        <label>Variation entre les clics (%)<input id="rapidWithin" class="input" type="number" min="0" max="5" step="0.5" value="5"></label>
@@ -500,6 +509,8 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
      <label id="cpsQuickRapidPresetWrap" class="hidden">Variations<select id="cpsQuickRapidPreset" class="select"><option value="precision">Précision</option><option value="balanced">Équilibré</option><option value="soft">Souple</option><option value="custom">Personnalisé</option></select></label>
      <label id="cpsQuickRapidBetweenWrap" class="hidden">Entre rafales (%)<input id="cpsQuickRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
      <label id="cpsQuickRapidWithinWrap" class="hidden">Entre clics (%)<input id="cpsQuickRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
+     <label id="cpsQuickRapidRpmWrap" class="hidden">RPM arme (facultatif)<input id="cpsQuickRapidRpm" class="input" type="number" min="60" max="6000" step="1" placeholder="Ex. 750"></label>
+     <button id="cpsQuickRapidRpmApply" class="btn quiet hidden" type="button">Calculer CPS depuis RPM</button>
     </div>
     <div class="quick-actions"><span id="cpsQuickNotice">Réglages du profil enregistré</span><button id="cpsQuickRevert" class="btn sm quiet" type="button">Annuler</button><button id="cpsQuickApply" class="btn sm primary" type="button">Appliquer au profil</button></div>
    </div>
@@ -643,10 +654,25 @@ function clamp(v) {return Math.max(1,Math.min(100,Math.round(Number(v)||1)));}
 const rapidPresets={precision:[2,1],balanced:[4,2],soft:[6,3],custom:null};
 const rapidPercents=c=>rapidPresets[c.rapidPreset]||[Number(c.rapidBetween??10),Number(c.rapidWithin??5)];
 const rapidClamp=(v,max)=>Math.max(0,Math.min(max,Math.round(Number(v)*2)/2||0));
+const rapidTargetClamp=v=>Math.max(1,Math.min(100,Math.round((Number(v)||1)*10)/10));
+const rpmToCps=rpm=>Math.round((rpm/60)*10)/10;
+const rpmIsValid=rpm=>Number.isInteger(rpm)&&rpm>=60&&rpm<=6000;
 function rapidChange(field,value) {
     const c=config();
-    c[field]=field==='rapidTarget'?clamp(value):rapidClamp(value,field==='rapidBetween'?10:5);
+    c[field]=field==='rapidTarget'?rapidTargetClamp(value):rapidClamp(value,field==='rapidBetween'?10:5);
+    if(field==='rapidTarget')c.rapidRpm=0;
     render();send('set',field,c[field]);
+}
+function rapidApplyRpm(source) {
+    const input=$(source==='compact'?'compactRapidRpm':'rapidRpm');
+    const rpm=Number(input.value);
+    if(!rpmIsValid(rpm)){toast('Indique une cadence comprise entre 60 et 6000 RPM.');return;}
+    const c=config();
+    c.rapidRpm=rpm;
+    c.rapidTarget=rpmToCps(rpm);
+    render();
+    send('set','rapidRpm',rpm);
+    toast(rpm+' RPM = '+c.rapidTarget+' CPS théoriques.');
 }
 function rapidPresetChange(value) {
     if(!Object.hasOwn(rapidPresets,value))return;
@@ -655,6 +681,9 @@ function rapidPresetChange(value) {
 function updateRanges() {
     const c=config();
     const rapid=c.mode==='rapid';
+    $('minRange').step=$('minNumber').step=rapid?'0.1':'1';
+    $('minRange').setAttribute('aria-label',rapid?'CPS cible':'CPS minimum');
+    $('minNumber').setAttribute('aria-label',rapid?'CPS cible':'CPS minimum');
     $('minRange').value=$('minNumber').value=rapid?(c.rapidTarget??10):c.min;
     $('maxRange').value=$('maxNumber').value=c.max;
     $('maxGroup').classList.toggle('hidden',c.mode==='fixed'||rapid);
@@ -663,6 +692,7 @@ function updateRanges() {
     $('rapidBlock').classList.toggle('hidden',!rapid);
     selectedButtons('rapidPresetSeg','rapidPreset',c.rapidPreset||'custom');
     $('rapidCustom').classList.toggle('hidden',!rapid||c.rapidPreset!=='custom');
+    $('rapidRpm').value=c.rapidRpm||'';
     $('rapidBetween').value=c.rapidBetween??10;
     $('rapidWithin').value=c.rapidWithin??5;
     const v=rapidPercents(c);
@@ -708,9 +738,11 @@ function renderCompactPanel() {
     selectedButtons('compactRapidPresetSeg','compactRapid',c.rapidPreset||'custom');
     $('compactRapid').classList.toggle('hidden',c.mode!=='rapid');
     $('compactRapidCustom').classList.toggle('hidden',c.mode!=='rapid'||c.rapidPreset!=='custom');
+    $('compactRapidRpm').value=c.rapidRpm||'';
     $('compactRapidBetween').value=c.rapidBetween??10;
     $('compactRapidWithin').value=c.rapidWithin??5;
     $('compactMinLabel').textContent=c.mode==='rapid'?'CPS cible':c.mode==='fixed'?'CPS fixe':'CPS min';
+    $('compactMin').step=c.mode==='rapid'?'0.1':'1';
     $('compactMin').value=c.mode==='rapid'?(c.rapidTarget??10):c.min;
     $('compactMax').value=c.max;
     $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed'||c.mode==='rapid');
@@ -744,6 +776,7 @@ document.querySelectorAll('[data-compact-rapid]').forEach(btn=>{
 for(const field of ['Between','Within']) {
     $('compactRapid'+field).onchange=e=>rapidChange('rapid'+field,e.target.value);
 }
+$('compactRapidRpmApply').onclick=()=>rapidApplyRpm('compact');
 for(const field of ['min','max']){
     $('compact'+field[0].toUpperCase()+field.slice(1)).onchange=e=>{
         changeCps(field,e.target.value);
@@ -784,7 +817,8 @@ function renderProfiles() {
             +' - '+(p.settings.mode==='rapid'?(p.settings.rapidTarget??10):p.settings.min)
             +(p.settings.mode==='fixed'||p.settings.mode==='rapid'?'':' à '+p.settings.max)+' CPS'
             +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'')
-            +(p.settings.mode==='rapid'?' - '+({precision:'Précision',balanced:'Équilibré',soft:'Souple',custom:'Personnalisé'})[p.settings.rapidPreset||'custom']:'');
+            +(p.settings.mode==='rapid'?' - '+({precision:'Précision',balanced:'Équilibré',soft:'Souple',custom:'Personnalisé'})[p.settings.rapidPreset||'custom']:'')
+            +(p.settings.mode==='rapid'&&p.settings.rapidRpm?' - '+p.settings.rapidRpm+' RPM':'');
         const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
         shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');
         const actions=document.createElement('div');actions.className='profile-card-actions';
@@ -936,6 +970,7 @@ document.querySelectorAll('[data-intensity]').forEach(b=>b.onclick=()=>{
 document.querySelectorAll('[data-rapid-preset]').forEach(b=>b.onclick=()=>rapidPresetChange(b.dataset.rapidPreset));
 for(const field of ['Between','Within'])
     $('rapid'+field).onchange=e=>rapidChange('rapid'+field,e.target.value);
+$('rapidRpmApply').onclick=()=>rapidApplyRpm('full');
 document.querySelectorAll('[data-activation]').forEach(b=>b.onclick=()=>{
     config().activation=b.dataset.activation;
     render();send('set','activation',b.dataset.activation);
