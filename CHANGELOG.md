@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 1.9.26 - 2026-11-21
+
+- Ajoute une troisième source **Réception réelle** dans Test CPS : une fenêtre native Windows reçoit réellement les clics SendInput générés à partir d'un profil sélectionné.
+- Marque les événements d'injection du test avec MOUSEINPUT.dwExtraInfo et compte uniquement les messages Windows reçus dans la zone de test ; les clics physiques de déclenchement ne sont pas comptés.
+- Affiche côte à côte le nombre de clics envoyés et reçus, la cadence effectivement reçue et les intervalles entre messages reçus dans les graphiques existants.
+- Réutilise le cadenceur haute précision, les variations du profil et le déclenchement par bouton conditionnel, avec le clic gauche comme bouton par défaut.
+- Empêche les envois hors du focus et hors de la zone contrôlée ; ferme le test au changement de fenêtre, à la sortie de zone, à l'arrêt d'urgence ou à la fin du temps.
+- Ajoute une régression native Windows avec véritable SendInput marqué, vérification du message reçu et des protections de zone, et un test JavaScript de l'intégration au Test CPS.
+- Le test mesure la réception Windows dans ClickFlow, pas les événements reçus par un jeu. Aucun score enregistré, pas de changement au moteur général.
+
+
 ## 1.9.25 - 2026-11-21
 
 - Corrige la dérive cumulative de la cadence : échéances ancrées à la chronologie prévue plutôt que recalculées depuis chaque réveil Windows légèrement en retard.

@@ -377,7 +377,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.25 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.26 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -525,8 +525,9 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
   <div class="hero"><div><h2>Teste ta vitesse de clic.</h2><p>Teste tes profils et tes clics manuels, sans historique enregistré.</p></div></div>
   <div class="card cps-card">
    <div class="card-head"><div><div class="card-title">Test de clics par seconde</div><div class="card-description">Teste les CPS générés par tes profils ou ta vitesse de clic manuelle.</div></div><span class="number">TEST / CPS</span></div>
-   <div class="cps-source-row"><span class="label" style="margin:0">Mode de test</span><div class="cps-durations"><button id="cpsSourceProfile" class="btn sm primary" type="button">Profil ClickFlow</button><button id="cpsSourceManual" class="btn sm" type="button">Clics manuels</button></div></div>
-   <div id="cpsProfileControls" class="cps-profile-controls"><label for="cpsProfileSelect" class="label" style="margin:0">Profil à tester</label><select id="cpsProfileSelect" class="select" aria-label="Profil à tester"></select><button id="cpsStartProfile" class="btn primary" type="button">Démarrer le test</button></div>
+   <div class="cps-source-row"><span class="label" style="margin:0">Mode de test</span><div class="cps-durations"><button id="cpsSourceProfile" class="btn sm primary" type="button">Profil ClickFlow</button><button id="cpsSourceManual" class="btn sm" type="button">Clics manuels</button><button id="cpsSourceReal" class="btn sm" type="button">Réception réelle</button></div></div>
+   <div id="cpsProfileControls" class="cps-profile-controls"><label for="cpsProfileSelect" class="label" style="margin:0">Profil à tester</label><select id="cpsProfileSelect" class="select" aria-label="Profil à tester"></select><button id="cpsStartProfile" class="btn primary" type="button">Démarrer le test</button><button id="cpsStartReal" class="btn primary hidden" type="button">Ouvrir le test réel</button></div>
+   <div id="cpsRealInfo" class="subnote hidden" style="margin-top:8px">Une fenêtre Windows dédiée reçoit les clics du profil. Maintiens le bouton de souris dans sa zone de test. Aucun envoi n'est autorisé lorsque la fenêtre n'est pas active ou que le curseur sort de la zone. Test réservé à ClickFlow.</div>
    <div id="cpsQuickSettings" class="quick-settings">
     <div class="quick-settings-title"><strong>Réglages rapides du profil</strong><span class="subnote">Modifications appliquées uniquement après validation</span></div>
     <div class="quick-fields">
@@ -557,7 +558,8 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
      <div class="cps-metric"><small>CPS actuels <span class="cps-help" title="Clics effectués au cours des 1 000 dernières millisecondes.">ⓘ</span></small><strong id="cpsInstant">0.0</strong></div>
      <div class="cps-metric"><small>CPS moyens</small><strong id="cpsAverage">0.0</strong></div>
      <div class="cps-metric"><small>Pic sur 1 s</small><strong id="cpsPeak">0</strong></div>
-     <div class="cps-metric"><small>Nombre de clics</small><strong id="cpsClicks">0</strong></div>
+     <div class="cps-metric"><small>Nombre de clics reçus / simulés</small><strong id="cpsClicks">0</strong></div>
+     <div id="cpsRealSentMetric" class="cps-metric hidden"><small>Clics envoyés dans la zone native</small><strong id="cpsRealSent">0</strong></div>
      
     </div>
    </div>
@@ -1128,7 +1130,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.25 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.26 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1501,10 +1503,11 @@ $('uninstallAll').onclick=()=>{
 };
 
 // Test CPS : profil ClickFlow ou souris manuelle, résultats en mémoire seulement.
+// La troisième source utilise une fenêtre native Windows pour la réception réelle.
 const cpsTest = {
     seconds:5, source:'profile', phase:'ready', startedAt:0,
     clicks:[], samples:[], peak:0, timer:0, last:null, run:0,
-    profileName:'', lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
+    profileName:'', sent:0, lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
 };
 const cpsDurations=[2,5,10,30,60];
 // Édition non destructive : les modifications restent un brouillon jusqu'à Appliquer.
@@ -1568,7 +1571,7 @@ function cpsQuickRender(loadInputs=false) {
     $('cpsQuickRapidRpmApply').classList.toggle('hidden',d.mode!=='rapid');
     const blocked=cpsTest.phase==='running'||cpsTest.phase==='pending';
     const dirty=cpsQuickDirty(),valid=cpsQuickValid();
-    $('cpsQuickSettings').hidden=cpsTest.source!=='profile';
+    $('cpsQuickSettings').hidden=cpsTest.source==='manual';
     for(const field of ['Mode','Min','Max','Intensity'])
         $('cpsQuick'+field).disabled=blocked||(field==='Intensity'&&d.mode!=='natural')
             ||(field==='Max'&&(d.mode==='fixed'||d.mode==='rapid'));
@@ -1579,6 +1582,7 @@ function cpsQuickRender(loadInputs=false) {
     $('cpsQuickApply').disabled=blocked||!dirty||!valid;
     $('cpsQuickRevert').disabled=blocked||!dirty;
     $('cpsStartProfile').disabled=blocked||dirty||cpsTest.source!=='profile';
+    $('cpsStartReal').disabled=blocked||dirty||cpsTest.source!=='real';
     $('cpsQuickNotice').textContent=!valid?(d.mode==='rapid'?'Réglages invalides : utilise Calculer CPS après la saisie d\'un RPM, ou vérifie les limites.':'CPS invalides : valeurs de 1 à 100 au dixième, avec maximum >= minimum.')
         :dirty?'Modifications non appliquées - valide pour tester ce profil.'
         :'Réglages du profil enregistré';
@@ -1700,13 +1704,15 @@ function cpsStopTimer() {
     if(cpsTest.timer){clearInterval(cpsTest.timer);cpsTest.timer=0;}
 }
 function cpsResetTest() {
-    if(cpsTest.source==='profile' && (cpsTest.phase==='pending'||cpsTest.phase==='running')
-        && connected)send('cpsTest','stop');
+    if((cpsTest.phase==='pending'||cpsTest.phase==='running')&&connected){
+        if(cpsTest.source==='profile')send('cpsTest','stop');
+        if(cpsTest.source==='real')send('cpsReal','stop');
+    }
     cpsTest.run++;
     cpsStopTimer();
     cpsTest.phase='ready';cpsTest.startedAt=0;
     cpsTest.clicks=[];cpsTest.samples=[];cpsTest.peak=0;
-    cpsTest.profileName='';
+    cpsTest.profileName='';cpsTest.sent=0;
     cpsRender(cpsNow());
 }
 function cpsFinish(now) {
@@ -1715,15 +1721,16 @@ function cpsFinish(now) {
     cpsSample(end,true);
     cpsTest.phase='done';cpsStopTimer();
     const testedProfile=model.profiles.find(p=>p.id===Number($('cpsProfileSelect').value));
-    const target=cpsTest.source==='profile'&&testedProfile&&testedProfile.settings.mode==='fixed'
+    const target=(cpsTest.source==='profile'||cpsTest.source==='real')
+        &&testedProfile&&testedProfile.settings.mode==='fixed'
         ?Number(testedProfile.settings.min):null;
     const n=cpsTest.clicks.length;
     const meanInterval=n>1?(cpsTest.clicks[n-1]-cpsTest.clicks[0])/(n-1):null;
     cpsTest.last={
         seconds:cpsTest.seconds,clicks:n,
         average:n/cpsTest.seconds,peak:cpsTest.peak,
-        source:cpsTest.source,target,meanInterval,
-        profile:cpsTest.source==='profile'?cpsTest.profileName:'Clics manuels'
+        source:cpsTest.source,target,meanInterval,sent:cpsTest.sent,
+        profile:cpsTest.source==='manual'?'Clics manuels':cpsTest.profileName
     };
     cpsLastRender();
     cpsRender(end);
@@ -1763,6 +1770,19 @@ function cpsStartProfile() {
     send('cpsTest','start',cpsTest.seconds,run,profile.id);
 }
 $('cpsStartProfile').onclick=cpsStartProfile;
+function cpsStartReal() {
+    if(cpsTest.source!=='real'||cpsTest.phase==='running'||cpsTest.phase==='pending')return;
+    if(!connected){toast('Le test réel est disponible dans ClickFlow sous Windows.');return;}
+    const profileId=Number($('cpsProfileSelect').value);
+    const profile=model.profiles.find(p=>p.id===profileId);
+    if(!profile){toast('Sélectionne un profil valide.');return;}
+    if(cpsQuickDirty()){toast('Applique ou annule tes réglages avant le test.');return;}
+    cpsResetTest();
+    cpsTest.phase='pending';cpsTest.profileName=profile.name;
+    cpsRender(cpsNow());
+    send('cpsReal','open',cpsTest.seconds,cpsTest.run,profileId);
+}
+$('cpsStartReal').onclick=cpsStartReal;
 $('cpsClickArea').addEventListener('pointerdown',event=>{
     if(cpsTest.source!=='manual'||cpsTest.phase==='done'
        ||event.pointerType!=='mouse'||event.button!==0||event.isPrimary===false)return;
@@ -1845,20 +1865,61 @@ function cpsHandleEngineMessage(msg) {
         toast(msg.message||'Impossible de lancer ce test.');
     }
 }
+function cpsHandleRealMessage(msg) {
+    if(cpsTest.source!=='real'||Number(msg.run)!==cpsTest.run)return;
+    if(msg.state==='opened') {
+        if(cpsTest.phase!=='pending')return;
+        cpsTest.profileName=msg.profile||cpsTest.profileName;
+        $('cpsRealInfo').textContent='Fenêtre native ouverte. Maintiens '
+            +(msg.trigger==='RButton'?'le clic droit':msg.trigger==='MButton'?'le clic milieu':'le clic gauche')
+            +' dans la zone dédiée pour commencer. Les clics injectés ne sont comptés qu\'après réception dans la fenêtre.';
+        return;
+    }
+    if(msg.state==='started') {
+        if(cpsTest.phase!=='pending')return;
+        cpsTest.profileName=msg.profile||cpsTest.profileName;
+        cpsStart(cpsNow());cpsRender(cpsNow());return;
+    }
+    if(msg.state==='ticks') {
+        if(cpsTest.phase!=='running')return;
+        cpsTest.sent=Number(msg.sent)||0;
+        cpsReceiveEngineTicks(msg.ticks);return;
+    }
+    if(msg.state==='finished') {
+        if(cpsTest.phase!=='running')return;
+        cpsTest.sent=Number(msg.sent)||0;
+        if(Array.isArray(msg.ticks)) {
+            cpsTest.clicks=msg.ticks.filter(x=>Number.isFinite(x)
+                &&x>=0&&x<cpsTest.seconds*1000).map(x=>cpsTest.startedAt+x);
+            cpsRebuildFinalSamples();
+        }
+        cpsFinish(cpsNow());return;
+    }
+    if(msg.state==='stopped' || msg.state==='error') {
+        if(cpsTest.phase==='pending'||cpsTest.phase==='running')
+            cpsResetTest();
+        if(msg.state==='error')toast(msg.message||'Impossible de lancer le test réel.');
+        else if(msg.reason && !String(msg.reason).includes('annulé'))
+            toast(msg.reason);
+    }
+}
 function cpsLastRender() {
     const last=cpsTest.last;
     $('cpsLast').textContent=last
         ? last.profile+' · '+last.seconds+' s · '+last.clicks+' clics · '
             +last.average.toFixed(1)+' CPS moyens · pic '+last.peak+' CPS'
+            +(last.source==='real'?' · '+last.sent+' envoyés / '+last.clicks+' reçus':'')
         : 'Aucun résultat pour le moment.';
     if(!last) {
         $('cpsPrecision').textContent='Aucune mesure de précision.';
-    } else if(last.source==='profile') {
+    } else if(last.source==='profile'||last.source==='real') {
         const period=Number.isFinite(last.meanInterval)?last.meanInterval.toFixed(1)+' ms':'indisponible';
         const fixed=Number.isFinite(last.target)&&last.target>0;
         const delta=fixed?((last.average/last.target-1)*100).toFixed(1)+' %':'non applicable';
         $('cpsPrecision').textContent=(fixed?'Cible : '+last.target+' CPS · Écart : '+delta+' · ':'')
-            +'Intervalle moyen mesuré : '+period+' (sans clics Windows).';
+            +'Intervalle moyen mesuré : '+period
+            +(last.source==='real'?' (événements reçus dans la fenêtre native).'
+                :' (sans clics Windows).');
     } else {
         $('cpsPrecision').textContent='Mesure de clics manuels : pas de cible CPS.';
     }
@@ -1990,7 +2051,7 @@ function cpsDrawIntervals(now) {
 function cpsRender(now) {
     if(cpsTest.phase==='running'&&cpsTest.source==='manual'
         &&now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
-    if(cpsTest.phase==='running'&&cpsTest.source==='profile'
+    if(cpsTest.phase==='running'&&(cpsTest.source==='profile'||cpsTest.source==='real')
         &&now-cpsTest.startedAt>cpsTest.seconds*1000+2500){
         cpsResetTest();toast('Le moteur de test ne répond plus.');return;
     }
@@ -2004,24 +2065,37 @@ function cpsRender(now) {
     $('cpsAverage').textContent=average.toFixed(1);
     $('cpsPeak').textContent=String(cpsTest.peak);
     $('cpsClicks').textContent=String(total);
+    $('cpsRealSent').textContent=String(cpsTest.sent);
+    $('cpsRealSentMetric').classList.toggle('hidden',cpsTest.source!=='real');
     $('cpsRemaining').textContent=remaining.toFixed(1)+' s restantes';
     $('cpsProgressFill').style.width=(100*elapsed/cpsTest.seconds).toFixed(1)+'%';
     $('cpsPhase').textContent=cpsTest.phase==='ready'?'PRÊT':cpsTest.phase==='pending'?'DÉMARRAGE':
         cpsTest.phase==='running'?'EN COURS':'TERMINÉ';
-    $('cpsHitTitle').textContent=cpsTest.source==='profile'
+    $('cpsHitTitle').textContent=cpsTest.source==='real'
+        ?cpsTest.phase==='running'?'Réception native en cours...':
+            cpsTest.phase==='pending'?'Ouvre la zone native et maintiens le bouton...':
+            cpsTest.phase==='done'?'Test de réception terminé':'Prêt pour le test Windows'
+        :cpsTest.source==='profile'
         ?cpsTest.phase==='running'?'Test du profil en cours...':
             cpsTest.phase==='pending'?'Initialisation du moteur...':
             cpsTest.phase==='done'?'Test du profil terminé':'Prêt à tester le profil'
         :cpsTest.phase==='ready'?'Clique ici pour démarrer':
             cpsTest.phase==='running'?'Continue à cliquer !':'Test terminé';
-    $('cpsHitHelp').textContent=cpsTest.source==='profile'
+    $('cpsHitHelp').textContent=cpsTest.source==='real'
+        ?'Les clics réels sont envoyés dans une fenêtre Windows dédiée, pas dans cette zone WebView2.'
+        :cpsTest.source==='profile'
         ?'Cadence calculée par le moteur ClickFlow, sans clics Windows.'
         :cpsTest.phase==='done'?'Recommencer pour un nouvel essai.':
             'Clic gauche uniquement. Le premier clic compte.';
-    $('cpsClickArea').disabled=cpsTest.source==='profile'||cpsTest.phase==='done';
+    $('cpsClickArea').disabled=cpsTest.source!=='manual'||cpsTest.phase==='done';
     $('cpsStartProfile').disabled=cpsTest.source!=='profile'
         ||cpsTest.phase==='running'||cpsTest.phase==='pending';
     $('cpsStartProfile').textContent=cpsTest.phase==='done'?'Relancer le test':'Démarrer le test';
+    $('cpsStartProfile').classList.toggle('hidden',cpsTest.source!=='profile');
+    $('cpsStartReal').classList.toggle('hidden',cpsTest.source!=='real');
+    $('cpsStartReal').disabled=cpsTest.source!=='real'||cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsStartReal').textContent=cpsTest.phase==='done'?'Relancer le test réel':'Ouvrir le test réel';
+    $('cpsRealInfo').classList.toggle('hidden',cpsTest.source!=='real');
     $('cpsProfileSelect').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
     for(const duration of cpsDurations) {
         const btn=document.querySelector('[data-cps-duration="'+duration+'"]');
@@ -2031,15 +2105,24 @@ function cpsRender(now) {
     }
     $('cpsSourceProfile').classList.toggle('primary',cpsTest.source==='profile');
     $('cpsSourceManual').classList.toggle('primary',cpsTest.source==='manual');
+    $('cpsSourceReal').classList.toggle('primary',cpsTest.source==='real');
     $('cpsSourceProfile').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
     $('cpsSourceManual').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
-    $('cpsProfileControls').hidden=cpsTest.source!=='profile';
+    $('cpsSourceReal').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsProfileControls').hidden=cpsTest.source==='manual';
     $('cpsSound').textContent=cpsTest.audioEnabled?'Son activé':'Son désactivé';
     $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
     cpsQuickRender();
     $('cpsDescription').textContent=cpsTest.source==='profile'
-        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire, naturel ou rapide naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
-        :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
+        ?'La simulation mesure les échéances du profil sans injecter de clics Windows. Aucun score n\u2019est enregistré.'
+        :cpsTest.source==='real'
+            ?'La réception réelle mesure les clics SendInput effectivement reçus par la fenêtre native du test. Ils ne sont pas envoyés au jeu. Le focus et la position de la souris sont contrôlés avant chaque envoi. Les événements reçus ne garantissent pas ceux acceptés par un jeu.'
+            :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n\u2019est enregistré.';
+    $('cpsIntervalsNote').textContent=cpsTest.source==='real'
+        ?'Les traits proviennent de messages de clic Windows reçus par la fenêtre native. Les clics physiques de déclenchement ne sont pas comptés. Ce n\u2019est pas une mesure de réception dans un jeu.'
+        :cpsTest.source==='profile'
+            ?'Les traits représentent les déclenchements internes du cadenceur, sans clics Windows envoyés. Ils ne représentent pas des clics reçus par un jeu.'
+            :'Les traits représentent les clics manuels reçus dans la zone WebView2.';
     cpsDrawChart();
     cpsDrawIntervals(now);
 }
@@ -2056,6 +2139,7 @@ function cpsSetSource(source){
 }
 $('cpsSourceProfile').onclick=()=>cpsSetSource('profile');
 $('cpsSourceManual').onclick=()=>cpsSetSource('manual');
+$('cpsSourceReal').onclick=()=>cpsSetSource('real');
 $('cpsSound').onclick=()=>{
     cpsTest.audioEnabled=!cpsTest.audioEnabled;
     if(cpsTest.audioEnabled)cpsPrepareAudio();
@@ -2134,6 +2218,7 @@ if(bridge) {
         else if(msg.type==='navigate' && msg.page==='cps')navigatePage('cps');
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
         else if(msg.type==='cpsTest') cpsHandleEngineMessage(msg);
+        else if(msg.type==='cpsReal') cpsHandleRealMessage(msg);
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
