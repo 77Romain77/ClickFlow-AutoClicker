@@ -1595,7 +1595,9 @@ CFIntervalRounded(exactMs) {
     global CF
     exactMs := Max(10.0, exactMs)
     raw := exactMs + CF.intervalFraction
-    whole := Max(10, Floor(raw))
+    ; Tolérance uniquement contre l'erreur flottante d'un entier exact :
+    ; ne pas perdre 1 ms après de longues séries (ex. 1230 x 12.3 CPS).
+    whole := Max(10, Floor(raw + 1e-9))
     CF.intervalFraction := raw - whole
     return whole
 }
