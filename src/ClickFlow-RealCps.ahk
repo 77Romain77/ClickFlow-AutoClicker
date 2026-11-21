@@ -95,9 +95,8 @@ CFRealFlush() {
     CFRealPost("ticks", ',"ticks":' events
         ',"sent":' test.sent ',"received":' test.received)
     if IsObject(test.status)
-        test.status.Text := "Envoyés : " test.sent
-            "   Reçus : " test.received
-            "   |   " Round(Max(0, test.endAt-CFNowMs())/1000,1) " s restantes"
+        test.status.Text := Format("Envoyés : {} | Reçus : {} | {} s restantes",
+            test.sent, test.received, Round(Max(0, test.endAt-CFNowMs())/1000, 1))
 }
 
 CFRealEnd(reason := "arrêté", completed := false) {
