@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.23 - 2026-11-21
+
+- Étend les variations Personnalisé de Rapide naturel : 0-50 % entre les rafales et 0-25 % entre les clics, toujours par pas de 0,5 %.
+- Met à jour les limites côté backend, les champs des interfaces complète et compacte ainsi que l'éditeur du Test CPS ; les anciennes valeurs restent valides.
+- Les plages théoriques de CPS se recalculent automatiquement avec les nouvelles valeurs et respectent la borne 1-100 CPS.
+- Étend les tests UI et AHK : rafales à 50 %, micro-variations à 25 %, sauvegarde, édition rapide et refus des valeurs hors limite.
+- Aucun changement au moteur de clic, à la détection souris, aux préréglages ou au calcul RPM.
+
+
 ## 1.9.22 - 2026-11-21
 
 - Autorise le réglage des CPS au dixième (pas de 0,1 CPS) dans les modes Fixe, Aléatoire et Naturel.

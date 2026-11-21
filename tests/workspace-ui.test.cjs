@@ -92,4 +92,11 @@ for(const id of ['rapidBlock','rapidPresetSeg','rapidRpm','rapidRpmApply',
     'rapidBetween','rapidWithin','compactRapid','compactRapidRpm','compactRapidRpmApply',
     'cpsQuickRapidPreset','cpsQuickRapidRpm','cpsQuickRapidRpmApply'])
     assert(html.includes('id="'+id+'"'), 'Rapid naturel control missing: '+id);
+for(const [id,max] of [['rapidBetween',50],['rapidWithin',25],
+    ['compactRapidBetween',50],['compactRapidWithin',25],
+    ['cpsQuickRapidBetween',50],['cpsQuickRapidWithin',25]]) {
+    const input=html.match(new RegExp('<input[^>]*id="'+id+'"[^>]*>'));
+    assert(input && input[0].includes('max="'+max+'"') && input[0].includes('step="0.5"'),
+        'Invalid widened custom variation range for '+id);
+}
 console.log('Workspace HTML structure, live monitor, settings, profile and quick edit JS syntax passed.');

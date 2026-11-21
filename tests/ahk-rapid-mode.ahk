@@ -61,11 +61,30 @@ try {
             throw Error("Pourcentages prédéfinis incorrects : " preset.id)
     }
 
+    ; L'intensité personnalisée peut désormais atteindre 50 % entre
+    ; les rafales et 25 % à chaque clic, sans dépasser 1..100 CPS.
+    cfg.rapidPreset := 4
+    cfg.rapidTarget := 10
+    cfg.rapidBetween := 50
+    cfg.rapidWithin := 25
+    CFNaturalReset(cfg)
+    Loop 80 {
+        CFRapidBurstReset(cfg)
+        burst := CF.rapidBurstCps
+        if burst < 5 || burst > 15
+            throw Error("Une rafale personnalisée sort de ±50 %.")
+        Loop 20 {
+            ms := GetNextIntervalMs(cfg, 20000 + A_Index * 100)
+            if ms < 52 || ms > 268
+                throw Error("La micro-variation personnalisée sort de ±25 %.")
+        }
+    }
+
     ; Les champs de RPM, de cible décimale et de variations sont conservés
     ; par les copies, l'export INI et le rechargement des profils.
     cfg.rapidPreset := 4
-    cfg.rapidBetween := 10
-    cfg.rapidWithin := 5
+    cfg.rapidBetween := 50
+    cfg.rapidWithin := 25
     cfg.rapidTarget := 12.5
     cfg.rapidRpm := 750
     copy := CopyConfig(cfg)
@@ -78,9 +97,33 @@ try {
     CFWriteProfile({id:1,name:"Arme 750 RPM",cfg:cfg})
     reloaded := ReadConfig(CFProfileFile(1), "Settings", DefaultConfig())
     if reloaded.mode != 4 || reloaded.rapidTarget != 12.5
-        || reloaded.rapidRpm != 750 || reloaded.rapidBetween != 10
-        || reloaded.rapidWithin != 5 || reloaded.rapidPreset != 4
+        || reloaded.rapidRpm != 750 || reloaded.rapidBetween != 50
+        || reloaded.rapidWithin != 25 || reloaded.rapidPreset != 4
         throw Error("La sauvegarde INI du mode rapide est incorrecte.")
+    ; Le réglage rapide doit accepter les nouvelles limites et refuser
+    ; tout dépassement, pour ne pas diverger des champs du tableau de bord.
+    CF.profiles := [{id: 1, name: "Arme 750 RPM", cfg: cfg}]
+    CF.selectedId := 1
+    CF.cfg := cfg
+    CFApplyQuickSettings("1", "rapid", "8", "14", "medium",
+        "12.5", "custom", "50", "25", "750")
+    if CF.cfg.rapidBetween != 50 || CF.cfg.rapidWithin != 25
+        throw Error("Le Test CPS ne prend pas les nouvelles limites personnalisées.")
+    rejected := false
+    try CFApplyQuickSettings("1", "rapid", "8", "14", "medium",
+        "12.5", "custom", "50.5", "25", "750")
+    catch
+        rejected := true
+    if !rejected
+        throw Error("Le Test CPS accepte plus de 50 % entre les rafales.")
+    rejected := false
+    try CFApplyQuickSettings("1", "rapid", "8", "14", "medium",
+        "12.5", "custom", "50", "25.5", "750")
+    catch
+        rejected := true
+    if !rejected
+        throw Error("Le Test CPS accepte plus de 25 % entre les clics.")
+
     legacy := DefaultConfig()
     if legacy.mode != 1 || legacy.min != 8 || legacy.max != 14
         throw Error("Le mode par défaut historique est modifié.")

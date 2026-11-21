@@ -323,7 +323,7 @@ EditConfig(field, value) {
         case "rapidBetween", "rapidWithin":
             if !RegExMatch(value, "^\d{1,2}(?:\.\d)?$")
                 return
-            limit := field = "rapidBetween" ? 10 : 5
+            limit := field = "rapidBetween" ? 50 : 25
             cfg.%field% := Round(Max(0, Min(limit, value + 0)) * 2) / 2
         case "activation":
             cfg.hold := value = "hold" ? 1 : value = "toggle" ? 2 : cfg.hold
@@ -712,7 +712,7 @@ CFApplyQuickSettings(id, mode, minimum, maximum, variation,
             || !RegExMatch(rapidWithin, "^\d{1,2}(?:\.\d)?$")
             throw Error("Réglages Rapide naturel invalides.")
         if rapidTarget + 0 < 1 || rapidTarget + 0 > 100
-            || rapidBetween + 0 > 10 || rapidWithin + 0 > 5
+            || rapidBetween + 0 > 50 || rapidWithin + 0 > 25
             || (rapidRpm + 0 != 0 && (rapidRpm + 0 < 60 || rapidRpm + 0 > 6000))
             || (rapidRpm + 0 != 0 && Abs(rapidTarget + 0 - Round((rapidRpm + 0) / 6) / 10) > 0.001)
             throw Error("Variations hors limites.")
@@ -1852,8 +1852,8 @@ ReadConfig(file, section, base) {
     if cfg.rapidRpm && Abs(cfg.rapidTarget - Round(cfg.rapidRpm / 6) / 10) > 0.001
         cfg.rapidRpm := 0
     cfg.rapidPreset := Max(1, Min(4, cfg.rapidPreset))
-    cfg.rapidBetween := Round(Max(0, Min(10, cfg.rapidBetween)) * 2) / 2
-    cfg.rapidWithin := Round(Max(0, Min(5, cfg.rapidWithin)) * 2) / 2
+    cfg.rapidBetween := Round(Max(0, Min(50, cfg.rapidBetween)) * 2) / 2
+    cfg.rapidWithin := Round(Max(0, Min(25, cfg.rapidWithin)) * 2) / 2
     cfg.variation := Max(1, Min(3, cfg.variation))
     cfg.min := Round(Max(1, Min(100, cfg.min)) * 10) / 10
     cfg.max := Round(Max(cfg.min, Min(100, cfg.max)) * 10) / 10
