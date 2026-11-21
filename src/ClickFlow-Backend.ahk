@@ -4,6 +4,7 @@
 #Include ClickFlow-Maintenance.ahk
 #Include ClickFlow-ProfileStore.ahk
 #Include ClickFlow-CpsTest.ahk
+#Include ClickFlow-RealCps.ahk
 #Include ClickFlow-Desktop.ahk
 #Include ClickFlow-GlobalHotkeys.ahk
 #Include ClickFlow-Backup.ahk
@@ -11,7 +12,7 @@
 global CF := {
     hwnd: 0, web: 0, event: 0,
     capture: false, inputHook: 0, pressed: false, armed: false,
-    test: {active: false},
+    test: {active: false}, realTest: {run: 0, active: false, held: false},
     desktopReady: false, trayProfiles: 0, floatGui: 0,
     closeToTray: false, minimizeToTray: false, floatShown: false,
     liveMonitor: true, compactChart: true, forceExit: false,
@@ -121,6 +122,7 @@ BackendExit(*) {
 
     ; Aucun nouveau clic, timer ou message WebView2 pendant la fermeture.
     CFTestStop("fermeture")
+    CFRealEnd("fermeture")
     CF.armed := false
     CF.pressed := false
     try CFEngineSetTimer(false)
@@ -576,6 +578,23 @@ BackendMessage(sender, args) {
             }
             return
         }
+        if cmd = "cpsReal" && parts.Length >= 2 {
+            switch parts[2] {
+                case "open":
+                    try {
+                        if parts.Length < 5
+                            throw Error("Commande de test réel incomplète.")
+                        CFRealOpen(parts[3],parts[4],parts[5])
+                    } catch as err {
+                        CFTestPost('{"type":"cpsReal","state":"error","run":'
+                            (parts.Length >= 4 && RegExMatch(parts[4], "^[1-9]\d{0,8}$") ? parts[4] : "0")
+                            ',"message":' JsonQuote(err.Message) '}')
+                    }
+                case "stop":
+                    CFRealEnd("Test réel annulé.")
+            }
+            return
+        }
         if cmd = "cpsTest" && parts.Length >= 2 {
             switch parts[2] {
                 case "open":
@@ -901,6 +920,9 @@ CFEngineRun() {
             if CF.test.active {
                 untilNext := Min(CF.test.nextAt - now,
                     CF.test.started + CF.test.duration * 1000 - now)
+            } else if CF.realTest.active && CF.realTest.held {
+                untilNext := Min(CF.realTest.nextAt - now,
+                    CF.realTest.endAt - now)
             } else if CF.armed {
                 untilNext := CF.nextAt - now
                 if CF.cfg.mouseGate && !CFGateIsHeld()
@@ -1276,7 +1298,7 @@ CFStatsSetTimer(active) {
 ActivationDown(*) {
     global CF
     activationStarted := CF.diagnosticsEnabled ? CFPerfCounter() : 0
-    if CF.capture || CF.pressed || CF.test.active
+    if CF.capture || CF.pressed || CF.test.active || CF.realTest.run
         return
     CF.pressed := true
     if CF.armed {
@@ -1367,6 +1389,7 @@ StopAll(message) {
     global CF
     wasArmed := CF.armed
     CFTestStop(message)
+    CFRealEnd(message)
     CF.armed := false
     CF.gateWaiting := false
     CF.gateMethodCurrent := "inactive"
@@ -1411,6 +1434,10 @@ CFNextDeadline(previousDue, now, intervalMs) {
 
 EngineTick(firstFromActivation := false) {
     global CF
+    if CF.realTest.active && CF.realTest.held {
+        CFRealTick()
+        return
+    }
     if CF.test.active {
         CFTestTick()
         return
