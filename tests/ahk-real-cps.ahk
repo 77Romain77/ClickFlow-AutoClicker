@@ -32,7 +32,8 @@ try {
             throw Error("INPUT.dwFlags/dwExtraInfo invalide pour " item.b)
         if CFRealMouseMessageId(item.b, true) != item.wm
             || CFRealMouseMessageId(item.b="Left"?"LButton":item.b="Right"?"RButton":"MButton", true) != item.wm
-            throw Error("Le message natif DOWN ne reconnaît pas le nom du bouton de sortie.")
+            || CFRealMouseDoubleMessageId(item.b) != item.wm + 2
+            throw Error("Le message natif DOWN/DBLCLK ne reconnaît pas le bouton de sortie.")
     }
     if !CFRealInfoIsTagged(CFRealMarker())
         || CFRealInfoIsTagged(0)
@@ -129,13 +130,31 @@ try {
             ", endAt=" test.endAt
             ", lastMsg=" test.lastMsg ", extra=" test.lastExtra)
 
+    ; Avec des clics rapprochés, Windows peut émettre WM_*DBLCLK
+    ; à la place de WM_*BUTTONDOWN. Tous doivent rester comptabilisés.
+    test.cfg.mode := 1
+    test.cfg.min := 50
+    test.cfg.max := 50
+    CFNaturalReset(test.cfg)
+    test.nextAt := CFNowMs()
+    Loop 18 {
+        CFRealTick()
+        Sleep(25)
+    }
+    Sleep(50)
+    if test.sent < 12
+        throw Error("Le test 50 CPS ne déclenche pas suffisamment de clics.")
+    if test.received != test.sent
+        throw Error("Les messages de double-clic sont perdus : sent="
+            test.sent ", received=" test.received ", lastMsg=" test.lastMsg)
+
     ; Le curseur hors du rectangle met fin au test sans nouvel envoi.
     MouseMove(NumGet(pt,0,"Int"),NumGet(pt,4,"Int")-120,0)
     Sleep(20)
     CFRealTick()
     if CF.realTest.run != 0
         throw Error("La sortie de zone n'a pas fermé le test.")
-    if test.sent != 2
+    if test.sent != test.received
         throw Error("Un clic a été envoyé hors zone.")
     MouseMove(savedX,savedY,0)
     FileAppend("Native physical DOWN/UP, injected-input filter, tagged SendInput delivery, focus/zone guard and cleanup passed.",
