@@ -30,6 +30,18 @@ CFRealMouseMessageId(button, isDown) {
     return 0
 }
 
+; Le système peut remplacer un deuxième WM_*BUTTONDOWN rapproché
+; par WM_*BUTTONDBLCLK. Pour mesurer les clics réellement reçus,
+; les deux messages représentent un nouvel appui.
+CFRealMouseDoubleMessageId(button) {
+    switch button {
+        case "LButton", "Left": return 0x203
+        case "RButton", "Right": return 0x206
+        case "MButton", "Middle": return 0x209
+    }
+    return 0
+}
+
 CFRealInputBuffer(button) {
     down := CFRealFlag(button, true)
     up := CFRealFlag(button, false)
@@ -287,7 +299,7 @@ CFRealEnd(reason := "arrêté", completed := false) {
     test.run := 0
     test.gui := 0
     test.zone := 0
-    for message in [0x201,0x202,0x204,0x205,0x207,0x208]
+    for message in [0x201,0x202,0x203,0x204,0x205,0x206,0x207,0x208,0x209]
         try OnMessage(message, CFRealMouse, 0)
     try windowGui.Destroy()
 }
@@ -309,7 +321,8 @@ CFRealMouse(wParam, lParam, msg, hwnd) {
     if hwnd != test.zone.Hwnd && hwnd != test.gui.Hwnd
         return
     if CFRealInfoIsTagged(extra) {
-        if test.active && msg = CFRealMouseMessageId(test.outButton, true) {
+        if test.active && (msg = CFRealMouseMessageId(test.outButton, true)
+            || msg = CFRealMouseDoubleMessageId(test.outButton)) {
             ; Seuls les clics générés par CE test comptent.
             offset := Max(0, CFNowMs()-test.started)
             if offset < test.duration*1000 {
@@ -387,7 +400,7 @@ CFRealOpen(duration, runId, profileId) {
         sent:0, received:0, lastSent:0, clicks:[],pending:[],lastFlush:0,
         anyMouse:0, lastMsg:0, lastHwnd:0, lastExtra:0}
     ; Seuls les clics injectés identifiés sont comptabilisés.
-    for message in [0x201,0x202,0x204,0x205,0x207,0x208]
+    for message in [0x201,0x202,0x203,0x204,0x205,0x206,0x207,0x208,0x209]
         OnMessage(message, CFRealMouse)
     windowGui.Show("w620 h505")
     CFRealWindowTheme(windowGui, close)
