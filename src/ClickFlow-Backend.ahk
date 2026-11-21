@@ -49,7 +49,8 @@ global CF := {
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
-    naturalBurstLeft: 0, rapidBurstCps: 10, total: 0, recent: [],
+    naturalBurstLeft: 0, rapidBurstCps: 10, intervalFraction: 0,
+    total: 0, recent: [],
     lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
     globalKeys: Map(),
@@ -1523,6 +1524,7 @@ CFNaturalReset(cfg) {
     CF.nextVariation := 0
     CF.naturalNoise := 0
     CF.naturalBurstLeft := 0
+    CF.intervalFraction := 0
     if cfg.mode = 4
         CFRapidBurstReset(cfg)
 }
@@ -1584,8 +1586,22 @@ GetNextCps(cfg := 0, now := "") {
     return Max(minimum, Min(maximum, CF.naturalCps))
 }
 
+; Répartit les fractions de millisecondes sur plusieurs clics au lieu
+; d'arrondir chaque période isolément. Pas de clic de rattrapage, pas de
+; nouvelle boucle CPU : CF.nextAt est toujours planifié depuis "now".
+; L'accumulateur est partagé entre moteur et Test CPS, et réinitialisé
+; au début de chaque session.
+CFIntervalRounded(exactMs) {
+    global CF
+    exactMs := Max(10.0, exactMs)
+    raw := exactMs + CF.intervalFraction
+    whole := Max(10, Floor(raw))
+    CF.intervalFraction := raw - whole
+    return whole
+}
+
 ; Le même intervalle est utilisé par le moteur SendInput et le banc de
-; test CPS. Le mode Fixe et le mode Aléatoire restent inchangés.
+; test CPS. Le pas du cadenceur reste de 1 ms, avec compensation cumulée.
 GetNextIntervalMs(cfg := 0, now := "") {
     global CF
     if !IsObject(cfg)
@@ -1597,10 +1613,10 @@ GetNextIntervalMs(cfg := 0, now := "") {
         v := CFRapidVariations(cfg)
         ; Pas d'hésitation, pas de rattrapage, pas d'accélération artificielle.
         cps := Max(1.0, Min(100.0, cps * (1 + Random(-v.within, v.within) / 100)))
-        return Max(10, Round(1000 / cps))
+        return CFIntervalRounded(1000.0 / cps)
     }
     if cfg.mode != 3
-        return Max(10, Round(1000 / cps))
+        return CFIntervalRounded(1000.0 / cps)
 
     intensity := Max(1, Min(3, cfg.variation))
     ; Bruit partiellement corrélé : les clics voisins ne sont pas
@@ -1623,7 +1639,7 @@ GetNextIntervalMs(cfg := 0, now := "") {
     ; Hors hésitations, aucun intervalle ne sort de la plage CPS prévue.
     shortest := Max(10, Ceil(1000 / cfg.max))
     longest := Max(shortest, Ceil(1000 / cfg.min))
-    interval := Max(shortest, Min(longest, Round(interval)))
+    interval := Max(shortest, Min(longest, CFIntervalRounded(interval)))
 
     ; Imperfection rare : un retard isolé, jamais rattrapé en rafale.
     hesitationChance := intensity = 1 ? 55 : intensity = 2 ? 160 : 300
