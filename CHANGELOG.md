@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.29 - 2026-11-21
+
+- Ajoute une mesure indépendante par horloge haute précision (QPC) pour chaque clic réellement envoyé par le moteur de la fenêtre native.
+- Compare sur le graphique des intervalles la chronologie d'envoi (orange) à celle des messages reçus/traités par la fenêtre (vert), afin d'identifier une file Windows retardée sans confondre cela avec une pause de génération.
+- Ajoute un diagnostic lisible après le test : intervalle moyen, intervalle maximal, pauses de 200 ms ou plus et événements regroupés à moins de 5 ms pour chaque chronologie.
+- Réduit la fréquence des mises à jour visuelles de la fenêtre native/WebView2 pour limiter leur surcharge, sans modifier la vitesse du moteur ni la détection du maintien physique.
+- Assure la transmission et la récupération de l'ensemble des horodatages en continu et dans le message de résultat final, même lors d'une confirmation retardée.
+- Tests de régression JavaScript/Windows dédiés. Aucune mesure dans une application externe et aucun résultat conservé sur disque.
+
+
 ## 1.9.28 - 2026-11-21
 
 - Corrige la disparition des résultats du test **Réception réelle** : un délai de confirmation ne remet plus les compteurs et les graphiques à zéro.
