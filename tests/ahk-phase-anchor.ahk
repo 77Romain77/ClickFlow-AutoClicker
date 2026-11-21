@@ -45,7 +45,10 @@ try {
         CFTestTick(tickAt)
         count += 1
     }
-    CFTestTick(started+30000)
+    ; Un arrondi flottant peut placer le tick à une fraction de
+    ; microseconde avant l'échéance exacte. Tester juste après 30 s
+    ; sans ajouter de clic au résultat final.
+    CFTestTick(started+30001)
     if CF.test.active
         throw Error("La simulation ne s'arrête pas après 30 s.")
     if CF.test.clicks.Length != 369
