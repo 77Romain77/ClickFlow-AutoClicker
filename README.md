@@ -1,23 +1,29 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.28 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.29 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.28.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.28)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.29.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.29)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.28.ahk`.
+2. Télécharger `ClickFlow-v1.9.29.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.28`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.29`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Mesure indépendante de la cadence d'envoi (v1.9.29)
+
+Dans **Test CPS > Réception réelle**, la courbe des intervalles comporte maintenant deux mesures : en **orange**, les vrais horodatages d'envoi pris par le moteur AutoHotkey, et en **vert**, les instants de traitement des messages de clic par la fenêtre native. Le tableau **Dernier test terminé** affiche les moyennes, maxima, pauses de 200 ms et réceptions très rapprochées de chaque série.
+
+Si seul le tracé vert présente de longues pauses suivies de clics quasi simultanés, cela indique un retard de traitement des messages Windows plutôt qu'un arrêt du moteur. Si les deux séries présentent la pause, il faut chercher du côté de la génération ou du système. Les mises à jour visuelles sont désormais moins fréquentes afin de limiter leur coût sur la fenêtre de capture. Ce test ne mesure pas la réception dans un jeu.
 
 ## Résultats de la réception réelle conservés (v1.9.28)
 

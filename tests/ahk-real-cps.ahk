@@ -147,6 +147,12 @@ try {
     if test.received != test.sent
         throw Error("Les messages de double-clic sont perdus : sent="
             test.sent ", received=" test.received ", lastMsg=" test.lastMsg)
+    if test.sentTicks.Length != test.sent
+        throw Error("Horodatages d'envoi absents : sent="
+            test.sent ", timestamps=" test.sentTicks.Length)
+    if test.sentTicks.Length > 1
+        && test.sentTicks[2] < test.sentTicks[1]
+        throw Error("Horodatages du moteur non chronologiques.")
 
     ; Le curseur hors du rectangle met fin au test sans nouvel envoi.
     MouseMove(NumGet(pt,0,"Int"),NumGet(pt,4,"Int")-120,0)
@@ -165,6 +171,7 @@ try {
     done.started := CFNowMs() - 2100
     done.endAt := CFNowMs() - 100
     done.clicks := [100, 200]
+    done.sentTicks := [99, 199]
     done.sent := 2
     done.received := 2
     CFRealTick()
@@ -172,7 +179,8 @@ try {
         throw Error("La fin native ne conserve pas son identifiant de test.")
     if !InStr(CF.realResult.json, '"state":"finished"')
         || !InStr(CF.realResult.json, '"ticks":[100,200]')
-        throw Error("Le résultat complet n'est pas récupérable après fermeture.")
+        || !InStr(CF.realResult.json, '"sentTicks":[99,199]')
+        throw Error("Les chronologies d'envoi/réception ne sont pas récupérables.")
     CFRealStatus(8)
     if CF.realResult.run != 8
         throw Error("La demande status a effacé le résultat natif.")
