@@ -1454,7 +1454,8 @@ function cpsQuickLoad() {
     cpsQuickSaved={mode:c.mode||'natural',min:Number(c.min)||8,
         max:Number(c.max)||14,intensity:c.intensity||'medium',
         rapidTarget:Number(c.rapidTarget)||10,rapidPreset:c.rapidPreset||'custom',
-        rapidBetween:Number(c.rapidBetween??10),rapidWithin:Number(c.rapidWithin??5)};
+        rapidBetween:Number(c.rapidBetween??10),rapidWithin:Number(c.rapidWithin??5),
+        rapidRpm:Number(c.rapidRpm)||0};
     cpsQuickDraft={...cpsQuickSaved};
     cpsQuickRender(true);
 }
@@ -1465,15 +1466,17 @@ function cpsQuickValid() {
         &&['low','medium','high'].includes(d.intensity)
         &&Number.isInteger(d.min)&&Number.isInteger(d.max)
         &&d.min>=1&&d.max<=100&&d.max>=d.min
-        &&(d.mode!=='rapid'||(Number.isInteger(d.rapidTarget)
+        &&(d.mode!=='rapid'||(Number.isFinite(d.rapidTarget)
            &&d.rapidTarget>=1&&d.rapidTarget<=100
            &&Object.hasOwn(rapidPresets,d.rapidPreset)
            &&Number.isFinite(d.rapidBetween)&&d.rapidBetween>=0&&d.rapidBetween<=10
-           &&Number.isFinite(d.rapidWithin)&&d.rapidWithin>=0&&d.rapidWithin<=5));
+           &&Number.isFinite(d.rapidWithin)&&d.rapidWithin>=0&&d.rapidWithin<=5
+           &&(d.rapidRpm===0||(rpmIsValid(d.rapidRpm)
+               &&Math.abs(d.rapidTarget-rpmToCps(d.rapidRpm))<0.001))));
 }
 function cpsQuickDirty() {
     if(!cpsQuickDraft||!cpsQuickSaved)return false;
-    return ['mode','min','max','intensity','rapidTarget','rapidPreset','rapidBetween','rapidWithin']
+    return ['mode','min','max','intensity','rapidTarget','rapidPreset','rapidBetween','rapidWithin','rapidRpm']
         .some(key=>cpsQuickDraft[key]!==cpsQuickSaved[key]);
 }
 function cpsQuickRender(loadInputs=false) {
@@ -1486,7 +1489,9 @@ function cpsQuickRender(loadInputs=false) {
         $('cpsQuickRapidPreset').value=d.rapidPreset;
         $('cpsQuickRapidBetween').value=d.rapidBetween;
         $('cpsQuickRapidWithin').value=d.rapidWithin;
+        $('cpsQuickRapidRpm').value=d.rapidRpm||'';
     }
+    $('cpsQuickMin').step=d.mode==='rapid'?'0.1':'1';
     $('cpsQuickMin').value=d.mode==='rapid'?d.rapidTarget:d.min;
     $('cpsQuickMinLabel').textContent=d.mode==='rapid'?'CPS cible':'CPS min';
     $('cpsQuickMaxWrap').classList.toggle('hidden',d.mode==='fixed'||d.mode==='rapid');
@@ -1494,36 +1499,50 @@ function cpsQuickRender(loadInputs=false) {
     $('cpsQuickRapidPresetWrap').classList.toggle('hidden',d.mode!=='rapid');
     $('cpsQuickRapidBetweenWrap').classList.toggle('hidden',d.mode!=='rapid'||d.rapidPreset!=='custom');
     $('cpsQuickRapidWithinWrap').classList.toggle('hidden',d.mode!=='rapid'||d.rapidPreset!=='custom');
+    $('cpsQuickRapidRpmWrap').classList.toggle('hidden',d.mode!=='rapid');
+    $('cpsQuickRapidRpmApply').classList.toggle('hidden',d.mode!=='rapid');
     const blocked=cpsTest.phase==='running'||cpsTest.phase==='pending';
     const dirty=cpsQuickDirty(),valid=cpsQuickValid();
     $('cpsQuickSettings').hidden=cpsTest.source!=='profile';
     for(const field of ['Mode','Min','Max','Intensity'])
         $('cpsQuick'+field).disabled=blocked||(field==='Intensity'&&d.mode!=='natural')
             ||(field==='Max'&&(d.mode==='fixed'||d.mode==='rapid'));
-    for(const field of ['RapidPreset','RapidBetween','RapidWithin'])
+    for(const field of ['RapidPreset','RapidBetween','RapidWithin','RapidRpm'])
         $('cpsQuick'+field).disabled=blocked||d.mode!=='rapid'
-            ||(field!=='RapidPreset'&&d.rapidPreset!=='custom');
+            ||(['RapidBetween','RapidWithin'].includes(field)&&d.rapidPreset!=='custom');
+    $('cpsQuickRapidRpmApply').disabled=blocked||d.mode!=='rapid';
     $('cpsQuickApply').disabled=blocked||!dirty||!valid;
     $('cpsQuickRevert').disabled=blocked||!dirty;
     $('cpsStartProfile').disabled=blocked||dirty||cpsTest.source!=='profile';
-    $('cpsQuickNotice').textContent=!valid?'CPS invalides : min 1, max 100 et maximum >= minimum.'
+    $('cpsQuickNotice').textContent=!valid?(d.mode==='rapid'?'Réglages invalides : utilise Calculer CPS après la saisie d\'un RPM, ou vérifie les limites.':'CPS invalides : min 1, max 100 et maximum >= minimum.')
         :dirty?'Modifications non appliquées - valide pour tester ce profil.'
         :'Réglages du profil enregistré';
 }
-for(const field of ['Mode','Min','Max','Intensity','RapidPreset','RapidBetween','RapidWithin']) {
+for(const field of ['Mode','Min','Max','Intensity','RapidPreset','RapidBetween','RapidWithin','RapidRpm']) {
     const el=$('cpsQuick'+field);
-    const numeric=['Min','Max','RapidBetween','RapidWithin'].includes(field);
+    const numeric=['Min','Max','RapidBetween','RapidWithin','RapidRpm'].includes(field);
     const handler=()=>{
         if(!cpsQuickDraft)return;
         const key=field[0].toLowerCase()+field.slice(1);
-        if(field==='Min'&&cpsQuickDraft.mode==='rapid')
+        if(field==='Min'&&cpsQuickDraft.mode==='rapid') {
             cpsQuickDraft.rapidTarget=Number(el.value);
-        else
+            cpsQuickDraft.rapidRpm=0;
+            $('cpsQuickRapidRpm').value='';
+        } else
             cpsQuickDraft[key]=numeric?Number(el.value):el.value;
         cpsQuickRender();
     };
     el.addEventListener(numeric?'input':'change',handler);
 }
+$('cpsQuickRapidRpmApply').onclick=()=>{
+    if(!cpsQuickDraft)return;
+    const rpm=Number($('cpsQuickRapidRpm').value);
+    if(!rpmIsValid(rpm)){toast('Indique une cadence comprise entre 60 et 6000 RPM.');return;}
+    cpsQuickDraft.rapidRpm=rpm;
+    cpsQuickDraft.rapidTarget=rpmToCps(rpm);
+    cpsQuickRender();
+    toast(rpm+' RPM = '+cpsQuickDraft.rapidTarget+' CPS théoriques. Clique sur Appliquer au profil pour enregistrer.');
+};
 $('cpsQuickRevert').onclick=()=>cpsQuickLoad();
 $('cpsQuickApply').onclick=()=>{
     if(!cpsQuickValid()||!cpsQuickDirty()
@@ -1531,7 +1550,7 @@ $('cpsQuickApply').onclick=()=>{
     const id=cpsQuickProfileId,d={...cpsQuickDraft};
     if(connected){
         send('quickSettings',id,d.mode,d.min,d.max,d.intensity,
-            d.rapidTarget,d.rapidPreset,d.rapidBetween,d.rapidWithin);
+            d.rapidTarget,d.rapidPreset,d.rapidBetween,d.rapidWithin,d.rapidRpm);
     } else {
         const p=model.profiles.find(p=>p.id===id);
         if(p&&p.settings)Object.assign(p.settings,d);
