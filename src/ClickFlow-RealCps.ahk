@@ -23,9 +23,9 @@ CFRealFlag(button, isDown) {
 
 CFRealMouseMessageId(button, isDown) {
     switch button {
-        case "LButton": return isDown ? 0x201 : 0x202
-        case "RButton": return isDown ? 0x204 : 0x205
-        case "MButton": return isDown ? 0x207 : 0x208
+        case "LButton", "Left": return isDown ? 0x201 : 0x202
+        case "RButton", "Right": return isDown ? 0x204 : 0x205
+        case "MButton", "Middle": return isDown ? 0x207 : 0x208
     }
     return 0
 }
