@@ -2051,7 +2051,7 @@ function cpsDrawIntervals(now) {
 function cpsRender(now) {
     if(cpsTest.phase==='running'&&cpsTest.source==='manual'
         &&now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
-    if(cpsTest.phase==='running'&&cpsTest.source==='profile'
+    if(cpsTest.phase==='running'&&(cpsTest.source==='profile'||cpsTest.source==='real')
         &&now-cpsTest.startedAt>cpsTest.seconds*1000+2500){
         cpsResetTest();toast('Le moteur de test ne répond plus.');return;
     }
@@ -2065,24 +2065,37 @@ function cpsRender(now) {
     $('cpsAverage').textContent=average.toFixed(1);
     $('cpsPeak').textContent=String(cpsTest.peak);
     $('cpsClicks').textContent=String(total);
+    $('cpsRealSent').textContent=String(cpsTest.sent);
+    $('cpsRealSentMetric').classList.toggle('hidden',cpsTest.source!=='real');
     $('cpsRemaining').textContent=remaining.toFixed(1)+' s restantes';
     $('cpsProgressFill').style.width=(100*elapsed/cpsTest.seconds).toFixed(1)+'%';
     $('cpsPhase').textContent=cpsTest.phase==='ready'?'PRÊT':cpsTest.phase==='pending'?'DÉMARRAGE':
         cpsTest.phase==='running'?'EN COURS':'TERMINÉ';
-    $('cpsHitTitle').textContent=cpsTest.source==='profile'
+    $('cpsHitTitle').textContent=cpsTest.source==='real'
+        ?cpsTest.phase==='running'?'Réception native en cours...':
+            cpsTest.phase==='pending'?'Ouvre la zone native et maintiens le bouton...':
+            cpsTest.phase==='done'?'Test de réception terminé':'Prêt pour le test Windows'
+        :cpsTest.source==='profile'
         ?cpsTest.phase==='running'?'Test du profil en cours...':
             cpsTest.phase==='pending'?'Initialisation du moteur...':
             cpsTest.phase==='done'?'Test du profil terminé':'Prêt à tester le profil'
         :cpsTest.phase==='ready'?'Clique ici pour démarrer':
             cpsTest.phase==='running'?'Continue à cliquer !':'Test terminé';
-    $('cpsHitHelp').textContent=cpsTest.source==='profile'
+    $('cpsHitHelp').textContent=cpsTest.source==='real'
+        ?'Les clics réels sont envoyés dans une fenêtre Windows dédiée, pas dans cette zone WebView2.'
+        :cpsTest.source==='profile'
         ?'Cadence calculée par le moteur ClickFlow, sans clics Windows.'
         :cpsTest.phase==='done'?'Recommencer pour un nouvel essai.':
             'Clic gauche uniquement. Le premier clic compte.';
-    $('cpsClickArea').disabled=cpsTest.source==='profile'||cpsTest.phase==='done';
+    $('cpsClickArea').disabled=cpsTest.source!=='manual'||cpsTest.phase==='done';
     $('cpsStartProfile').disabled=cpsTest.source!=='profile'
         ||cpsTest.phase==='running'||cpsTest.phase==='pending';
     $('cpsStartProfile').textContent=cpsTest.phase==='done'?'Relancer le test':'Démarrer le test';
+    $('cpsStartProfile').classList.toggle('hidden',cpsTest.source!=='profile');
+    $('cpsStartReal').classList.toggle('hidden',cpsTest.source!=='real');
+    $('cpsStartReal').disabled=cpsTest.source!=='real'||cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsStartReal').textContent=cpsTest.phase==='done'?'Relancer le test réel':'Ouvrir le test réel';
+    $('cpsRealInfo').classList.toggle('hidden',cpsTest.source!=='real');
     $('cpsProfileSelect').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
     for(const duration of cpsDurations) {
         const btn=document.querySelector('[data-cps-duration="'+duration+'"]');
@@ -2092,9 +2105,11 @@ function cpsRender(now) {
     }
     $('cpsSourceProfile').classList.toggle('primary',cpsTest.source==='profile');
     $('cpsSourceManual').classList.toggle('primary',cpsTest.source==='manual');
+    $('cpsSourceReal').classList.toggle('primary',cpsTest.source==='real');
     $('cpsSourceProfile').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
     $('cpsSourceManual').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
-    $('cpsProfileControls').hidden=cpsTest.source!=='profile';
+    $('cpsSourceReal').disabled=cpsTest.phase==='running'||cpsTest.phase==='pending';
+    $('cpsProfileControls').hidden=cpsTest.source==='manual';
     $('cpsSound').textContent=cpsTest.audioEnabled?'Son activé':'Son désactivé';
     $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
     cpsQuickRender();
@@ -2117,6 +2132,7 @@ function cpsSetSource(source){
 }
 $('cpsSourceProfile').onclick=()=>cpsSetSource('profile');
 $('cpsSourceManual').onclick=()=>cpsSetSource('manual');
+$('cpsSourceReal').onclick=()=>cpsSetSource('real');
 $('cpsSound').onclick=()=>{
     cpsTest.audioEnabled=!cpsTest.audioEnabled;
     if(cpsTest.audioEnabled)cpsPrepareAudio();
@@ -2195,6 +2211,7 @@ if(bridge) {
         else if(msg.type==='navigate' && msg.page==='cps')navigatePage('cps');
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
         else if(msg.type==='cpsTest') cpsHandleEngineMessage(msg);
+        else if(msg.type==='cpsReal') cpsHandleRealMessage(msg);
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
