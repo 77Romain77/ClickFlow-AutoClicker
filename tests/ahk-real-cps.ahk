@@ -30,8 +30,9 @@ try {
             || NumGet(input.data,32,"UPtr") != CFRealMarker()
             || NumGet(input.data,72,"UPtr") != CFRealMarker()
             throw Error("INPUT.dwFlags/dwExtraInfo invalide pour " item.b)
-        if CFRealMouseMessageId(item.b="Left"?"LButton":item.b="Right"?"RButton":"MButton",true) != item.wm
-            throw Error("Message natif DOWN incorrect.")
+        if CFRealMouseMessageId(item.b, true) != item.wm
+            || CFRealMouseMessageId(item.b="Left"?"LButton":item.b="Right"?"RButton":"MButton", true) != item.wm
+            throw Error("Le message natif DOWN ne reconnaît pas le nom du bouton de sortie.")
     }
     if !CFRealInfoIsTagged(CFRealMarker())
         || CFRealInfoIsTagged(0)
