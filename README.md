@@ -1,25 +1,35 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.20 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.21 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.20.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.20)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.21.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.21)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.20.ahk`.
+2. Télécharger `ClickFlow-v1.9.21.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.20`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.21`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
 
-## Nouveau mode Rapide naturel (v1.9.20)
+## Plages de cadence et sélection du preset (v1.9.21)
+
+Le mode Rapide naturel indique maintenant visuellement le niveau sélectionné (Précision, Équilibré, Souple, Personnalisé), aussi bien dans l'interface complète qu'en mode compact.
+
+Deux plages se mettent à jour dès que le CPS cible ou les pourcentages changent :
+- **Cadence de base par rafale** : cible × (1 ± variation entre les rafales).
+- **Cadence théorique par clic** : bornes précédentes × (1 ± variation entre les clics).
+
+Par exemple 10 CPS, ±10 % entre les rafales et ±5 % entre les clics donnent 9.00 - 11.00 CPS de base et 8.55 - 11.55 CPS en comptant les micro-variations. Les résultats sont plafonnés à 1 - 100 CPS comme dans le moteur. Ce sont des estimations théoriques avant l'arrondi en millisecondes et les retards du système ou de l'application, et non des mesures de tir. Aucun changement de cadence ni de détection souris dans cette version.
+
+## Nouveau mode Rapide naturel (v1.9.21)
 
 Un quatrième mode de cadence s'ajoute à Fixe, Aléatoire et Naturel, sans modifier ces trois modes ni la détection souris de v1.9.19.
 
@@ -31,7 +41,7 @@ Un quatrième mode de cadence s'ajoute à Fixe, Aléatoire et Naturel, sans modi
 
 Les réglages sont disponibles dans le tableau de bord, la vue compacte et l'éditeur du Test CPS. Les tests de profil reprennent le vrai calcul de cadence sans injecter de clics dans Windows. La cadence théorique d'une arme ne garantit pas le nombre de tirs réellement acceptés par un jeu : les entrées trop rapprochées peuvent être ignorées. Ajuster selon l'application et respecter ses règles d'utilisation.
 
-## Modes de détection et latence (v1.9.20)
+## Modes de détection et latence (v1.9.21)
 
 Dans Paramètres > Diagnostics et détection souris, trois modes sont proposés :
 
@@ -49,7 +59,7 @@ La séparation par hDevice convient aux souris physiques exposant un identifiant
 
 ## Fonctionnalités
 
-- De 1 à 100 CPS, en modes **Fixe**, **Aléatoire** et **Naturel**.
+- De 1 à 100 CPS, en modes **Fixe**, **Aléatoire**, **Naturel** et **Rapide naturel**.
 - Mode **Naturel v1.5** : trois intensités Faible / Moyen / Élevé nettement différenciées, évolution progressive de la cadence, irrégularités entre clics, accélérations brèves et hésitations occasionnelles.
 - Clic gauche, droit ou central, en complément des clics physiques.
 - Déclenchement configurable par touche du clavier ou bouton de souris.
