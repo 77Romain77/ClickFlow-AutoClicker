@@ -316,6 +316,22 @@ jobs:
             throw "Decimal CPS regression failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
+      - name: Verify fractional millisecond CPS carry and simulated click timing
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-fractional-cps.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError fractional-cps.err -RedirectStandardOutput fractional-cps.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Fractional CPS test timed out.'
+          }
+          $out = if (Test-Path fractional-cps.out) { Get-Content fractional-cps.out -Raw } else { '' }
+          $err = if (Test-Path fractional-cps.err) { Get-Content fractional-cps.err -Raw } else { '' }
+          Write-Host "Fractional CPS accuracy: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Fractional CPS test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
       - name: Verify natural cadence, jitter, hesitations and intensity levels
         shell: pwsh
         run: |
