@@ -266,6 +266,26 @@ CFRealFlush() {
     CFRealUpdateStatus()
 }
 
+// Une confirmation finale peut être renvoyée à WebView2 à sa demande.
+// Le dernier résultat est conservé en mémoire, sans fichier sur disque.
+CFRealStatus(runId) {
+    global CF
+    if !RegExMatch(String(runId), "^[1-9]\d{0,8}$")
+        return
+    runId += 0
+    if CF.realResult.run = runId {
+        CFTestPost(CF.realResult.json)
+        return
+    }
+    test := CF.realTest
+    if test.run != runId
+        return
+    if test.active && CFNowMs() >= test.endAt
+        CFRealTick()
+    else
+        CFRealFlush()
+}
+
 CFRealEnd(reason := "arrêté", completed := false) {
     global CF
     if !CF.realTest.run
@@ -287,11 +307,17 @@ CFRealEnd(reason := "arrêté", completed := false) {
     if !CF.armed && !CF.test.active
         CFEngineSetTimer(false)
     if completed {
-        CFRealPost("finished", ',"duration":' test.duration
+        ; Mémoriser le message AVANT la fermeture de la GUI native.
+        ; Si WebView2 perd cette notification, la commande status la renvoie.
+        resultJson := '{"type":"cpsReal","state":"finished","run":' test.run
+            ',"duration":' test.duration
             ',"profile":' JsonQuote(test.profile)
             ',"sent":' test.sent
             ',"received":' test.received
-            ',"ticks":' CFTestArrayJson(test.clicks) '}')
+            ',"ticks":' CFTestArrayJson(test.clicks) '}'
+        CF.realResult := {run: test.run, json: resultJson}
+        if !CF.shuttingDown
+            CFTestPost(resultJson)
     } else {
         CFRealPost("stopped", ',"reason":' JsonQuote(reason) '}')
     }
