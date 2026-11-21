@@ -156,8 +156,28 @@ try {
         throw Error("La sortie de zone n'a pas fermé le test.")
     if test.sent != test.received
         throw Error("Un clic a été envoyé hors zone.")
+    ; Une fin native doit rester récupérable, même après destruction
+    ; de la fenêtre, via la commande status du bridge.
+    CFRealOpen(2, 8, 1)
+    done := CF.realTest
+    done.active := true
+    done.held := false
+    done.started := CFNowMs() - 2100
+    done.endAt := CFNowMs() - 100
+    done.clicks := [100, 200]
+    done.sent := 2
+    done.received := 2
+    CFRealTick()
+    if CF.realTest.run != 0 || CF.realResult.run != 8
+        throw Error("La fin native ne conserve pas son identifiant de test.")
+    if !InStr(CF.realResult.json, '"state":"finished"')
+        || !InStr(CF.realResult.json, '"ticks":[100,200]')
+        throw Error("Le résultat complet n'est pas récupérable après fermeture.")
+    CFRealStatus(8)
+    if CF.realResult.run != 8
+        throw Error("La demande status a effacé le résultat natif.")
     MouseMove(savedX,savedY,0)
-    FileAppend("Native physical DOWN/UP, injected-input filter, tagged SendInput delivery, focus/zone guard and cleanup passed.",
+    FileAppend("Native physical DOWN/UP, injected-input filter, tagged SendInput delivery, focus/zone guard, completion recovery and cleanup passed.",
         "*","UTF-8")
     ExitApp(0)
 } catch as err {
