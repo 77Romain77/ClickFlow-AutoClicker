@@ -2114,8 +2114,15 @@ function cpsRender(now) {
     $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
     cpsQuickRender();
     $('cpsDescription').textContent=cpsTest.source==='profile'
-        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire, naturel ou rapide naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
-        :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
+        ?'La simulation mesure les échéances du profil sans injecter de clics Windows. Aucun score n\u2019est enregistré.'
+        :cpsTest.source==='real'
+            ?'La réception réelle mesure les clics SendInput effectivement reçus par la fenêtre native du test. Ils ne sont pas envoyés au jeu. Le focus et la position de la souris sont contrôlés avant chaque envoi. Les événements reçus ne garantissent pas ceux acceptés par un jeu.'
+            :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n\u2019est enregistré.';
+    $('cpsIntervalsNote').textContent=cpsTest.source==='real'
+        ?'Les traits proviennent de messages de clic Windows reçus par la fenêtre native. Les clics physiques de déclenchement ne sont pas comptés. Ce n\u2019est pas une mesure de réception dans un jeu.'
+        :cpsTest.source==='profile'
+            ?'Les traits représentent les déclenchements internes du cadenceur, sans clics Windows envoyés. Ils ne représentent pas des clics reçus par un jeu.'
+            :'Les traits représentent les clics manuels reçus dans la zone WebView2.';
     cpsDrawChart();
     cpsDrawIntervals(now);
 }
