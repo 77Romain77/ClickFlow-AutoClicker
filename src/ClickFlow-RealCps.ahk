@@ -136,9 +136,13 @@ CFRealMouse(wParam, lParam, msg, hwnd) {
     test := CF.realTest
     if !test.run || !IsObject(test.gui) || !IsObject(test.zone)
         return
+    test.anyMouse += 1
+    test.lastMsg := msg
+    test.lastHwnd := hwnd
+    extra := DllCall("User32\GetMessageExtraInfo", "Ptr")
+    test.lastExtra := extra
     if hwnd != test.zone.Hwnd && hwnd != test.gui.Hwnd
         return
-    extra := DllCall("User32\GetMessageExtraInfo", "Ptr")
     if CFRealInfoIsTagged(extra) {
         if test.active && msg = CFRealMouseMessageId(test.outButton, true) {
             ; Seuls les clics générés par CE test comptent.
@@ -227,7 +231,8 @@ CFRealOpen(duration, runId, profileId) {
         gui:windowGui, zone:zone, status:status, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
         started:0, endAt:0, nextAt:0,
-        sent:0, received:0, lastSent:0, clicks:[],pending:[],lastFlush:0}
+        sent:0, received:0, lastSent:0, clicks:[],pending:[],lastFlush:0,
+        anyMouse:0, lastMsg:0, lastHwnd:0, lastExtra:0}
     ; Les handlers sont filtrés par hwnd : pas d'effet hors de la fenêtre.
     for message in [0x201,0x202,0x204,0x205,0x207,0x208]
         OnMessage(message, CFRealMouse)
