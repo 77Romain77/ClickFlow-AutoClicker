@@ -1395,6 +1395,20 @@ SetNotice(message) {
     SendStats()
 }
 
+; Conserve une chronologie d'échéances au lieu de réadditionner chaque
+; période depuis l'horodatage réel (potentiellement en retard).
+; Un retard modéré est absorbé par l'échéance suivante, sans envoyer
+; de clic supplémentaire. Un retard important réinitialise la phase
+; et conserve au moins la moitié de l'intervalle entre deux échéances
+; (10 ms minimum), pour éviter tout rattrapage brusque.
+CFNextDeadline(previousDue, now, intervalMs) {
+    ideal := previousDue + intervalMs
+    minGap := Max(10, intervalMs * 0.5)
+    if ideal <= now + minGap
+        return now + intervalMs
+    return ideal
+}
+
 EngineTick(firstFromActivation := false) {
     global CF
     if CF.test.active {
@@ -1436,6 +1450,7 @@ EngineTick(firstFromActivation := false) {
     }
 
     now := CFNowMs()
+    newBurst := false
     if CF.cfg.mouseGate {
         if CF.mouseDetectionMode = "event" && !CF.gateRawRegistered {
             CF.gateWaiting := true
@@ -1445,6 +1460,7 @@ EngineTick(firstFromActivation := false) {
             return
         }
         if CF.gateWaiting {
+            newBurst := true
             ; Chaque nouvel appui physique crée une nouvelle rafale.
             if CF.cfg.mode = 4
                 CFRapidBurstReset(CF.cfg)
@@ -1510,8 +1526,10 @@ EngineTick(firstFromActivation := false) {
     CF.recent.Push(now)
     if CF.floatShown
         CF.overlayRecent.Push(A_TickCount) ; l'overlay reste sur son horloge historique
-    ; Evite les rafales de rattrapage apres une interruption.
-    CF.nextAt := now + intervalMs
+    ; Garder l'échéance théorique malgré les petits retards du timer.
+    ; Un retard important réinitialise la phase : aucun clic rattrapé.
+    CF.nextAt := firstFromActivation || newBurst ? now + intervalMs
+        : CFNextDeadline(CF.nextAt, now, intervalMs)
 }
 
 ; Un état de cadence par session : reset à chaque activation ou banc de test.
