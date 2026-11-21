@@ -1,23 +1,31 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.23 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.24 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.23.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.23)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.24.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.24)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.23.ahk`.
+2. Télécharger `ClickFlow-v1.9.24.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.23`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.24`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Cadence à fractions de millisecondes et simulation visuelle (v1.9.24)
+
+**Précision moyenne :** au lieu d'arrondir chaque intervalle de clic isolément à la milliseconde, le moteur conserve les fractions restantes et les répartit entre les clics suivants. Exemple à 12,3 CPS : période idéale d'environ 81,301 ms, représentée sur la durée par une succession d'intervalles à 81 et 82 ms. L'accumulateur est remis à zéro à chaque nouvelle activation ou test. Le premier clic reste immédiat, sans ajouter d'attente active ni de clics de rattrapage. Le cadenceur haute précision, la détection Raw Input et les règles d'arrêt ne changent pas.
+
+**Simulation visuelle :** l'onglet Test CPS comporte désormais un second graphique, sous celui des CPS glissants. Il montre les clics dans une fenêtre des 3 dernières secondes et la courbe des 60 derniers intervalles en millisecondes. Une ligne indique la moyenne, le minimum et le maximum des intervalles récents. La simulation fonctionne avec les profils (horodatages renvoyés par le moteur) et les clics manuels dans la zone de test. Elle n'injecte aucun clic Windows dans une autre application.
+
+La compensation réduit l'erreur *théorique cumulée due à l'arrondi* et affine la cadence moyenne sur plusieurs clics. Elle ne garantit ni un espacement matériel parfaitement régulier, ni un gain précis de latence, car l'ordonnanceur Windows et le traitement des applications restent variables. Le graphique mesure les déclenchements internes du test, pas les tirs réellement enregistrés par un jeu. Aucune donnée de score n'est enregistrée.
 
 ## Variations personnalisées étendues (v1.9.23)
 

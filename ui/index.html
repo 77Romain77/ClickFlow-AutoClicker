@@ -126,6 +126,10 @@ body.compact #page-dashboard{display:block!important}
 .cps-chart-wrap{margin-top:19px;border:1px solid #2e415e;background:#0e1a2b;border-radius:13px;padding:14px 14px 8px}
 .cps-chart-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px}.cps-chart-title span{color:#8ca5c6;font-size:10px}
 #cpsChart{display:block;width:100%;height:250px;margin-top:9px}
+#cpsIntervalsChart{display:block;width:100%;height:260px;margin-top:9px}
+.cps-interval-summary{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px;font-size:12px;color:#b7cbe5}
+.cps-interval-summary strong{color:#f3f8ff;font-variant-numeric:tabular-nums}
+.cps-interval-note{margin-top:5px;line-height:1.5}
 .cps-last-wrap{border-top:1px solid #2d405a;margin-top:20px;padding-top:15px;font-size:12px}.cps-last-wrap strong{color:#ecf5ff}.cps-last-value{color:#a7bedb;margin-top:9px;font-size:12px}
 body.compact #page-cps{display:none!important}
 @media(max-width:900px){.cps-main{grid-template-columns:1fr}.cps-hit-area{min-height:240px}}
@@ -373,7 +377,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.23 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.24 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -560,6 +564,12 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div class="cps-progress-top"><span>Progression</span><strong id="cpsRemaining">5.0 s restantes</strong></div>
    <div class="cps-progress"><div id="cpsProgressFill"></div></div>
    <div class="cps-chart-wrap"><div class="cps-chart-title"><strong>Évolution des CPS en direct</strong><span>Mesure glissante sur 1 seconde</span></div><canvas id="cpsChart" width="900" height="250" role="img" aria-label="Courbe d'évolution des CPS pendant le test"></canvas></div>
+   <div class="cps-chart-wrap" id="cpsIntervalsPanel">
+    <div class="cps-chart-title"><strong>Simulation visuelle des clics et intervalles</strong><span>Dernières 3 secondes / 60 derniers intervalles</span></div>
+    <canvas id="cpsIntervalsChart" width="900" height="260" role="img" aria-label="Chronologie des clics et courbe des intervalles en millisecondes"></canvas>
+    <div id="cpsIntervalsSummary" class="cps-interval-summary" aria-live="polite">Lance un test de profil pour voir les clics et leur espacement.</div>
+    <p id="cpsIntervalsNote" class="subnote cps-interval-note">Dans le test de profil, les traits représentent les déclenchements du cadenceur ClickFlow, sans clics Windows envoyés. Les intervalles affichés sont calculés à partir des horodatages du moteur, et non d'une mesure dans un jeu.</p>
+   </div>
    <div class="cps-last-wrap"><strong>Dernier test terminé</strong><div id="cpsLast" class="cps-last-value">Aucun résultat pour le moment.</div><div id="cpsPrecision" class="subnote" style="margin-top:7px">Aucune mesure de précision.</div></div>
     <div class="shortcut-setting" style="margin-top:14px"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Affiche les événements de la souris et la méthode réellement utilisée pour rechercher un problème. Facultatif, sans effet sur le fonctionnement des clics.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris" aria-pressed="false"></button></div>
     <div id="gateMethodCpsPanel" class="cps-last-wrap hidden" style="margin-top:14px"><strong>Méthode de détection réellement utilisée</strong><div id="gateMethodCps" class="subnote" style="margin-top:7px">Aucun clic conditionné enregistré pour cette session.</div></div>
@@ -1118,7 +1128,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.23 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.24 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1895,6 +1905,88 @@ function cpsDrawChart() {
     cpsTest.samples.forEach((p,i)=>i?ctx.lineTo(px(p.t),py(p.v)):ctx.moveTo(px(p.t),py(p.v)));
     ctx.stroke();
 }
+// Conserve uniquement les 60 derniers intervalles pour éviter de surcharger
+// le graphique pendant les tests à 100 CPS. Les horodatages sont ceux du
+// moteur de test, pas ceux d'un jeu ou d'une application extérieure.
+function cpsIntervalStats(clicks,limit=60) {
+    if(clicks.length<2)return {intervals:[],min:0,max:0,average:0};
+    const start=Math.max(1,clicks.length-limit);
+    const intervals=[];
+    for(let i=start;i<clicks.length;i++) {
+        const diff=clicks[i]-clicks[i-1];
+        if(Number.isFinite(diff)&&diff>=0)intervals.push(diff);
+    }
+    if(!intervals.length)return {intervals,min:0,max:0,average:0};
+    return {intervals,min:Math.min(...intervals),max:Math.max(...intervals),
+        average:intervals.reduce((total,value)=>total+value,0)/intervals.length};
+}
+function cpsDrawIntervals(now) {
+    const summary=$('cpsIntervalsSummary');
+    const stats=cpsIntervalStats(cpsTest.clicks);
+    summary.textContent=stats.intervals.length
+        ?'Derniers '+stats.intervals.length+' intervalles : moyenne '
+            +stats.average.toFixed(2)+' ms | min '+stats.min.toFixed(2)
+            +' ms | max '+stats.max.toFixed(2)+' ms'
+        :'Il faut au moins deux clics pour afficher les intervalles.';
+    const canvas=$('cpsIntervalsChart');
+    const box=canvas.getBoundingClientRect();
+    if(!box.width)return;
+    const w=Math.max(260,Math.round(box.width));
+    const h=Math.max(200,Math.round(box.height||260));
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    const left=43,right=w-13,width=right-left;
+    ctx.font='11px Segoe UI, sans-serif';ctx.textBaseline='middle';
+    ctx.fillStyle='#bed3ed';ctx.textAlign='left';
+    ctx.fillText('Clics successifs - fenêtre de 3 s',left,12);
+    ctx.beginPath();ctx.lineWidth=1;ctx.strokeStyle='#355171';
+    ctx.moveTo(left,65);ctx.lineTo(right,65);ctx.stroke();
+    const clicks=cpsTest.clicks;
+    const end=cpsTest.phase==='running'
+        ?Math.max(cpsTest.startedAt,Math.min(now,cpsTest.startedAt+cpsTest.seconds*1000))
+        :(clicks.length?clicks[clicks.length-1]:cpsTest.startedAt);
+    const beginning=Math.max(cpsTest.startedAt,end-3000);
+    const duration=Math.max(1000,end-beginning);
+    ctx.lineWidth=1.7;ctx.strokeStyle='#80c4ff';ctx.beginPath();
+    let first=true;
+    for(let i=clicks.length-1;i>=0;i--) {
+        if(clicks[i]<beginning)break;
+        if(clicks[i]>end)continue;
+        const x=left+(clicks[i]-beginning)/duration*width;
+        ctx.moveTo(x,33);ctx.lineTo(x,65);
+        first=false;
+    }
+    if(!first)ctx.stroke();
+    ctx.fillStyle='#92aacb';ctx.textAlign='left';
+    ctx.fillText('3 s avant',left,78);
+    ctx.textAlign='right';ctx.fillText('Dernier instant',right,78);
+    const top=115,bottom=h-27,plotH=Math.max(48,bottom-top);
+    ctx.textAlign='left';ctx.fillStyle='#bed3ed';
+    ctx.fillText('Temps entre deux clics (ms)',left,98);
+    const intervals=stats.intervals;
+    if(!intervals.length)return;
+    const floor=Math.max(0,Math.floor(stats.min*0.9/5)*5);
+    const ceiling=Math.max(floor+5,Math.ceil(stats.max*1.1/5)*5);
+    ctx.font='10px Segoe UI, sans-serif';
+    for(let i=0;i<=3;i++){
+        const y=top+plotH*i/3;
+        const value=ceiling-(ceiling-floor)*i/3;
+        ctx.strokeStyle='#29405d';ctx.lineWidth=1;ctx.beginPath();
+        ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
+        ctx.textAlign='right';ctx.fillStyle='#8da7c7';
+        ctx.fillText(value.toFixed(0),left-7,y);
+    }
+    const px=i=>left+(intervals.length===1?0.5:i/(intervals.length-1))*width;
+    const py=value=>top+plotH*(ceiling-value)/(ceiling-floor);
+    ctx.beginPath();ctx.lineWidth=2;ctx.lineJoin='round';ctx.strokeStyle='#77d7c5';
+    intervals.forEach((value,i)=>i?ctx.lineTo(px(i),py(value)):ctx.moveTo(px(i),py(value)));
+    ctx.stroke();
+    ctx.textAlign='left';ctx.fillStyle='#8da7c7';
+    ctx.fillText('Plus anciens',left,h-11);
+    ctx.textAlign='right';ctx.fillText('Plus récents',right,h-11);
+}
 function cpsRender(now) {
     if(cpsTest.phase==='running'&&cpsTest.source==='manual'
         &&now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
@@ -1949,6 +2041,7 @@ function cpsRender(now) {
         ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire, naturel ou rapide naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
         :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
     cpsDrawChart();
+    cpsDrawIntervals(now);
 }
 document.querySelectorAll('[data-cps-duration]').forEach(btn=>{
     btn.onclick=()=>{

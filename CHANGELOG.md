@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.24 - 2026-11-21
+
+- Introduit un accumulateur de fractions de milliseconde pour le calcul des intervalles de clics, afin d'améliorer la cadence moyenne à CPS décimaux sans surcoût de polling, attente active ou clics de rattrapage.
+- Réinitialise cet accumulateur à chaque session/test ; conserve le premier clic immédiat, le maximum de 100 CPS et les mécanismes de détection/sécurité existants.
+- Ajoute dans le Test CPS une chronologie glissante de 3 s des clics, une courbe des 60 derniers intervalles et leur moyenne, minimum et maximum en millisecondes.
+- Les graphiques utilisent les horodatages du Test CPS (profil ou clics manuels), pas des clics injectés dans d'autres applications ; aucun score sauvegardé.
+- Ajoute des tests Windows pour la précision 12,3/12,4 CPS et les profils, et des tests UI pour le calcul et l'affichage des intervalles.
+
+
 ## 1.9.23 - 2026-11-21
 
 - Étend les variations Personnalisé de Rapide naturel : 0-50 % entre les rafales et 0-25 % entre les clics, toujours par pas de 0,5 %.
