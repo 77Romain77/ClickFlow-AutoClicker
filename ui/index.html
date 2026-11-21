@@ -527,7 +527,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div class="card-head"><div><div class="card-title">Test de clics par seconde</div><div class="card-description">Teste les CPS générés par tes profils ou ta vitesse de clic manuelle.</div></div><span class="number">TEST / CPS</span></div>
    <div class="cps-source-row"><span class="label" style="margin:0">Mode de test</span><div class="cps-durations"><button id="cpsSourceProfile" class="btn sm primary" type="button">Profil ClickFlow</button><button id="cpsSourceManual" class="btn sm" type="button">Clics manuels</button><button id="cpsSourceReal" class="btn sm" type="button">Réception réelle</button></div></div>
    <div id="cpsProfileControls" class="cps-profile-controls"><label for="cpsProfileSelect" class="label" style="margin:0">Profil à tester</label><select id="cpsProfileSelect" class="select" aria-label="Profil à tester"></select><button id="cpsStartProfile" class="btn primary" type="button">Démarrer le test</button><button id="cpsStartReal" class="btn primary hidden" type="button">Ouvrir le test réel</button></div>
-   <div id="cpsRealInfo" class="subnote hidden" style="margin-top:8px">Une fenêtre Windows dédiée reçoit les clics du profil. Maintiens le bouton de souris dans sa zone de test. Aucun envoi n'est autorisé lorsque la fenêtre n'est pas active ou que le curseur sort de la zone. Test réservé à ClickFlow.</div>
+   <div id="cpsRealInfo" class="subnote hidden" style="margin-top:8px">Une fenêtre Windows dédiée reçoit les clics du profil. Maintiens le bouton de souris dans sa zone de test. À la fin, les résultats restent dans cet onglet, sous le graphique. Aucun envoi n'est autorisé hors de la fenêtre active ou de la zone.</div>
    <div id="cpsQuickSettings" class="quick-settings">
     <div class="quick-settings-title"><strong>Réglages rapides du profil</strong><span class="subnote">Modifications appliquées uniquement après validation</span></div>
     <div class="quick-fields">
@@ -1507,7 +1507,8 @@ $('uninstallAll').onclick=()=>{
 const cpsTest = {
     seconds:5, source:'profile', phase:'ready', startedAt:0,
     clicks:[], samples:[], peak:0, timer:0, last:null, run:0,
-    profileName:'', sent:0, lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
+    profileName:'', sent:0, finalizationRequested:false,
+    lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
 };
 const cpsDurations=[2,5,10,30,60];
 // Édition non destructive : les modifications restent un brouillon jusqu'à Appliquer.
@@ -1712,11 +1713,12 @@ function cpsResetTest() {
     cpsStopTimer();
     cpsTest.phase='ready';cpsTest.startedAt=0;
     cpsTest.clicks=[];cpsTest.samples=[];cpsTest.peak=0;
-    cpsTest.profileName='';cpsTest.sent=0;
+    cpsTest.profileName='';cpsTest.sent=0;cpsTest.finalizationRequested=false;
     cpsRender(cpsNow());
 }
-function cpsFinish(now) {
-    if(cpsTest.phase!=='running')return;
+function cpsFinish(now,replaceIncomplete=false) {
+    if(cpsTest.phase!=='running'
+        &&!(replaceIncomplete&&cpsTest.phase==='done'&&cpsTest.last?.incomplete))return;
     const end=cpsTest.startedAt+cpsTest.seconds*1000;
     cpsSample(end,true);
     cpsTest.phase='done';cpsStopTimer();
@@ -1739,6 +1741,7 @@ function cpsStart(now) {
     cpsStopTimer();
     cpsTest.phase='running';cpsTest.startedAt=now;
     cpsTest.clicks=[];cpsTest.samples=[{t:0,v:0}];cpsTest.peak=0;
+    cpsTest.finalizationRequested=false;
     cpsTest.timer=setInterval(()=>cpsRender(cpsNow()),85);
 }
 function cpsSyncProfiles() {
@@ -1865,6 +1868,20 @@ function cpsHandleEngineMessage(msg) {
         toast(msg.message||'Impossible de lancer ce test.');
     }
 }
+// Ne jamais effacer les mesures déjà reçues si le moteur perd sa confirmation.
+function cpsRecoverIncomplete(reason,stopNative=false) {
+    if(cpsTest.phase!=='running')return;
+    cpsRebuildFinalSamples();
+    cpsFinish(cpsNow());
+    if(cpsTest.last) {
+        cpsTest.last.incomplete=true;
+        cpsTest.last.reason=reason;
+        cpsLastRender();
+        cpsRender(cpsNow());
+    }
+    if(stopNative&&connected&&cpsTest.source==='real')
+        send('cpsReal','stop');
+}
 function cpsHandleRealMessage(msg) {
     if(cpsTest.source!=='real'||Number(msg.run)!==cpsTest.run)return;
     if(msg.state==='opened') {
@@ -1872,7 +1889,7 @@ function cpsHandleRealMessage(msg) {
         cpsTest.profileName=msg.profile||cpsTest.profileName;
         $('cpsRealInfo').textContent='Fenêtre native ouverte. Maintiens '
             +(msg.trigger==='RButton'?'le clic droit':msg.trigger==='MButton'?'le clic milieu':'le clic gauche')
-            +' dans la zone dédiée pour commencer. Les clics injectés ne sont comptés qu\'après réception dans la fenêtre.';
+            +' dans la zone dédiée pour commencer. Après le test, retrouve les résultats ici sous le graphique. Seuls les clics reçus sont comptés.';
         return;
     }
     if(msg.state==='started') {
@@ -1886,19 +1903,24 @@ function cpsHandleRealMessage(msg) {
         cpsReceiveEngineTicks(msg.ticks);return;
     }
     if(msg.state==='finished') {
-        if(cpsTest.phase!=='running')return;
+        if(cpsTest.phase!=='running'
+            &&!(cpsTest.phase==='done'&&cpsTest.last?.incomplete))return;
         cpsTest.sent=Number(msg.sent)||0;
         if(Array.isArray(msg.ticks)) {
             cpsTest.clicks=msg.ticks.filter(x=>Number.isFinite(x)
                 &&x>=0&&x<cpsTest.seconds*1000).map(x=>cpsTest.startedAt+x);
             cpsRebuildFinalSamples();
         }
-        cpsFinish(cpsNow());return;
+        cpsFinish(cpsNow(),true);return;
     }
     if(msg.state==='stopped' || msg.state==='error') {
-        if(cpsTest.phase==='pending'||cpsTest.phase==='running')
+        const reason=msg.message||msg.reason||'Test interrompu.';
+        if(cpsTest.phase==='running') {
+            cpsRecoverIncomplete(reason);
+        } else if(cpsTest.phase==='pending') {
             cpsResetTest();
-        if(msg.state==='error')toast(msg.message||'Impossible de lancer le test réel.');
+        }
+        if(msg.state==='error')toast(reason);
         else if(msg.reason && !String(msg.reason).includes('annulé'))
             toast(msg.reason);
     }
@@ -1906,7 +1928,8 @@ function cpsHandleRealMessage(msg) {
 function cpsLastRender() {
     const last=cpsTest.last;
     $('cpsLast').textContent=last
-        ? last.profile+' · '+last.seconds+' s · '+last.clicks+' clics · '
+        ? (last.incomplete?'MESURE INCOMPLÈTE - ':'')
+            +last.profile+' · '+last.seconds+' s · '+last.clicks+' clics · '
             +last.average.toFixed(1)+' CPS moyens · pic '+last.peak+' CPS'
             +(last.source==='real'?' · '+last.sent+' envoyés / '+last.clicks+' reçus':'')
         : 'Aucun résultat pour le moment.';
@@ -1919,7 +1942,10 @@ function cpsLastRender() {
         $('cpsPrecision').textContent=(fixed?'Cible : '+last.target+' CPS · Écart : '+delta+' · ':'')
             +'Intervalle moyen mesuré : '+period
             +(last.source==='real'?' (événements reçus dans la fenêtre native).'
-                :' (sans clics Windows).');
+                :' (sans clics Windows).')
+            +(last.incomplete?' Attention : confirmation finale absente ou test interrompu.'
+                +(last.reason?' Motif : '+last.reason:'')
+                +' Les données reçues sont conservées, mais le score est provisoire.':'');
     } else {
         $('cpsPrecision').textContent='Mesure de clics manuels : pas de cible CPS.';
     }
@@ -2051,9 +2077,18 @@ function cpsDrawIntervals(now) {
 function cpsRender(now) {
     if(cpsTest.phase==='running'&&cpsTest.source==='manual'
         &&now>=cpsTest.startedAt+cpsTest.seconds*1000){cpsFinish(now);return;}
+    if(cpsTest.phase==='running'&&cpsTest.source==='real'
+        &&now-cpsTest.startedAt>cpsTest.seconds*1000+350
+        &&!cpsTest.finalizationRequested&&connected) {
+        cpsTest.finalizationRequested=true;
+        send('cpsReal','status',cpsTest.run);
+    }
     if(cpsTest.phase==='running'&&(cpsTest.source==='profile'||cpsTest.source==='real')
-        &&now-cpsTest.startedAt>cpsTest.seconds*1000+2500){
-        cpsResetTest();toast('Le moteur de test ne répond plus.');return;
+        &&now-cpsTest.startedAt>cpsTest.seconds*1000+2500) {
+        cpsRecoverIncomplete('Le moteur n\'a pas confirmé la fin du test.',
+            cpsTest.source==='real');
+        toast('Mesures conservées : confirmation du moteur absente.');
+        return;
     }
     if(cpsTest.phase==='running')cpsSample(now);
     const elapsed=cpsTest.phase==='done'?cpsTest.seconds:cpsElapsed(now);
