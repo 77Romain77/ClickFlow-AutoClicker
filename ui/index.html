@@ -606,7 +606,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 'use strict';
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
-const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
+const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',rapidTarget:10,rapidPreset:'custom',rapidBetween:10,rapidWithin:5,activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
 const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,diagnosticsEnabled:false,gateDebugEnabled:false,mouseDetectionMode:"classic",overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
 model.globalHotkeys={next:'',previous:'',overlay:'',test:'',open:''};
 let connected = false, toastTimer = 0, modalTask = null;
@@ -640,13 +640,33 @@ function setSwitch(id,enabled) {
     $(id).setAttribute('aria-pressed',String(!!enabled));
 }
 function clamp(v) {return Math.max(1,Math.min(100,Math.round(Number(v)||1)));}
+const rapidPresets={precision:[2,1],balanced:[4,2],soft:[6,3],custom:null};
+const rapidPercents=c=>rapidPresets[c.rapidPreset]||[Number(c.rapidBetween??10),Number(c.rapidWithin??5)];
+const rapidClamp=(v,max)=>Math.max(0,Math.min(max,Math.round(Number(v)*2)/2||0));
+function rapidChange(field,value) {
+    const c=config();
+    c[field]=field==='rapidTarget'?clamp(value):rapidClamp(value,field==='rapidBetween'?10:5);
+    render();send('set',field,c[field]);
+}
+function rapidPresetChange(value) {
+    if(!Object.hasOwn(rapidPresets,value))return;
+    config().rapidPreset=value;render();send('set','rapidPreset',value);
+}
 function updateRanges() {
     const c=config();
-    $('minRange').value=$('minNumber').value=c.min;
+    const rapid=c.mode==='rapid';
+    $('minRange').value=$('minNumber').value=rapid?(c.rapidTarget??10):c.min;
     $('maxRange').value=$('maxNumber').value=c.max;
-    $('maxGroup').classList.toggle('hidden',c.mode==='fixed');
-    $('minLabel').textContent=c.mode==='fixed'?'CPS fixe':'CPS minimum';
+    $('maxGroup').classList.toggle('hidden',c.mode==='fixed'||rapid);
+    $('minLabel').textContent=rapid?'CPS cible':c.mode==='fixed'?'CPS fixe':'CPS minimum';
     $('intensityBlock').classList.toggle('hidden',c.mode!=='natural');
+    $('rapidBlock').classList.toggle('hidden',!rapid);
+    selectedButtons('rapidPresetSeg','rapidPreset',c.rapidPreset||'custom');
+    $('rapidCustom').classList.toggle('hidden',!rapid||c.rapidPreset!=='custom');
+    $('rapidBetween').value=c.rapidBetween??10;
+    $('rapidWithin').value=c.rapidWithin??5;
+    const v=rapidPercents(c);
+    $('rapidHint').textContent='±'+v[0]+' % entre les rafales, ±'+v[1]+' % entre les clics. Aucun ralentissement volontaire ni accélération au démarrage.';
 }
 function render() {
     const c=config();
@@ -685,12 +705,17 @@ function renderCompactPanel() {
     sel.value=String(model.selected);
     selectedButtons('compactModeSeg','compactMode',c.mode);
     selectedButtons('compactIntensitySeg','compactIntensity',c.intensity);
-    $('compactMin').value=c.min;
+    selectedButtons('compactRapidPresetSeg','compactRapid',c.rapidPreset||'custom');
+    $('compactRapid').classList.toggle('hidden',c.mode!=='rapid');
+    $('compactRapidCustom').classList.toggle('hidden',c.mode!=='rapid'||c.rapidPreset!=='custom');
+    $('compactRapidBetween').value=c.rapidBetween??10;
+    $('compactRapidWithin').value=c.rapidWithin??5;
+    $('compactMinLabel').textContent=c.mode==='rapid'?'CPS cible':c.mode==='fixed'?'CPS fixe':'CPS min';
+    $('compactMin').value=c.mode==='rapid'?(c.rapidTarget??10):c.min;
     $('compactMax').value=c.max;
-    $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed');
+    $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed'||c.mode==='rapid');
     $('compactIntensity').classList.toggle('hidden',c.mode!=='natural');
-    $('compactModeLabel').textContent=c.mode==='fixed'?'Fixe':
-        c.mode==='random'?'Aléatoire':'Naturel';
+    $('compactModeLabel').textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel',rapid:'Rapide naturel'})[c.mode]||'Fixe';
     $('compactHotkey').textContent=model.capturing&&model.captureTarget==='activation'
         ?'...' : c.hotkey;
     $('compactEmergencyKey').textContent=model.capturing&&model.captureTarget==='emergency'
@@ -713,6 +738,12 @@ document.querySelectorAll('[data-compact-intensity]').forEach(btn=>{
         config().intensity=value;render();send('set','intensity',value);
     };
 });
+document.querySelectorAll('[data-compact-rapid]').forEach(btn=>{
+    btn.onclick=()=>rapidPresetChange(btn.dataset.compactRapid);
+});
+for(const field of ['Between','Within']) {
+    $('compactRapid'+field).onchange=e=>rapidChange('rapid'+field,e.target.value);
+}
 for(const field of ['min','max']){
     $('compact'+field[0].toUpperCase()+field.slice(1)).onchange=e=>{
         changeCps(field,e.target.value);
@@ -749,9 +780,11 @@ function renderProfiles() {
         fav.onclick=()=>toggleFavorite(p.id);
         head.append(name,fav);
         const mode=document.createElement('div');mode.className='profile-card-meta';
-        mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel'})[p.settings.mode]
-            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS'
-            +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'');
+        mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel',rapid:'Rapide naturel'})[p.settings.mode]
+            +' - '+(p.settings.mode==='rapid'?(p.settings.rapidTarget??10):p.settings.min)
+            +(p.settings.mode==='fixed'||p.settings.mode==='rapid'?'':' à '+p.settings.max)+' CPS'
+            +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'')
+            +(p.settings.mode==='rapid'?' - '+({precision:'Précision',balanced:'Équilibré',soft:'Souple',custom:'Personnalisé'})[p.settings.rapidPreset||'custom']:'');
         const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
         shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');
         const actions=document.createElement('div');actions.className='profile-card-actions';
@@ -878,6 +911,10 @@ $('importProfilePage').onclick=importProfile;
 $('profileSelect').onchange=e=>chooseProfile(Number(e.target.value));
 function changeCps(which,input) {
     const c=config();
+    if(c.mode==='rapid'&&which==='min') {
+        rapidChange('rapidTarget',input);
+        return;
+    }
     const n=clamp(input);
     c[which]=n;
     if(c.min>c.max){if(which==='min') c.max=c.min; else c.min=c.max;}
@@ -896,6 +933,9 @@ document.querySelectorAll('[data-intensity]').forEach(b=>b.onclick=()=>{
     config().intensity=b.dataset.intensity;
     render();send('set','intensity',b.dataset.intensity);
 });
+document.querySelectorAll('[data-rapid-preset]').forEach(b=>b.onclick=()=>rapidPresetChange(b.dataset.rapidPreset));
+for(const field of ['Between','Within'])
+    $('rapid'+field).onchange=e=>rapidChange('rapid'+field,e.target.value);
 document.querySelectorAll('[data-activation]').forEach(b=>b.onclick=()=>{
     config().activation=b.dataset.activation;
     render();send('set','activation',b.dataset.activation);
@@ -1772,7 +1812,7 @@ function cpsRender(now) {
     $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
     cpsQuickRender();
     $('cpsDescription').textContent=cpsTest.source==='profile'
-        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire ou naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
+        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire, naturel ou rapide naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
         :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
     cpsDrawChart();
 }
