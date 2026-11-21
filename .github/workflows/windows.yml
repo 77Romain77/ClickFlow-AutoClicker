@@ -54,7 +54,7 @@ jobs:
           New-Item -ItemType Directory -Force 'stage/ui' | Out-Null
           Copy-Item 'src/*' 'stage/' -Recurse -Force
           Copy-Item 'ui/index.html' 'stage/ui/index.html'
-          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-Desktop.ahk','ClickFlow-GlobalHotkeys.ahk','ClickFlow-Backup.ahk','ClickFlow-Backup.ps1','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
+          foreach ($required in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-RealCps.ahk','ClickFlow-Desktop.ahk','ClickFlow-GlobalHotkeys.ahk','ClickFlow-Backup.ahk','ClickFlow-Backup.ps1','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','assets/ClickFlow.ico','lib/WebView2/64bit/WebView2Loader.dll')) {
             if (!(Test-Path (Join-Path 'stage' $required))) { throw "Stage missing: $required" }
           }
 
@@ -253,6 +253,22 @@ jobs:
           Write-Host "Desktop workspace: $out"
           if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
             throw "Workspace test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
+      - name: Verify native received-click window and tagged Win32 SendInput
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-real-cps.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError real-cps.err -RedirectStandardOutput real-cps.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Native received-click test timed out.'
+          }
+          $out = if (Test-Path real-cps.out) { Get-Content real-cps.out -Raw } else { '' }
+          $err = if (Test-Path real-cps.err) { Get-Content real-cps.err -Raw } else { '' }
+          Write-Host "Native click receiver: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Native receiver regression failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
       - name: Verify profile CPS scheduler and cancellation (AutoHotkey)
@@ -581,7 +597,7 @@ jobs:
             if (Test-Path (Join-Path $appRoot $legacy)) { throw "Old runtime not deleted: $legacy" }
           }
           if (!(Test-Path $dataSentinel)) { throw 'Unrelated WebView2 user data was deleted!' }
-          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-Desktop.ahk','ClickFlow-GlobalHotkeys.ahk','ClickFlow-Backup.ahk','ClickFlow-Backup.ps1','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
+          foreach ($asset in @('ClickFlow-WebView2.ahk','ClickFlow-Backend.ahk','ClickFlow-CpsTest.ahk','ClickFlow-RealCps.ahk','ClickFlow-Desktop.ahk','ClickFlow-GlobalHotkeys.ahk','ClickFlow-Backup.ahk','ClickFlow-Backup.ps1','ClickFlow-ProfileStore.ahk','ClickFlow-Maintenance.ahk','ClickFlow-Uninstall.ahk','ui/index.html','lib/WebView2/64bit/WebView2Loader.dll','.extracted-ok')) {
             if (!(Test-Path (Join-Path $cache $asset))) { throw "Bundled asset missing: $asset" }
           }
           Add-Type -TypeDefinition @'
