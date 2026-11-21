@@ -301,6 +301,22 @@ jobs:
             throw "Natural cadence test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
+      - name: Verify Rapid naturel burst variation, RPM conversion and saved profiles
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-rapid-mode.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError rapid-test.err -RedirectStandardOutput rapid-test.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Rapid naturel test timed out.'
+          }
+          $out = if (Test-Path rapid-test.out) { Get-Content rapid-test.out -Raw } else { '' }
+          $err = if (Test-Path rapid-test.err) { Get-Content rapid-test.err -Raw } else { '' }
+          Write-Host "Rapid naturel: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Rapid naturel regression failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
       - name: Verify safe uninstall (preserve profiles / remove everything)
         shell: pwsh
         run: |
