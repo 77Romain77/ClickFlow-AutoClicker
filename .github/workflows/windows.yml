@@ -129,6 +129,11 @@ jobs:
         run: |
           node tests/cps-tester.test.cjs
 
+      - name: Verify Rapid naturel RPM calculator and manual CPS overrides (Node.js)
+        shell: pwsh
+        run: |
+          node tests/rapid-ui.test.cjs
+
       - name: Verify dashboard CPS monitor sleeps without clicks (Node.js)
         shell: pwsh
         run: |
