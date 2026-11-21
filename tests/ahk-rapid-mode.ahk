@@ -139,6 +139,11 @@ try {
     started := CF.test.started
     Loop 201
         CFTestTick(started + (A_Index - 1) * 10)
+    ; Le dernier tick peut tomber une fraction de microseconde avant
+    ; l'échéance à cause de la représentation des nombres flottants.
+    ; Un tick de fin explicitement au-delà de la durée reste déterministe.
+    if CF.test.active
+        CFTestTick(started + 2010)
     if CF.test.active
         throw Error("Le test de profil rapide n'est pas terminé.")
     if CF.test.clicks.Length < 22 || CF.test.clicks.Length > 27

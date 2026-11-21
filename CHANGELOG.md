@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.27 - 2026-11-21
+
+- Corrige le démarrage inopérant de la réception réelle : la zone statique ne transmettait pas de façon fiable les messages de bouton physique.
+- Installe un hook souris bas niveau uniquement pendant le test, filtrant les événements SendInput injectés afin de ne pas confondre relâchement artificiel et vrai relâchement du maintien.
+- Prend en charge le premier clic qui active la fenêtre avant le démarrage ; réappui après relâchement sans relancer l'application.
+- Actualise la fenêtre Windows : barre de titre native sombre lorsque disponible, panneaux contrastés, statut visible, compteurs séparés pour appuis physiques, clics envoyés, clics reçus, temps restant et bouton de fermeture.
+- Conserve la réception réelle des clics Windows, la précision du moteur et les contrôles de sécurité sur le focus et la zone. Aucun changement au moteur général.
+- Étend les tests natifs avec appui/relâchement physiques simulés, protection contre les événements injectés sur le même bouton, reprise et sortie de zone.
+
+
 ## 1.9.26 - 2026-11-21
 
 - Ajoute une troisième source **Réception réelle** dans Test CPS : une fenêtre native Windows reçoit réellement les clics SendInput générés à partir d'un profil sélectionné.

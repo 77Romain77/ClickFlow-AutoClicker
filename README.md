@@ -1,23 +1,31 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.26 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.27 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.26.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.26)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.27.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.27)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.26.ahk`.
+2. Télécharger `ClickFlow-v1.9.27.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.26`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.27`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Correction du test réel et nouvelle fenêtre native (v1.9.27)
+
+Le premier appui physique sur la zone de réception native est maintenant détecté indépendamment des messages souris du contrôle de texte : la fenêtre active un **hook souris bas niveau limité à la durée du test**, ignore les événements marqués comme injectés et suit le vrai bouton maintenu, même lorsque ClickFlow envoie des clics du même bouton. Le premier clic peut donner le focus à la fenêtre avant que le test ne démarre ; un très bref délai de réessai absorbe ce changement de focus. Au relâchement physique, la génération cesse et un nouvel appui permet de reprendre tant que la durée du test n'est pas écoulée.
+
+La fenêtre conserve sa vraie barre de titre Windows, désormais foncée lorsque DWM le permet. Son contenu reprend les couleurs de ClickFlow, avec un état d'attente/maintien/pause, une grande zone de réception, un compteur des appuis physiques distinct des clics envoyés et reçus, un compte à rebours et un bouton de fermeture. Un clic physique isolé est indiqué dans le compteur des appuis, même s'il est trop court pour produire un clic automatique. La méthode d'injection reste SendInput avec les mêmes protections de zone et focus.
+
+**Pour tester :** Test CPS > Réception réelle > sélectionner un profil > Ouvrir le test réel. Dans la fenêtre, cliquer et maintenir le bouton indiqué à l'intérieur du rectangle. Les compteurs doivent changer pendant le maintien. Relâcher pour mettre la génération en pause, maintenir de nouveau pour reprendre. La fenêtre se ferme en fin de durée ou à l'arrêt. Le test n'envoie rien dans un jeu ; SendInput reste toutefois global à Windows, donc ne pas le lancer devant une application sensible.
 
 ## Nouveau Test CPS : réception réelle Windows (v1.9.26)
 
