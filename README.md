@@ -1,23 +1,33 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.25 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.26 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.25.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.25)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.26.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.26)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.25.ahk`.
+2. Télécharger `ClickFlow-v1.9.26.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.25`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.26`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Nouveau Test CPS : réception réelle Windows (v1.9.26)
+
+L'onglet Test CPS propose désormais trois sources distinctes : **Profil ClickFlow** (simulation interne sans clic Windows), **Clics manuels** (clics physiques dans la zone WebView2) et **Réception réelle** (nouvelle fenêtre native Windows recevant les clics SendInput du profil).
+
+Pour la réception réelle : sélectionner un profil et la durée, choisir **Réception réelle**, puis **Ouvrir le test réel**. Dans la nouvelle fenêtre native, maintenir le bouton de condition configuré par le profil (ou le clic gauche par défaut) à l'intérieur de la zone. La cadence du profil est calculée avec le même moteur que l'utilisation normale, et les événements SendInput portent un marqueur pour être identifiés lorsqu'ils arrivent dans la file de messages de cette fenêtre. Les clics physiques servant à déclencher le test ne sont pas comptés comme clics générés.
+
+Le Test CPS affiche séparément **clics envoyés** et **clics réellement reçus par la fenêtre**, ainsi que les CPS et les intervalles des messages reçus dans le même graphique. La fenêtre se ferme à la fin de la durée sélectionnée. Le test s'arrête immédiatement si la fenêtre perd le focus, si le curseur quitte la zone pendant le maintien, si l'utilisateur ferme la fenêtre ou déclenche l'arrêt d'urgence. Le moteur général reste désactivé pendant ce test. Aucun résultat n'est sauvegardé.
+
+**Sécurité et portée de la mesure :** SendInput est une entrée globale Windows : ClickFlow vérifie juste avant chaque envoi que la fenêtre native est active et que le curseur est dans la zone. La vérification réduit le risque d'un clic hors de la fenêtre, sans pouvoir éliminer une course extrêmement courte si le focus change exactement entre le contrôle et l'injection. Ne pas utiliser ce test devant une application sensible. Les messages reçus dans cette fenêtre ne prouvent pas qu'un jeu accepterait exactement les mêmes événements.
 
 ## Cadence ancrée sur la chronologie prévue (v1.9.25)
 
