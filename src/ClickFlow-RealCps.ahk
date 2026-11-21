@@ -123,6 +123,8 @@ CFRealEnd(reason := "arrêté", completed := false) {
     test.run := 0
     test.gui := 0
     test.zone := 0
+    for message in [0x201,0x202,0x204,0x205,0x207,0x208]
+        try OnMessage(message, CFRealMouse, 0)
     try gui.Destroy()
 }
 
@@ -260,15 +262,10 @@ CFRealTick(now := "") {
             CFRealFlush()
         return
     }
-    ; Le véritable UP natif reste prioritaire, même si le clic simulé
-    ; sur le même bouton a modifié l'état logique du bouton dans Windows.
-    ; Si aucun vrai UP n'est arrivé, la lecture physique sert de filet.
-    if !GetKeyState(test.trigger, "P") {
-        test.held := false
-        if !CF.armed && !CF.test.active
-            CFEngineSetTimer(false)
-        return
-    }
+    ; Le WM_*BUTTONUP physique non marqué est la référence.
+    ; GetKeyState peut être temporairement faussé si l'on injecte
+    ; le même bouton que celui qui est maintenu : ne pas l'utiliser
+    ; comme motif d'arrêt pendant ce test.
     if now < test.nextAt
         return
     ; Contrôle de destination juste avant SendInput. Si la fenêtre ou la
