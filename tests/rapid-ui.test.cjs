@@ -18,7 +18,7 @@ const context={
     Math,Number,Object,String
 };
 vm.runInNewContext(script+
-    '\nthis.exported={rpmToCps,rpmIsValid,rapidChange,rapidApplyRpm,rapidPresetChange,rapidPercents,rapidTargetClamp};',
+    '\nthis.exported={rpmToCps,rpmIsValid,rapidChange,rapidApplyRpm,rapidPresetChange,rapidPercents,rapidTargetClamp,rapidEstimatedRanges,rapidEstimateText};',
     context,{timeout:2000,filename:'Rapid naturel calculator'});
 const app=context.exported;
 assert.equal(app.rpmToCps(600),10);
@@ -50,6 +50,23 @@ inputs.compactRapidRpm.value='600';
 app.rapidApplyRpm('compact');
 assert.equal(profile.rapidTarget,10);
 assert.equal(profile.rapidRpm,600);
+// The two ranges must combine per-burst and per-click variations, with
+// exactly the same 1-100 CPS bounds as the actual scheduling engine.
+const example={rapidTarget:10,rapidPreset:'custom',rapidBetween:10,rapidWithin:5};
+const estimated=app.rapidEstimateText(example);
+assert.equal(estimated.burst,'9.00 - 11.00 CPS');
+assert.equal(estimated.click,'8.55 - 11.55 CPS');
+assert.deepEqual(Array.from(app.rapidPercents({...example,rapidPreset:'precision'})),[2,1]);
+assert.equal(app.rapidEstimateText({...example,rapidPreset:'precision'}).burst,'9.80 - 10.20 CPS');
+assert.equal(app.rapidEstimateText({...example,rapidPreset:'precision'}).click,'9.70 - 10.30 CPS');
+assert.equal(app.rapidEstimateText({...example,rapidPreset:'balanced'}).burst,'9.60 - 10.40 CPS');
+assert.equal(app.rapidEstimateText({...example,rapidPreset:'soft'}).burst,'9.40 - 10.60 CPS');
+assert.equal(app.rapidEstimateText({...example,rapidBetween:0,rapidWithin:0}).click,'10.00 - 10.00 CPS');
+const bounded=app.rapidEstimatedRanges({...example,rapidTarget:100});
+assert.equal(bounded.burstMax,100);
+assert.equal(bounded.clickMax,100);
+assert.equal(app.rapidEstimateText({...example,rapidTarget:9.3}).burst,'8.37 - 10.23 CPS');
+
 const before=sent.length;
 inputs.rapidRpm.value='12';
 app.rapidApplyRpm('full');
