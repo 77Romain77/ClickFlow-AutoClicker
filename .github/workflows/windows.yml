@@ -129,6 +129,11 @@ jobs:
         run: |
           node tests/cps-tester.test.cjs
 
+      - name: Verify tenth-CPS input handling for all other modes (Node.js)
+        shell: pwsh
+        run: |
+          node tests/decimal-cps-ui.test.cjs
+
       - name: Verify Rapid naturel RPM calculator and manual CPS overrides (Node.js)
         shell: pwsh
         run: |
@@ -293,6 +298,22 @@ jobs:
           Write-Host "CPS timing (10/50/100): $timingOut"
           if ($q.ExitCode -ne 0 -or $timingErr -or $timingOut -notmatch 'passed') {
             throw "CPS timing regression failed: exit=$($q.ExitCode) stdout=$timingOut stderr=$timingErr"
+          }
+
+      - name: Verify decimal CPS cadence, per-profile storage and legacy migration
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-decimal-cps.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError decimal-test.err -RedirectStandardOutput decimal-test.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Decimal CPS regression timed out.'
+          }
+          $out = if (Test-Path decimal-test.out) { Get-Content decimal-test.out -Raw } else { '' }
+          $err = if (Test-Path decimal-test.err) { Get-Content decimal-test.err -Raw } else { '' }
+          Write-Host "Decimal CPS: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Decimal CPS regression failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
       - name: Verify natural cadence, jitter, hesitations and intensity levels
