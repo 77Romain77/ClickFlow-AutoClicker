@@ -1505,7 +1505,8 @@ CFNaturalReset(cfg) {
     CF.nextVariation := 0
     CF.naturalNoise := 0
     CF.naturalBurstLeft := 0
-    CFRapidBurstReset(cfg)
+    if cfg.mode = 4
+        CFRapidBurstReset(cfg)
 }
 
 ; Pour des rafales courtes : cadence choisie une fois par appui,
