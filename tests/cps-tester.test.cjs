@@ -305,4 +305,34 @@ assert.equal(st.last.incomplete,true);
 assert.equal(st.last.clicks,2);
 assert(get('cpsPrecision').textContent.includes('Fenêtre de test non active.'));
 get('cpsReset').onclick();
+// v1.9.29 : distinguer un moteur régulier d'une réception native figée.
+get('cpsReset').onclick();
+get('cpsStartReal').onclick();
+const timedRun=sent.at(-1)[3];
+time=27000;
+api.cpsHandleRealMessage({state:'started',run:timedRun,profile:'Gaming'});
+api.cpsHandleRealMessage({state:'ticks',run:timedRun,sent:7,received:7,
+    sentTicks:[0,80,160,240,320,400,480],
+    ticks:[0,80,160,550,550.05,630,710]});
+assert.equal(st.sentClicks.length,7,'Sent timestamps should be collected separately');
+assert.equal(st.clicks.length,7,'Received messages must remain independent');
+assert(get('cpsIntervalsSummary').textContent.includes('Envoi moteur'),
+    'Live chart must compare both timelines');
+time=28400;
+api.cpsHandleRealMessage({state:'finished',run:timedRun,duration:2,
+    profile:'Gaming',sent:7,received:7,
+    sentTicks:[0,80,160,240,320,400,480],
+    ticks:[0,80,160,550,550.05,630,710]});
+assert.equal(st.phase,'done');
+assert.equal(st.last.sending.count,6);
+assert.equal(st.last.sending.longGaps,0);
+assert.equal(st.last.receiving.longGaps,1);
+assert.equal(st.last.receiving.shortGaps,1);
+assert(get('cpsTimingDiagnostics').textContent.includes('Envoi moteur'));
+assert(get('cpsTimingDiagnostics').textContent.includes('Traitement dans la fenêtre Windows'));
+assert.equal(get('cpsTimingDiagnostics').classList.contains('hidden'),false);
+get('cpsReset').onclick();
+api.cpsSetSource('manual');
+assert.equal(get('cpsTimingDiagnostics').classList.contains('hidden'),false,
+    'Last finished native diagnostic is retained across source changes');
 console.log('CPS simulation, manual clicking and native sent/received Windows test passed.');
