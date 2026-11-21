@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 1.9.25 - 2026-11-21
+
+- Corrige la dérive cumulative de la cadence : échéances ancrées à la chronologie prévue plutôt que recalculées depuis chaque réveil Windows légèrement en retard.
+- Conserve les fractions de milliseconde introduites en v1.9.24 pour plus de précision sur les CPS au dixième.
+- En cas de pause longue, réinitialise la phase et impose un intervalle sûr avant de reprendre, sans aucun clic de rattrapage.
+- Les premiers clics de chaque activation ou nouvel appui conditionnel restent immédiats.
+- Le Test CPS utilise désormais exactement cette même planification pour ses graphiques et mesures.
+- Ajoute un test Windows simulant 30 secondes à 12,3 CPS avec 0,9 ms de retard et vérifiant l'absence de rafales après une pause.
+- Aucun changement de la détection souris Raw Input, des profils, ni des raccourcis.
+
+
 ## 1.9.24 - 2026-11-21
 
 - Introduit un accumulateur de fractions de milliseconde pour le calcul des intervalles de clics, afin d'améliorer la cadence moyenne à CPS décimaux sans surcoût de polling, attente active ou clics de rattrapage.
