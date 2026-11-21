@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.28 - 2026-11-21
+
+- Corrige la disparition des résultats du test **Réception réelle** : un délai de confirmation ne remet plus les compteurs et les graphiques à zéro.
+- Demande explicitement au moteur Windows de renvoyer le résultat final lorsqu'une confirmation tarde ; le dernier résultat natif est conservé en mémoire pour récupération après fermeture de la fenêtre.
+- Si le moteur ne confirme toujours pas la fin ou si la fenêtre est interrompue, conserve les mesures reçues en les signalant comme **incomplètes**, plutôt que de les présenter comme un test validé.
+- Accepte une confirmation tardive et remplace automatiquement le résultat provisoire par la mesure complète.
+- Clarifie dans l'onglet **Test CPS** où consulter les résultats ; ajoute des régressions JavaScript et AutoHotkey dédiées.
+- Ne modifie pas le moteur général de clics et ne sauvegarde aucun score sur disque.
+
+
 ## 1.9.27 - 2026-11-21
 
 - Corrige le démarrage inopérant de la réception réelle : la zone statique ne transmettait pas de façon fiable les messages de bouton physique.

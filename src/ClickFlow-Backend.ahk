@@ -13,6 +13,7 @@ global CF := {
     hwnd: 0, web: 0, event: 0,
     capture: false, inputHook: 0, pressed: false, armed: false,
     test: {active: false}, realTest: {run: 0, active: false, held: false},
+    realResult: {run: 0, json: ""},
     desktopReady: false, trayProfiles: 0, floatGui: 0,
     closeToTray: false, minimizeToTray: false, floatShown: false,
     liveMonitor: true, compactChart: true, forceExit: false,
@@ -592,6 +593,9 @@ BackendMessage(sender, args) {
                     }
                 case "stop":
                     CFRealEnd("Test réel annulé.")
+                case "status":
+                    if parts.Length >= 3
+                        CFRealStatus(parts[3])
             }
             return
         }
