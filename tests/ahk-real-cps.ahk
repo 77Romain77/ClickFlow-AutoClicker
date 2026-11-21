@@ -75,9 +75,15 @@ try {
     Sleep(120)
     if test.sent != 1
         throw Error("L'injection unique native a échoué.")
-    if test.received != 1 || test.clicks.Length != 1
-        throw Error("Le message Windows marqué n'a pas été reçu (sent "
-            test.sent ", received " test.received ").")
+    if test.received != 1 || test.clicks.Length != 1 {
+        MouseGetPos(,,&underHwnd,&underCtrl,2)
+        throw Error("Windows received mismatch: sent=" test.sent
+            ", received=" test.received ", anyMouse=" test.anyMouse
+            ", lastMsg=" test.lastMsg ", lastHwnd=" test.lastHwnd
+            ", extra=" test.lastExtra ", Gui=" test.gui.Hwnd
+            ", zone=" test.zone.Hwnd ", cursorWin=" underHwnd
+            ", cursorCtrl=" underCtrl)
+    }
     if test.received != test.sent
         throw Error("Les compteurs envoyés/reçus divergent sur le récepteur natif.")
 
