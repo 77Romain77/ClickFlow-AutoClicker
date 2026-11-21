@@ -1,23 +1,31 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.22 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.23 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.22.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.22)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.23.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.23)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.22.ahk`.
+2. Télécharger `ClickFlow-v1.9.23.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.22`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.23`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Variations personnalisées étendues (v1.9.23)
+
+Le mode **Rapide naturel > Personnalisé** accepte désormais **0 à ±50 % entre les rafales** et **0 à ±25 % entre les clics**, toujours par pas de 0,5 %. Ces nouveaux plafonds s'appliquent dans le tableau de bord, le panneau compact, les réglages rapides du Test CPS et la sauvegarde des profils.
+
+Les préréglages Précision, Équilibré et Souple, la cadence cible, la conversion RPM, le moteur de clic et la détection souris restent inchangés. Le champ Personnalisé conserve ses valeurs précédentes lors de la mise à jour (10 % / 5 % par défaut).
+
+Attention : une variation importante peut produire des ralentissements très visibles. Exemple avec une cible de 10 CPS et des variations maximales (50 % / 25 %) : cadence de base de 5.00 à 15.00 CPS par rafale, cadence théorique instantanée de 3.75 à 18.75 CPS avant les arrondis et latences Windows. Les valeurs de CPS calculées restent plafonnées à la plage 1-100 CPS.
 
 ## CPS au dixième dans tous les modes (v1.9.22)
 
@@ -44,7 +52,7 @@ Un quatrième mode de cadence s'ajoute à Fixe, Aléatoire et Naturel, sans modi
 - **CPS cible** : une seule vitesse de référence de 1 à 100 CPS, réglable par pas de 0,1 CPS, sans plage min/max à remplir.
 - **Variations de rafale** : une nouvelle cadence de base est choisie à chaque nouvel appui conditionnel (ou à chaque activation si aucune condition souris n'est utilisée). Elle reste stable pendant la rafale.
 - **Micro-variations par clic** : légères irrégularités de cadence sans hésitation volontaire, accélération artificielle ni rattrapage en rafale.
-- **Précision** : ±2 % entre les rafales, ±1 % entre les clics. **Équilibré** : ±4 % / ±2 %. **Souple** : ±6 % / ±3 %. **Personnalisé** : de 0 à ±10 % / de 0 à ±5 % par pas de 0,5 %.
+- **Précision** : ±2 % entre les rafales, ±1 % entre les clics. **Équilibré** : ±4 % / ±2 %. **Souple** : ±6 % / ±3 %. **Personnalisé** : de 0 à ±50 % / de 0 à ±25 % par pas de 0,5 %.
 - **Calculatrice RPM de l'arme (facultative)** : entrer 60 à 6000 RPM puis cliquer sur "Calculer le CPS". La cible devient RPM / 60 arrondi au dixième (750 RPM -> 12,5 CPS). La source RPM est sauvegardée avec le profil ; modifier manuellement le CPS cible délie le précédent RPM.
 
 Les réglages sont disponibles dans le tableau de bord, la vue compacte et l'éditeur du Test CPS. Les tests de profil reprennent le vrai calcul de cadence sans injecter de clics dans Windows. La cadence théorique d'une arme ne garantit pas le nombre de tirs réellement acceptés par un jeu : les entrées trop rapprochées peuvent être ignorées. Ajuster selon l'application et respecter ses règles d'utilisation.
