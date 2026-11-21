@@ -63,16 +63,30 @@ try {
     if !CFRealInside()
         throw Error("Le curseur n'est pas dans la zone native de test.")
 
-    ; Simulation de l'état de maintien uniquement pour provoquer un
-    ; véritable SendInput marqué, puis compter son WM_LBUTTONDOWN.
+    ; Un vrai appui dans la zone déclenche maintenant le test, sans
+    ; dépendre de WM_LBUTTONDOWN reçu par le contrôle Text. Les
+    ; injections système (LLMHF_INJECTED=1) ne doivent jamais le faire.
     test := CF.realTest
-    test.active := true
-    test.held := true
-    test.started := CFNowMs()
-    test.endAt := test.started + 2000
-    test.nextAt := test.started
-    CFNaturalReset(test.cfg)
-    CFRealTick()
+    test.cfg.mode := 1
+    test.cfg.min := 1
+    test.cfg.max := 1
+    if !test.hook
+        throw Error("Le hook souris physique n'a pas été installé.")
+    centerX := NumGet(pt, 0, "Int")
+    centerY := NumGet(pt, 4, "Int")
+    if CFRealPhysicalMessage(0x201, 1, CFRealMarker(), centerX, centerY)
+        || CFRealPhysicalMessage(0x201, 1, 0, centerX, centerY)
+        || test.physical != 0
+        throw Error("Un clic injecté a armé le test réel.")
+    if CFRealPhysicalMessage(0x201, 0, 0, centerX, centerY-260)
+        throw Error("Un appui hors de la zone a armé le test réel.")
+    if !CFRealPhysicalMessage(0x201, 0, 0, centerX, centerY)
+        || !test.held || !test.pendingStart || test.physical != 1
+        throw Error("Le premier appui physique dans la zone n'est pas détecté.")
+    CFRealBeginPending()
+    if !test.active || test.pendingStart
+        throw Error("Le premier appui physique n'a pas démarré le profil.")
+    CFEngineSetTimer(false)
     Sleep(120)
     if test.sent != 1
         throw Error("L'injection unique native a échoué.")
@@ -85,8 +99,27 @@ try {
             ", zone=" test.zone.Hwnd ", cursorWin=" underHwnd
             ", cursorCtrl=" underCtrl)
     }
+    if !test.held || CFRealPhysicalMessage(0x202, 1, CFRealMarker(), centerX, centerY)
+        || CFRealPhysicalMessage(0x202, 1, 0, centerX, centerY)
+        || !test.held
+        throw Error("Le bouton injecté relâche le maintien physique.")
+    if !CFRealPhysicalMessage(0x202, 0, 0, centerX, centerY)
+        || test.held
+        throw Error("Le vrai relâchement ne met pas fin au maintien.")
+    CFRealReleasePending()
+    if CF.engineTimerActive
+        throw Error("Le cadenceur tourne encore après le relâchement.")
     if test.received != test.sent
         throw Error("Les compteurs envoyés/reçus divergent sur le récepteur natif.")
+    ; Nouvel appui physique : la même fenêtre doit rester utilisable.
+    if !CFRealPhysicalMessage(0x201, 0, 0, centerX, centerY)
+        || test.physical != 2
+        throw Error("Le second appui physique n'a pas été détecté.")
+    CFRealBeginPending()
+    CFEngineSetTimer(false)
+    Sleep(80)
+    if test.sent != 2 || test.received != 2
+        throw Error("Un nouvel appui ne reprend pas les clics du profil.")
 
     ; Le curseur hors du rectangle met fin au test sans nouvel envoi.
     MouseMove(NumGet(pt,0,"Int"),NumGet(pt,4,"Int")-120,0)
@@ -94,10 +127,10 @@ try {
     CFRealTick()
     if CF.realTest.run != 0
         throw Error("La sortie de zone n'a pas fermé le test.")
-    if test.sent != 1
+    if test.sent != 2
         throw Error("Un clic a été envoyé hors zone.")
     MouseMove(savedX,savedY,0)
-    FileAppend("Native Windows SendInput receiver, tag filter, focus/zone guard and cleanup passed.",
+    FileAppend("Native physical DOWN/UP, injected-input filter, tagged SendInput delivery, focus/zone guard and cleanup passed.",
         "*","UTF-8")
     ExitApp(0)
 } catch as err {
