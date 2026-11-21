@@ -75,7 +75,7 @@ const ctx={
     Math,Number,String,Array,console
 };
 vm.runInNewContext(rapidHelpers+'\n'+script+
-    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage,cpsQuickLoad};',
+    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage,cpsQuickLoad,cpsIntervalStats};',
     ctx,{timeout:3000,filename:'ui/index.html CPS test'});
 const api=ctx.exports,st=api.cpsTest;
 const quickMode=get('cpsQuickMode');
@@ -136,6 +136,11 @@ assert.equal(st.phase,'running');
 time=510;
 api.cpsHandleEngineMessage({state:'ticks',run,ticks:[0,50,100,150,200]});
 assert.equal(st.clicks.length,5,'Engine ticks should drive the graph and count');
+assert.equal(api.cpsIntervalStats(st.clicks).average,50);
+assert.equal(api.cpsIntervalStats(st.clicks).min,50);
+assert.equal(api.cpsIntervalStats(st.clicks).max,50);
+assert(get('cpsIntervalsSummary').textContent.includes('50.00 ms'),
+    'Simulation must show intervals from actual engine ticks');
 assert.equal(st.peak,5);
 assert.equal(sounds,5,'Every generated click should play its subtle sound');
 time=5110;
@@ -196,7 +201,19 @@ assert.equal(st.phase,'done');
 assert.equal(st.last.profile,'Clics manuels');
 assert.equal(st.last.clicks,3);
 assert.equal(st.last.average,1.5);
+assert.equal(api.cpsIntervalStats(st.clicks).average,200);
+assert(get('cpsIntervalsSummary').textContent.includes('200.00 ms'),
+    'Manual clicks should be visualized independently of profile test');
 assert.equal(get('cpsAverage').textContent,'1.5');
 assert.equal(get('cpsLast').textContent.includes('3 clics'),true);
 assert.equal(sent.filter(x=>x[1]==='result').length,0,'No scores should be persisted');
-console.log('CPS profile scheduling UI, audio, manual mode, last result and stale message tests passed.');
+const sample=api.cpsIntervalStats([0,81,163,244,325]);
+assert.equal(sample.min,81);
+assert.equal(sample.max,82);
+assert.equal(sample.average,81.25);
+assert.equal(api.cpsIntervalStats([]).intervals.length,0);
+assert.equal(api.cpsIntervalStats([15]).intervals.length,0);
+assert.equal(api.cpsIntervalStats([0,10,30,60],2).intervals.length,2);
+assert(html.includes('id="cpsIntervalsChart"')&&html.includes('id="cpsIntervalsSummary"'),
+    'Click timeline and interval summary must be present in CPS tab');
+console.log('CPS profile scheduling, interval chart, fractional period summary, manual mode and stale message tests passed.');
