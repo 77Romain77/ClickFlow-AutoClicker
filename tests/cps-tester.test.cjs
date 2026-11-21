@@ -261,4 +261,48 @@ assert.equal(sent.at(-1)[1],'stop');
 api.cpsHandleRealMessage({state:'finished',run:abandonedRun,duration:2,
     profile:'Gaming',sent:100,received:100,ticks:[0]});
 assert.equal(st.phase,'ready','A cancelled native test cannot revive from late messages');
+// Régression v1.9.28 : une confirmation native manquante ne doit plus
+// effacer les mesures. Une confirmation tardive remplace le résultat provisoire.
+get('cpsStartReal').onclick();
+const recoverRun=sent.at(-1)[3];
+time=15000;
+api.cpsHandleRealMessage({state:'started',run:recoverRun,profile:'Gaming'});
+api.cpsHandleRealMessage({state:'ticks',run:recoverRun,sent:5,received:4,
+    ticks:[0,200,400,600]});
+time=17380;
+for(const tick of [...timers.values()])tick();
+assert.equal(st.phase,'running','Native test must wait briefly for final confirmation');
+assert(sent.some(x=>x[0]==='cpsReal'&&x[1]==='status'&&x[2]===recoverRun),
+    'Frontend must request a missing native completion');
+time=17600;
+for(const tick of [...timers.values()])tick();
+assert.equal(st.phase,'running','Status retry must not reset native CPS metrics');
+time=19650;
+for(const tick of [...timers.values()])tick();
+assert.equal(st.phase,'done','Expired final confirmation must freeze the test');
+assert.equal(st.last.incomplete,true,'Timeout results must be identified as provisional');
+assert.equal(st.last.clicks,4,'Already received clicks must survive the timeout');
+assert(get('cpsLast').textContent.includes('MESURE INCOMPLÈTE'));
+assert(sent.some(x=>x[0]==='cpsReal'&&x[1]==='stop'),
+    'Timeout must stop native injection without resetting displayed results');
+api.cpsHandleRealMessage({state:'stopped',run:recoverRun,reason:'Test réel annulé.'});
+assert.equal(st.phase,'done','Late native stop must not erase provisional results');
+api.cpsHandleRealMessage({state:'finished',run:recoverRun,duration:2,
+    profile:'Gaming',sent:6,received:5,ticks:[0,200,400,600,800]});
+assert.equal(st.last.clicks,5,'Late final confirmation must replace incomplete data');
+assert.equal(st.last.incomplete,undefined,'Confirmed results must no longer be provisional');
+assert.equal(st.phase,'done');
+get('cpsReset').onclick();
+// Une fermeture/erreur en cours de test doit conserver les clics reçus.
+get('cpsStartReal').onclick();
+const stopRun=sent.at(-1)[3];
+time=22000;
+api.cpsHandleRealMessage({state:'started',run:stopRun,profile:'Gaming'});
+api.cpsHandleRealMessage({state:'ticks',run:stopRun,sent:3,received:2,ticks:[0,250]});
+api.cpsHandleRealMessage({state:'stopped',run:stopRun,reason:'Fenêtre de test non active.'});
+assert.equal(st.phase,'done','Interrupted native run must remain visible');
+assert.equal(st.last.incomplete,true);
+assert.equal(st.last.clicks,2);
+assert(get('cpsPrecision').textContent.includes('Fenêtre de test non active.'));
+get('cpsReset').onclick();
 console.log('CPS simulation, manual clicking and native sent/received Windows test passed.');
