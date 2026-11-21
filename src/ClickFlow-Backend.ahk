@@ -57,6 +57,8 @@ global CF := {
     configFile: A_AppData "\ClickFlow\settings.ini",
     profilesDir: A_AppData "\ClickFlow\profiles",
     cfg: {mode: 1, variation: 2, min: 8, max: 14,
+        rapidTarget: 10.0, rapidPreset: 4, rapidBetween: 10.0,
+        rapidWithin: 5.0, rapidRpm: 0,
         clickButton: "Left", activation: "F6", hold: 1,
         mouseGate: 0, gateButton: "RButton", focusStop: 1}
 }
