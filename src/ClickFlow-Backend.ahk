@@ -49,7 +49,7 @@ global CF := {
     mainCompactW: 480, mainCompactH: 600,
     target: 0, nextAt: 0, cpsNow: 0, nextVariation: 0,
     naturalCps: 12, naturalTarget: 12, naturalNoise: 0,
-    naturalBurstLeft: 0, total: 0, recent: [],
+    naturalBurstLeft: 0, rapidBurstCps: 10, total: 0, recent: [],
     lastStatus: "", notice: "Prêt.", loading: true, shuttingDown: false,
     emergencyKey: "F12", compactMode: false, captureKind: "activation",
     globalKeys: Map(),
@@ -57,6 +57,8 @@ global CF := {
     configFile: A_AppData "\ClickFlow\settings.ini",
     profilesDir: A_AppData "\ClickFlow\profiles",
     cfg: {mode: 1, variation: 2, min: 8, max: 14,
+        rapidTarget: 10.0, rapidPreset: 4, rapidBetween: 10.0,
+        rapidWithin: 5.0, rapidRpm: 0,
         clickButton: "Left", activation: "F6", hold: 1,
         mouseGate: 0, gateButton: "RButton", focusStop: 1}
 }
@@ -150,12 +152,13 @@ JsonQuote(str) {
 }
 
 ToUiCfg(cfg) {
-    mode := ["fixed","random","natural"][cfg.mode]
+    mode := ["fixed","random","natural","rapid"][cfg.mode]
     intensity := ["low","medium","high"][cfg.variation]
+    rapidPreset := ["precision","balanced","soft","custom"][cfg.rapidPreset]
     activation := cfg.hold = 1 ? "hold" : "toggle"
     mouse := cfg.clickButton = "Left" ? "left" : cfg.clickButton = "Right" ? "right" : "middle"
     gate := cfg.gateButton = "LButton" ? "left" : cfg.gateButton = "RButton" ? "right" : cfg.gateButton = "MButton" ? "middle" : cfg.gateButton = "XButton1" ? "mouse4" : "mouse5"
-    return '{"mode":' JsonQuote(mode) ',"min":' cfg.min ',"max":' cfg.max ',"intensity":' JsonQuote(intensity) ',"activation":' JsonQuote(activation) ',"mouse":' JsonQuote(mouse) ',"hotkey":' JsonQuote(DisplayKey(cfg.activation)) ',"gate":' (cfg.mouseGate ? "true" : "false") ',"gateButton":' JsonQuote(gate) ',"focus":' (cfg.focusStop ? "true" : "false") '}'
+    return '{"mode":' JsonQuote(mode) ',"min":' cfg.min ',"max":' cfg.max ',"intensity":' JsonQuote(intensity) ',"rapidTarget":' cfg.rapidTarget ',"rapidRpm":' cfg.rapidRpm ',"rapidPreset":' JsonQuote(rapidPreset) ',"rapidBetween":' cfg.rapidBetween ',"rapidWithin":' cfg.rapidWithin ',"activation":' JsonQuote(activation) ',"mouse":' JsonQuote(mouse) ',"hotkey":' JsonQuote(DisplayKey(cfg.activation)) ',"gate":' (cfg.mouseGate ? "true" : "false") ',"gateButton":' JsonQuote(gate) ',"focus":' (cfg.focusStop ? "true" : "false") '}'
 }
 
 SendState() {
@@ -297,9 +300,31 @@ EditConfig(field, value) {
     cfg := CF.cfg
     switch field {
         case "mode":
-            cfg.mode := value = "fixed" ? 1 : value = "random" ? 2 : value = "natural" ? 3 : cfg.mode
+            cfg.mode := value = "fixed" ? 1 : value = "random" ? 2 : value = "natural" ? 3 : value = "rapid" ? 4 : cfg.mode
         case "intensity":
             cfg.variation := value = "low" ? 1 : value = "medium" ? 2 : value = "high" ? 3 : cfg.variation
+        case "rapidPreset":
+            cfg.rapidPreset := value = "precision" ? 1 : value = "balanced" ? 2
+                : value = "soft" ? 3 : value = "custom" ? 4 : cfg.rapidPreset
+        case "rapidTarget":
+            if !RegExMatch(value, "^\d{1,3}(?:\.\d)?$")
+                return
+            cfg.rapidTarget := Round(Max(1, Min(100, value + 0)) * 10) / 10
+            cfg.rapidRpm := 0
+        case "rapidRpm":
+            if !RegExMatch(value, "^(?:0|[1-9]\d{1,3})$")
+                return
+            rpm := value + 0
+            if rpm != 0 && (rpm < 60 || rpm > 6000)
+                return
+            cfg.rapidRpm := rpm
+            if rpm
+                cfg.rapidTarget := Round((rpm / 60) * 10) / 10
+        case "rapidBetween", "rapidWithin":
+            if !RegExMatch(value, "^\d{1,2}(?:\.\d)?$")
+                return
+            limit := field = "rapidBetween" ? 10 : 5
+            cfg.%field% := Round(Max(0, Min(limit, value + 0)) * 2) / 2
         case "activation":
             cfg.hold := value = "hold" ? 1 : value = "toggle" ? 2 : cfg.hold
         case "mouse":
@@ -436,7 +461,11 @@ BackendMessage(sender, args) {
         }
         if cmd = "quickSettings" && parts.Length >= 6 {
             try CFApplyQuickSettings(parts[2], parts[3], parts[4],
-                parts[5], parts[6])
+                parts[5], parts[6], parts.Length >= 10 ? parts[7] : "",
+                parts.Length >= 10 ? parts[8] : "",
+                parts.Length >= 10 ? parts[9] : "",
+                parts.Length >= 10 ? parts[10] : "",
+                parts.Length >= 11 ? parts[11] : "")
             catch as err
                 CFProfileMessage("Réglages rapides refusés : " err.Message, true)
             return
@@ -656,7 +685,8 @@ BackendMessage(sender, args) {
 }
 
 
-CFApplyQuickSettings(id, mode, minimum, maximum, variation) {
+CFApplyQuickSettings(id, mode, minimum, maximum, variation,
+    rapidTarget := "", rapidPreset := "", rapidBetween := "", rapidWithin := "", rapidRpm := "0") {
     global CF
     if !RegExMatch(id, "^[1-9]\d{0,8}$")
         throw Error("Identifiant invalide.")
@@ -669,15 +699,35 @@ CFApplyQuickSettings(id, mode, minimum, maximum, variation) {
     high := maximum + 0
     if low < 1 || high > 100 || high < low
         throw Error("La valeur maximale doit être supérieure ou égale au minimum.")
-    if !HasValue(["fixed", "random", "natural"], mode)
+    if !HasValue(["fixed", "random", "natural", "rapid"], mode)
         throw Error("Mode invalide.")
     if !HasValue(["low", "medium", "high"], variation)
         throw Error("Intensité invalide.")
+    if mode = "rapid" {
+        if !RegExMatch(rapidTarget, "^\d{1,3}(?:\.\d)?$")
+            || !RegExMatch(rapidRpm, "^(?:0|[1-9]\d{1,3})$")
+            || !HasValue(["precision", "balanced", "soft", "custom"], rapidPreset)
+            || !RegExMatch(rapidBetween, "^\d{1,2}(?:\.\d)?$")
+            || !RegExMatch(rapidWithin, "^\d{1,2}(?:\.\d)?$")
+            throw Error("Réglages Rapide naturel invalides.")
+        if rapidTarget + 0 < 1 || rapidTarget + 0 > 100
+            || rapidBetween + 0 > 10 || rapidWithin + 0 > 5
+            || (rapidRpm + 0 != 0 && (rapidRpm + 0 < 60 || rapidRpm + 0 > 6000))
+            || (rapidRpm + 0 != 0 && Abs(rapidTarget + 0 - Round((rapidRpm + 0) / 6) / 10) > 0.001)
+            throw Error("Variations hors limites.")
+    }
     StopAll("Profil ajusté depuis le Test CPS.")
-    profile.cfg.mode := mode = "fixed" ? 1 : mode = "random" ? 2 : 3
+    profile.cfg.mode := mode = "fixed" ? 1 : mode = "random" ? 2 : mode = "natural" ? 3 : 4
     profile.cfg.min := low
     profile.cfg.max := high
     profile.cfg.variation := variation = "low" ? 1 : variation = "medium" ? 2 : 3
+    if mode = "rapid" {
+        profile.cfg.rapidTarget := Round((rapidTarget + 0) * 10) / 10
+        profile.cfg.rapidRpm := rapidRpm + 0
+        profile.cfg.rapidPreset := rapidPreset = "precision" ? 1 : rapidPreset = "balanced" ? 2 : rapidPreset = "soft" ? 3 : 4
+        profile.cfg.rapidBetween := Round((rapidBetween + 0) * 2) / 2
+        profile.cfg.rapidWithin := Round((rapidWithin + 0) * 2) / 2
+    }
     SaveSettings()
     SendState()
 }
@@ -1393,6 +1443,9 @@ EngineTick(firstFromActivation := false) {
             return
         }
         if CF.gateWaiting {
+            ; Chaque nouvel appui physique crée une nouvelle rafale.
+            if CF.cfg.mode = 4
+                CFRapidBurstReset(CF.cfg)
             CF.gateMethodLast := CF.mouseDetectionMode = "classic" ? "classic"
                 : (CF.gateRawRegistered && CF.gateWakeSignal)
                     ? "event" : "fallback"
@@ -1469,6 +1522,27 @@ CFNaturalReset(cfg) {
     CF.nextVariation := 0
     CF.naturalNoise := 0
     CF.naturalBurstLeft := 0
+    if cfg.mode = 4
+        CFRapidBurstReset(cfg)
+}
+
+; Pour des rafales courtes : cadence choisie une fois par appui,
+; avec une micro-variation indépendante entre les clics.
+CFRapidVariations(cfg) {
+    switch cfg.rapidPreset {
+        case 1: return {between: 2.0, within: 1.0}
+        case 2: return {between: 4.0, within: 2.0}
+        case 3: return {between: 6.0, within: 3.0}
+        default: return {between: cfg.rapidBetween, within: cfg.rapidWithin}
+    }
+}
+
+CFRapidBurstReset(cfg) {
+    global CF
+    v := CFRapidVariations(cfg)
+    ; La variation principale ne change pas pendant la rafale.
+    CF.rapidBurstCps := Max(1.0, Min(100.0,
+        cfg.rapidTarget * (1 + Random(-v.between, v.between) / 100)))
 }
 
 ; Cadence cible à évolution progressive. Le niveau faible de la v1.5
@@ -1485,6 +1559,8 @@ GetNextCps(cfg := 0, now := "") {
         return minimum
     if cfg.mode = 2
         return Random(minimum, maximum)
+    if cfg.mode = 4
+        return CF.rapidBurstCps
 
     intensity := Max(1, Min(3, cfg.variation))
     if now >= CF.nextVariation {
@@ -1516,6 +1592,12 @@ GetNextIntervalMs(cfg := 0, now := "") {
     if now = ""
         now := CFNowMs()
     cps := GetNextCps(cfg, now)
+    if cfg.mode = 4 {
+        v := CFRapidVariations(cfg)
+        ; Pas d'hésitation, pas de rattrapage, pas d'accélération artificielle.
+        cps := Max(1.0, Min(100.0, cps * (1 + Random(-v.within, v.within) / 100)))
+        return Max(10, Round(1000 / cps))
+    }
     if cfg.mode != 3
         return Max(10, Round(1000 / cps))
 
@@ -1721,12 +1803,16 @@ FinishCapture(key) {
 
 DefaultConfig() {
     return {mode: 1, variation: 2, min: 8, max: 14,
+        rapidTarget: 10.0, rapidPreset: 4, rapidBetween: 10.0, rapidWithin: 5.0, rapidRpm: 0,
         clickButton: "Left", activation: "F6", hold: 1,
         mouseGate: 0, gateButton: "RButton", focusStop: 1}
 }
 
 CopyConfig(cfg) {
     return {mode: cfg.mode, variation: cfg.variation, min: cfg.min, max: cfg.max,
+        rapidTarget: cfg.rapidTarget, rapidPreset: cfg.rapidPreset,
+        rapidRpm: cfg.rapidRpm,
+        rapidBetween: cfg.rapidBetween, rapidWithin: cfg.rapidWithin,
         clickButton: cfg.clickButton, activation: cfg.activation, hold: cfg.hold,
         mouseGate: cfg.mouseGate, gateButton: cfg.gateButton, focusStop: cfg.focusStop}
 }
@@ -1745,15 +1831,28 @@ ReadConfig(file, section, base) {
     cfg := CopyConfig(base)
     if !FileExist(file)
         return cfg
-    for field in ["mode", "variation", "min", "max", "hold", "mouseGate", "focusStop"] {
+    for field in ["mode", "variation", "min", "max", "rapidPreset", "rapidRpm",
+        "hold", "mouseGate", "focusStop"] {
         value := IniRead(file, section, field, cfg.%field%)
         if RegExMatch(value, "^\d+$")
+            cfg.%field% := value + 0
+    }
+    for field in ["rapidTarget", "rapidBetween", "rapidWithin"] {
+        value := IniRead(file, section, field, cfg.%field%)
+        if RegExMatch(value, "^\d{1,3}(?:\.\d+)?$")
             cfg.%field% := value + 0
     }
     for field in ["clickButton", "activation", "gateButton"]
         cfg.%field% := IniRead(file, section, field, cfg.%field%)
 
-    cfg.mode := Max(1, Min(3, cfg.mode))
+    cfg.mode := Max(1, Min(4, cfg.mode))
+    cfg.rapidTarget := Round(Max(1, Min(100, cfg.rapidTarget)) * 10) / 10
+    cfg.rapidRpm := cfg.rapidRpm >= 60 && cfg.rapidRpm <= 6000 ? cfg.rapidRpm : 0
+    if cfg.rapidRpm && Abs(cfg.rapidTarget - Round(cfg.rapidRpm / 6) / 10) > 0.001
+        cfg.rapidRpm := 0
+    cfg.rapidPreset := Max(1, Min(4, cfg.rapidPreset))
+    cfg.rapidBetween := Round(Max(0, Min(10, cfg.rapidBetween)) * 2) / 2
+    cfg.rapidWithin := Round(Max(0, Min(5, cfg.rapidWithin)) * 2) / 2
     cfg.variation := Max(1, Min(3, cfg.variation))
     cfg.min := Max(1, Min(100, cfg.min))
     cfg.max := Max(cfg.min, Min(100, cfg.max))

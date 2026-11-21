@@ -202,6 +202,14 @@ body.compact #intensityBlock .range-top{margin-top:14px!important}
 body.compact #intensitySeg{margin-top:7px}
 body.compact #intensitySeg button{flex:1;min-height:32px}
 body.compact #naturalIntensityHint{display:none}
+.rapid-custom{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.rapid-custom label{flex:1;min-width:135px;font-size:11px;color:#b7d0eb}
+.rapid-custom input{width:100%;margin-top:5px}.rapid-hint{margin-top:9px}
+#rapidBlock .mini-tab{flex-wrap:wrap}#rapidBlock .mini-tab button{min-width:88px;flex:1}
+#modeSeg{flex-wrap:wrap}#modeSeg button{min-width:105px;flex:1}
+#compactModeSeg,#compactRapidPresetSeg{grid-template-columns:repeat(2,minmax(0,1fr))}
+#compactRapid .compact-segment button{min-width:0;font-size:10px}
+#compactRapid .rapid-custom label{min-width:80px}
+.quick-fields label.hidden{display:none!important}
 body.compact .seg button{min-height:35px;font-size:12px}
 body.compact .key-row{display:none}
 body.compact .card .emergency-row{margin-top:10px}
@@ -353,7 +361,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.19 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.20 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -379,9 +387,10 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
      <button type="button" data-compact-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button>
      <button type="button" data-compact-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button>
      <button type="button" data-compact-mode="natural" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button>
+     <button type="button" data-compact-mode="rapid" data-mode-tip="Rafales courtes, cadence rapide et micro-variations sans hésitations." aria-label="Rapide naturel : rafales courtes et régulières.">Rapide naturel</button>
     </div>
     <div class="compact-numbers">
-     <label>CPS min<input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
+     <label><span id="compactMinLabel">CPS min</span><input id="compactMin" class="input" type="number" min="1" max="100" aria-label="CPS minimum compact"></label>
      <label id="compactMaxWrap">CPS max<input id="compactMax" class="input" type="number" min="1" max="100" aria-label="CPS maximum compact"></label>
     </div>
     <div id="compactIntensity" class="compact-intensity">
@@ -390,6 +399,23 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
       <button type="button" data-compact-intensity="low">Faible</button>
       <button type="button" data-compact-intensity="medium">Moyenne</button>
       <button type="button" data-compact-intensity="high">Élevée</button>
+     </div>
+    </div>
+    <div id="compactRapid" class="compact-intensity hidden">
+     <span class="compact-caption">RAPIDE NATUREL - VARIATIONS</span>
+     <div id="compactRapidPresetSeg" class="compact-segment">
+      <button type="button" data-compact-rapid="precision">Précision</button>
+      <button type="button" data-compact-rapid="balanced">Équilibré</button>
+      <button type="button" data-compact-rapid="soft">Souple</button>
+      <button type="button" data-compact-rapid="custom">Personnalisé</button>
+     </div>
+     <div class="rapid-custom">
+      <label>RPM arme (facultatif)<input id="compactRapidRpm" class="input" type="number" min="60" max="6000" step="1" placeholder="Ex. 750"></label>
+      <button id="compactRapidRpmApply" class="btn quiet" type="button">Calculer CPS</button>
+     </div>
+     <div id="compactRapidCustom" class="rapid-custom hidden">
+      <label>Entre les rafales (%)<input id="compactRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
+      <label>Entre les clics (%)<input id="compactRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
      </div>
     </div>
    </section>
@@ -411,10 +437,23 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="card">
      <div class="card-head"><div><div class="card-title">Fréquence des clics</div><div class="card-description">Configurez votre cadence en quelques secondes.</div></div><span class="number">01 / CPS</span></div>
      <span class="label">Mode de fonctionnement</span>
-     <div class="seg" id="modeSeg"><button data-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button><button data-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button><button data-mode="natural" class="active" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button></div>
+     <div class="seg" id="modeSeg"><button data-mode="fixed" data-mode-tip="Cadence constante : le même intervalle entre chaque clic." aria-label="Fixe : Cadence constante : le même intervalle entre chaque clic.">Fixe</button><button data-mode="random" data-mode-tip="Un CPS différent à chaque clic, dans la plage min/max." aria-label="Aléatoire : Un CPS différent à chaque clic, dans la plage min/max.">Aléatoire</button><button data-mode="natural" class="active" data-mode-tip="Variations progressives, micro-irrégularités et hésitations occasionnelles." aria-label="Naturel : Variations progressives, micro-irrégularités et hésitations occasionnelles.">Naturel</button><button data-mode="rapid" data-mode-tip="Cadence rapide dès le premier clic, variation par rafale et micro-variations sans hésitations." aria-label="Rapide naturel : rafales régulières et variations légères.">Rapide naturel</button></div>
      <div class="range-group"><div class="range-top"><b id="minLabel">CPS minimum</b><span class="subnote">1 à 100 CPS</span></div><div class="value-row"><input aria-label="CPS minimum" id="minRange" class="range" type="range" min="1" max="100" value="8"><input aria-label="Valeur minimum" id="minNumber" class="input number-input" type="number" min="1" max="100" value="8"></div></div>
      <div class="range-group" id="maxGroup"><div class="range-top"><b>CPS maximum</b><span class="subnote">Valeur supérieure ou égale au minimum</span></div><div class="value-row"><input aria-label="CPS maximum" id="maxRange" class="range" type="range" min="1" max="100" value="14"><input aria-label="Valeur maximum" id="maxNumber" class="input number-input" type="number" min="1" max="100" value="14"></div></div>
      <div id="intensityBlock"><div class="range-top" style="margin-top:20px"><b>Intensité des variations</b></div><div class="mini-tab" id="intensitySeg"><button data-intensity="low">Faible</button><button data-intensity="medium" class="active">Moyenne</button><button data-intensity="high">Élevée</button></div><p class="subnote" id="naturalIntensityHint" style="margin-top:10px"></p></div>
+     <div id="rapidBlock" class="hidden"><div class="range-top" style="margin-top:20px"><b>Variations de Rapide naturel</b></div>
+      <div class="mini-tab" id="rapidPresetSeg"><button data-rapid-preset="precision">Précision</button><button data-rapid-preset="balanced">Équilibré</button><button data-rapid-preset="soft">Souple</button><button data-rapid-preset="custom">Personnalisé</button></div>
+      <p class="subnote rapid-hint" id="rapidHint">Nouvelle cadence à chaque rafale. Aucune hésitation ni accélération artificielle.</p>
+      <div class="rapid-custom">
+       <label>RPM de l'arme (facultatif)<input id="rapidRpm" class="input" type="number" min="60" max="6000" step="1" placeholder="Ex. 750"></label>
+       <button id="rapidRpmApply" class="btn quiet" type="button">Calculer le CPS</button>
+      </div>
+      <p class="subnote">Conversion théorique : RPM / 60 = CPS. Le jeu peut ignorer certains clics envoyés trop tôt.</p>
+      <div id="rapidCustom" class="rapid-custom hidden">
+       <label>Variation entre les rafales (%)<input id="rapidBetween" class="input" type="number" min="0" max="10" step="0.5" value="10"></label>
+       <label>Variation entre les clics (%)<input id="rapidWithin" class="input" type="number" min="0" max="5" step="0.5" value="5"></label>
+      </div>
+     </div>
      <div class="mutedline">La précision réelle dépend des minuteries de Windows et de l'application cible.</div>
     </div>
     <div class="card">
@@ -465,10 +504,15 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
    <div id="cpsQuickSettings" class="quick-settings">
     <div class="quick-settings-title"><strong>Réglages rapides du profil</strong><span class="subnote">Modifications appliquées uniquement après validation</span></div>
     <div class="quick-fields">
-     <label>Mode<select id="cpsQuickMode" class="select"><option value="fixed">Fixe</option><option value="random">Aléatoire</option><option value="natural">Naturel</option></select></label>
-     <label>CPS min<input id="cpsQuickMin" class="input" type="number" min="1" max="100"></label>
-     <label>CPS max<input id="cpsQuickMax" class="input" type="number" min="1" max="100"></label>
-     <label>Intensité<select id="cpsQuickIntensity" class="select"><option value="low">Faible</option><option value="medium">Moyenne</option><option value="high">Élevée</option></select></label>
+     <label>Mode<select id="cpsQuickMode" class="select"><option value="fixed">Fixe</option><option value="random">Aléatoire</option><option value="natural">Naturel</option><option value="rapid">Rapide naturel</option></select></label>
+     <label id="cpsQuickMinWrap"><span id="cpsQuickMinLabel">CPS min</span><input id="cpsQuickMin" class="input" type="number" min="1" max="100"></label>
+     <label id="cpsQuickMaxWrap">CPS max<input id="cpsQuickMax" class="input" type="number" min="1" max="100"></label>
+     <label id="cpsQuickIntensityWrap">Intensité<select id="cpsQuickIntensity" class="select"><option value="low">Faible</option><option value="medium">Moyenne</option><option value="high">Élevée</option></select></label>
+     <label id="cpsQuickRapidPresetWrap" class="hidden">Variations<select id="cpsQuickRapidPreset" class="select"><option value="precision">Précision</option><option value="balanced">Équilibré</option><option value="soft">Souple</option><option value="custom">Personnalisé</option></select></label>
+     <label id="cpsQuickRapidBetweenWrap" class="hidden">Entre rafales (%)<input id="cpsQuickRapidBetween" class="input" type="number" min="0" max="10" step="0.5"></label>
+     <label id="cpsQuickRapidWithinWrap" class="hidden">Entre clics (%)<input id="cpsQuickRapidWithin" class="input" type="number" min="0" max="5" step="0.5"></label>
+     <label id="cpsQuickRapidRpmWrap" class="hidden">RPM arme (facultatif)<input id="cpsQuickRapidRpm" class="input" type="number" min="60" max="6000" step="1" placeholder="Ex. 750"></label>
+     <button id="cpsQuickRapidRpmApply" class="btn quiet hidden" type="button">Calculer CPS depuis RPM</button>
     </div>
     <div class="quick-actions"><span id="cpsQuickNotice">Réglages du profil enregistré</span><button id="cpsQuickRevert" class="btn sm quiet" type="button">Annuler</button><button id="cpsQuickApply" class="btn sm primary" type="button">Appliquer au profil</button></div>
    </div>
@@ -575,7 +619,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 'use strict';
 const $ = id => document.getElementById(id);
 const clone = o => JSON.parse(JSON.stringify(o));
-const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
+const defaults = () => ({mode:'natural',min:8,max:14,intensity:'medium',rapidTarget:10,rapidPreset:'custom',rapidBetween:10,rapidWithin:5,activation:'toggle',mouse:'left',hotkey:'F6',gate:false,gateButton:'right',focus:true});
 const model = {profiles:[{id:1,name:'Principal',settings:defaults()}],selected:1,nextId:2,demo:false,capturing:false,captureTarget:'activation',emergencyKey:'F12',compact:false,shortcuts:{desktop:false,start:false},preferences:{closeToTray:false,minimizeToTray:false,floatShown:false,liveMonitor:true,compactChart:true,diagnosticsEnabled:false,gateDebugEnabled:false,mouseDetectionMode:"classic",overlayAlwaysVisible:false,overlayOpacity:85,overlayMargin:20,overlayAverageSeconds:5,overlayMonitor:1,overlayMonitorCount:1,overlayPosition:'tm',overlayEditing:false}};
 model.globalHotkeys={next:'',previous:'',overlay:'',test:'',open:''};
 let connected = false, toastTimer = 0, modalTask = null;
@@ -609,13 +653,52 @@ function setSwitch(id,enabled) {
     $(id).setAttribute('aria-pressed',String(!!enabled));
 }
 function clamp(v) {return Math.max(1,Math.min(100,Math.round(Number(v)||1)));}
+const rapidPresets={precision:[2,1],balanced:[4,2],soft:[6,3],custom:null};
+const rapidPercents=c=>rapidPresets[c.rapidPreset]||[Number(c.rapidBetween??10),Number(c.rapidWithin??5)];
+const rapidClamp=(v,max)=>Math.max(0,Math.min(max,Math.round(Number(v)*2)/2||0));
+const rapidTargetClamp=v=>Math.max(1,Math.min(100,Math.round((Number(v)||1)*10)/10));
+const rpmToCps=rpm=>Math.round((rpm/60)*10)/10;
+const rpmIsValid=rpm=>Number.isInteger(rpm)&&rpm>=60&&rpm<=6000;
+function rapidChange(field,value) {
+    const c=config();
+    c[field]=field==='rapidTarget'?rapidTargetClamp(value):rapidClamp(value,field==='rapidBetween'?10:5);
+    if(field==='rapidTarget')c.rapidRpm=0;
+    render();send('set',field,c[field]);
+}
+function rapidApplyRpm(source) {
+    const input=$(source==='compact'?'compactRapidRpm':'rapidRpm');
+    const rpm=Number(input.value);
+    if(!rpmIsValid(rpm)){toast('Indique une cadence comprise entre 60 et 6000 RPM.');return;}
+    const c=config();
+    c.rapidRpm=rpm;
+    c.rapidTarget=rpmToCps(rpm);
+    render();
+    send('set','rapidRpm',rpm);
+    toast(rpm+' RPM = '+c.rapidTarget+' CPS théoriques.');
+}
+function rapidPresetChange(value) {
+    if(!Object.hasOwn(rapidPresets,value))return;
+    config().rapidPreset=value;render();send('set','rapidPreset',value);
+}
 function updateRanges() {
     const c=config();
-    $('minRange').value=$('minNumber').value=c.min;
+    const rapid=c.mode==='rapid';
+    $('minRange').step=$('minNumber').step=rapid?'0.1':'1';
+    $('minRange').setAttribute('aria-label',rapid?'CPS cible':'CPS minimum');
+    $('minNumber').setAttribute('aria-label',rapid?'CPS cible':'CPS minimum');
+    $('minRange').value=$('minNumber').value=rapid?(c.rapidTarget??10):c.min;
     $('maxRange').value=$('maxNumber').value=c.max;
-    $('maxGroup').classList.toggle('hidden',c.mode==='fixed');
-    $('minLabel').textContent=c.mode==='fixed'?'CPS fixe':'CPS minimum';
+    $('maxGroup').classList.toggle('hidden',c.mode==='fixed'||rapid);
+    $('minLabel').textContent=rapid?'CPS cible':c.mode==='fixed'?'CPS fixe':'CPS minimum';
     $('intensityBlock').classList.toggle('hidden',c.mode!=='natural');
+    $('rapidBlock').classList.toggle('hidden',!rapid);
+    selectedButtons('rapidPresetSeg','rapidPreset',c.rapidPreset||'custom');
+    $('rapidCustom').classList.toggle('hidden',!rapid||c.rapidPreset!=='custom');
+    $('rapidRpm').value=c.rapidRpm||'';
+    $('rapidBetween').value=c.rapidBetween??10;
+    $('rapidWithin').value=c.rapidWithin??5;
+    const v=rapidPercents(c);
+    $('rapidHint').textContent='±'+v[0]+' % entre les rafales, ±'+v[1]+' % entre les clics. Aucun ralentissement volontaire ni accélération au démarrage.';
 }
 function render() {
     const c=config();
@@ -654,12 +737,19 @@ function renderCompactPanel() {
     sel.value=String(model.selected);
     selectedButtons('compactModeSeg','compactMode',c.mode);
     selectedButtons('compactIntensitySeg','compactIntensity',c.intensity);
-    $('compactMin').value=c.min;
+    selectedButtons('compactRapidPresetSeg','compactRapid',c.rapidPreset||'custom');
+    $('compactRapid').classList.toggle('hidden',c.mode!=='rapid');
+    $('compactRapidCustom').classList.toggle('hidden',c.mode!=='rapid'||c.rapidPreset!=='custom');
+    $('compactRapidRpm').value=c.rapidRpm||'';
+    $('compactRapidBetween').value=c.rapidBetween??10;
+    $('compactRapidWithin').value=c.rapidWithin??5;
+    $('compactMinLabel').textContent=c.mode==='rapid'?'CPS cible':c.mode==='fixed'?'CPS fixe':'CPS min';
+    $('compactMin').step=c.mode==='rapid'?'0.1':'1';
+    $('compactMin').value=c.mode==='rapid'?(c.rapidTarget??10):c.min;
     $('compactMax').value=c.max;
-    $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed');
+    $('compactMaxWrap').classList.toggle('hidden',c.mode==='fixed'||c.mode==='rapid');
     $('compactIntensity').classList.toggle('hidden',c.mode!=='natural');
-    $('compactModeLabel').textContent=c.mode==='fixed'?'Fixe':
-        c.mode==='random'?'Aléatoire':'Naturel';
+    $('compactModeLabel').textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel',rapid:'Rapide naturel'})[c.mode]||'Fixe';
     $('compactHotkey').textContent=model.capturing&&model.captureTarget==='activation'
         ?'...' : c.hotkey;
     $('compactEmergencyKey').textContent=model.capturing&&model.captureTarget==='emergency'
@@ -682,6 +772,13 @@ document.querySelectorAll('[data-compact-intensity]').forEach(btn=>{
         config().intensity=value;render();send('set','intensity',value);
     };
 });
+document.querySelectorAll('[data-compact-rapid]').forEach(btn=>{
+    btn.onclick=()=>rapidPresetChange(btn.dataset.compactRapid);
+});
+for(const field of ['Between','Within']) {
+    $('compactRapid'+field).onchange=e=>rapidChange('rapid'+field,e.target.value);
+}
+$('compactRapidRpmApply').onclick=()=>rapidApplyRpm('compact');
 for(const field of ['min','max']){
     $('compact'+field[0].toUpperCase()+field.slice(1)).onchange=e=>{
         changeCps(field,e.target.value);
@@ -718,9 +815,12 @@ function renderProfiles() {
         fav.onclick=()=>toggleFavorite(p.id);
         head.append(name,fav);
         const mode=document.createElement('div');mode.className='profile-card-meta';
-        mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel'})[p.settings.mode]
-            +' - '+p.settings.min+(p.settings.mode==='fixed'?'':' à '+p.settings.max)+' CPS'
-            +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'');
+        mode.textContent=({fixed:'Fixe',random:'Aléatoire',natural:'Naturel',rapid:'Rapide naturel'})[p.settings.mode]
+            +' - '+(p.settings.mode==='rapid'?(p.settings.rapidTarget??10):p.settings.min)
+            +(p.settings.mode==='fixed'||p.settings.mode==='rapid'?'':' à '+p.settings.max)+' CPS'
+            +(p.settings.mode==='natural'?' - intensité '+({low:'faible',medium:'moyenne',high:'élevée'})[p.settings.intensity]:'')
+            +(p.settings.mode==='rapid'?' - '+({precision:'Précision',balanced:'Équilibré',soft:'Souple',custom:'Personnalisé'})[p.settings.rapidPreset||'custom']:'')
+            +(p.settings.mode==='rapid'&&p.settings.rapidRpm?' - '+p.settings.rapidRpm+' RPM':'');
         const shortcut=document.createElement('div');shortcut.className='profile-card-meta';
         shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');
         const actions=document.createElement('div');actions.className='profile-card-actions';
@@ -847,6 +947,10 @@ $('importProfilePage').onclick=importProfile;
 $('profileSelect').onchange=e=>chooseProfile(Number(e.target.value));
 function changeCps(which,input) {
     const c=config();
+    if(c.mode==='rapid'&&which==='min') {
+        rapidChange('rapidTarget',input);
+        return;
+    }
     const n=clamp(input);
     c[which]=n;
     if(c.min>c.max){if(which==='min') c.max=c.min; else c.min=c.max;}
@@ -865,6 +969,10 @@ document.querySelectorAll('[data-intensity]').forEach(b=>b.onclick=()=>{
     config().intensity=b.dataset.intensity;
     render();send('set','intensity',b.dataset.intensity);
 });
+document.querySelectorAll('[data-rapid-preset]').forEach(b=>b.onclick=()=>rapidPresetChange(b.dataset.rapidPreset));
+for(const field of ['Between','Within'])
+    $('rapid'+field).onchange=e=>rapidChange('rapid'+field,e.target.value);
+$('rapidRpmApply').onclick=()=>rapidApplyRpm('full');
 document.querySelectorAll('[data-activation]').forEach(b=>b.onclick=()=>{
     config().activation=b.dataset.activation;
     render();send('set','activation',b.dataset.activation);
@@ -959,7 +1067,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.19 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.20 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -1346,21 +1454,31 @@ function cpsQuickLoad() {
     cpsQuickProfileId=id;
     const c=(profile&&profile.settings)||{mode:'natural',min:8,max:14,intensity:'medium'};
     cpsQuickSaved={mode:c.mode||'natural',min:Number(c.min)||8,
-        max:Number(c.max)||14,intensity:c.intensity||'medium'};
+        max:Number(c.max)||14,intensity:c.intensity||'medium',
+        rapidTarget:Number(c.rapidTarget)||10,rapidPreset:c.rapidPreset||'custom',
+        rapidBetween:Number(c.rapidBetween??10),rapidWithin:Number(c.rapidWithin??5),
+        rapidRpm:Number(c.rapidRpm)||0};
     cpsQuickDraft={...cpsQuickSaved};
     cpsQuickRender(true);
 }
 function cpsQuickValid() {
     if(!cpsQuickDraft)return false;
     const d=cpsQuickDraft;
-    return ['fixed','random','natural'].includes(d.mode)
+    return ['fixed','random','natural','rapid'].includes(d.mode)
         &&['low','medium','high'].includes(d.intensity)
         &&Number.isInteger(d.min)&&Number.isInteger(d.max)
-        &&d.min>=1&&d.max<=100&&d.max>=d.min;
+        &&d.min>=1&&d.max<=100&&d.max>=d.min
+        &&(d.mode!=='rapid'||(Number.isFinite(d.rapidTarget)
+           &&d.rapidTarget>=1&&d.rapidTarget<=100
+           &&Object.hasOwn(rapidPresets,d.rapidPreset)
+           &&Number.isFinite(d.rapidBetween)&&d.rapidBetween>=0&&d.rapidBetween<=10
+           &&Number.isFinite(d.rapidWithin)&&d.rapidWithin>=0&&d.rapidWithin<=5
+           &&(d.rapidRpm===0||(rpmIsValid(d.rapidRpm)
+               &&Math.abs(d.rapidTarget-rpmToCps(d.rapidRpm))<0.001))));
 }
 function cpsQuickDirty() {
     if(!cpsQuickDraft||!cpsQuickSaved)return false;
-    return ['mode','min','max','intensity']
+    return ['mode','min','max','intensity','rapidTarget','rapidPreset','rapidBetween','rapidWithin','rapidRpm']
         .some(key=>cpsQuickDraft[key]!==cpsQuickSaved[key]);
 }
 function cpsQuickRender(loadInputs=false) {
@@ -1368,39 +1486,73 @@ function cpsQuickRender(loadInputs=false) {
     const d=cpsQuickDraft;
     if(loadInputs) {
         $('cpsQuickMode').value=d.mode;
-        $('cpsQuickMin').value=d.min;
         $('cpsQuickMax').value=d.max;
         $('cpsQuickIntensity').value=d.intensity;
+        $('cpsQuickRapidPreset').value=d.rapidPreset;
+        $('cpsQuickRapidBetween').value=d.rapidBetween;
+        $('cpsQuickRapidWithin').value=d.rapidWithin;
+        $('cpsQuickRapidRpm').value=d.rapidRpm||'';
     }
+    $('cpsQuickMin').step=d.mode==='rapid'?'0.1':'1';
+    $('cpsQuickMin').value=d.mode==='rapid'?d.rapidTarget:d.min;
+    $('cpsQuickMinLabel').textContent=d.mode==='rapid'?'CPS cible':'CPS min';
+    $('cpsQuickMaxWrap').classList.toggle('hidden',d.mode==='fixed'||d.mode==='rapid');
+    $('cpsQuickIntensityWrap').classList.toggle('hidden',d.mode!=='natural');
+    $('cpsQuickRapidPresetWrap').classList.toggle('hidden',d.mode!=='rapid');
+    $('cpsQuickRapidBetweenWrap').classList.toggle('hidden',d.mode!=='rapid'||d.rapidPreset!=='custom');
+    $('cpsQuickRapidWithinWrap').classList.toggle('hidden',d.mode!=='rapid'||d.rapidPreset!=='custom');
+    $('cpsQuickRapidRpmWrap').classList.toggle('hidden',d.mode!=='rapid');
+    $('cpsQuickRapidRpmApply').classList.toggle('hidden',d.mode!=='rapid');
     const blocked=cpsTest.phase==='running'||cpsTest.phase==='pending';
     const dirty=cpsQuickDirty(),valid=cpsQuickValid();
     $('cpsQuickSettings').hidden=cpsTest.source!=='profile';
     for(const field of ['Mode','Min','Max','Intensity'])
-        $('cpsQuick'+field).disabled=blocked||(field==='Intensity'&&d.mode!=='natural');
+        $('cpsQuick'+field).disabled=blocked||(field==='Intensity'&&d.mode!=='natural')
+            ||(field==='Max'&&(d.mode==='fixed'||d.mode==='rapid'));
+    for(const field of ['RapidPreset','RapidBetween','RapidWithin','RapidRpm'])
+        $('cpsQuick'+field).disabled=blocked||d.mode!=='rapid'
+            ||(['RapidBetween','RapidWithin'].includes(field)&&d.rapidPreset!=='custom');
+    $('cpsQuickRapidRpmApply').disabled=blocked||d.mode!=='rapid';
     $('cpsQuickApply').disabled=blocked||!dirty||!valid;
     $('cpsQuickRevert').disabled=blocked||!dirty;
     $('cpsStartProfile').disabled=blocked||dirty||cpsTest.source!=='profile';
-    $('cpsQuickNotice').textContent=!valid?'CPS invalides : min 1, max 100 et maximum >= minimum.'
+    $('cpsQuickNotice').textContent=!valid?(d.mode==='rapid'?'Réglages invalides : utilise Calculer CPS après la saisie d\'un RPM, ou vérifie les limites.':'CPS invalides : min 1, max 100 et maximum >= minimum.')
         :dirty?'Modifications non appliquées - valide pour tester ce profil.'
         :'Réglages du profil enregistré';
 }
-for(const field of ['Mode','Min','Max','Intensity']) {
+for(const field of ['Mode','Min','Max','Intensity','RapidPreset','RapidBetween','RapidWithin','RapidRpm']) {
     const el=$('cpsQuick'+field);
+    const numeric=['Min','Max','RapidBetween','RapidWithin','RapidRpm'].includes(field);
     const handler=()=>{
         if(!cpsQuickDraft)return;
         const key=field[0].toLowerCase()+field.slice(1);
-        cpsQuickDraft[key]=field==='Min'||field==='Max'?Number(el.value):el.value;
+        if(field==='Min'&&cpsQuickDraft.mode==='rapid') {
+            cpsQuickDraft.rapidTarget=Number(el.value);
+            cpsQuickDraft.rapidRpm=0;
+            $('cpsQuickRapidRpm').value='';
+        } else
+            cpsQuickDraft[key]=numeric?Number(el.value):el.value;
         cpsQuickRender();
     };
-    el.addEventListener(field==='Min'||field==='Max'?'input':'change',handler);
+    el.addEventListener(numeric?'input':'change',handler);
 }
+$('cpsQuickRapidRpmApply').onclick=()=>{
+    if(!cpsQuickDraft)return;
+    const rpm=Number($('cpsQuickRapidRpm').value);
+    if(!rpmIsValid(rpm)){toast('Indique une cadence comprise entre 60 et 6000 RPM.');return;}
+    cpsQuickDraft.rapidRpm=rpm;
+    cpsQuickDraft.rapidTarget=rpmToCps(rpm);
+    cpsQuickRender();
+    toast(rpm+' RPM = '+cpsQuickDraft.rapidTarget+' CPS théoriques. Clique sur Appliquer au profil pour enregistrer.');
+};
 $('cpsQuickRevert').onclick=()=>cpsQuickLoad();
 $('cpsQuickApply').onclick=()=>{
     if(!cpsQuickValid()||!cpsQuickDirty()
         ||cpsTest.phase==='running'||cpsTest.phase==='pending')return;
     const id=cpsQuickProfileId,d={...cpsQuickDraft};
     if(connected){
-        send('quickSettings',id,d.mode,d.min,d.max,d.intensity);
+        send('quickSettings',id,d.mode,d.min,d.max,d.intensity,
+            d.rapidTarget,d.rapidPreset,d.rapidBetween,d.rapidWithin,d.rapidRpm);
     } else {
         const p=model.profiles.find(p=>p.id===id);
         if(p&&p.settings)Object.assign(p.settings,d);
@@ -1741,7 +1893,7 @@ function cpsRender(now) {
     $('cpsSound').setAttribute('aria-pressed',String(cpsTest.audioEnabled));
     cpsQuickRender();
     $('cpsDescription').textContent=cpsTest.source==='profile'
-        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire ou naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
+        ?'Le test mesure les déclenchements du moteur du profil sélectionné (fixe, aléatoire, naturel ou rapide naturel). Il ne simule pas de clic dans les autres fenêtres et ne teste ni le raccourci ni la condition souris. Aucun score n’est enregistré.'
         :'Le test manuel compte uniquement les clics gauches de souris dans la zone. Aucun score n’est enregistré.';
     cpsDrawChart();
 }

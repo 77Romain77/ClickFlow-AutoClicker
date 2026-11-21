@@ -22,7 +22,8 @@ CFWriteProfile(profile) {
             temporary, "ClickFlowProfile", "Favorite")
         IniWrite(profile.HasOwnProp("sortOrder") ? profile.sortOrder : profile.id,
             temporary, "ClickFlowProfile", "SortOrder")
-        for field in ["mode", "variation", "min", "max", "hold", "mouseGate",
+        for field in ["mode", "variation", "min", "max", "rapidTarget",
+            "rapidPreset", "rapidBetween", "rapidWithin", "rapidRpm", "hold", "mouseGate",
             "focusStop", "clickButton", "activation", "gateButton"]
             IniWrite(profile.cfg.%field%, temporary, "Settings", field)
         ; Déplacement avec remplacement : l'ancienne copie reste intacte

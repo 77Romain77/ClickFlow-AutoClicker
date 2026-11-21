@@ -8,6 +8,10 @@ const start=html.indexOf('// Test CPS : profil ClickFlow ou souris manuelle');
 const end=html.indexOf('function navigatePage(page) {',start);
 assert(start>=0&&end>start,'CPS JavaScript section must exist');
 const script=html.slice(start,end);
+const rapidBegin=html.indexOf('const rapidPresets=');
+const rapidEnd=html.indexOf('function rapidChange(',rapidBegin);
+assert(rapidBegin>=0&&rapidEnd>rapidBegin,'Rapid naturel helpers missing');
+const rapidHelpers=html.slice(rapidBegin,rapidEnd);
 let time=0, timerId=0, sounds=0;
 const timers=new Map(),sent=[],nodes=new Map();
 const durations=[2,5,10,30,60];
@@ -70,8 +74,8 @@ const ctx={
     clearInterval:id=>timers.delete(id),
     Math,Number,String,Array,console
 };
-vm.runInNewContext(script+
-    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage};',
+vm.runInNewContext(rapidHelpers+'\n'+script+
+    '\n;globalThis.exports={cpsTest,cpsRender,cpsResetTest,cpsFinish,cpsSetSource,cpsHandleEngineMessage,cpsQuickLoad};',
     ctx,{timeout:3000,filename:'ui/index.html CPS test'});
 const api=ctx.exports,st=api.cpsTest;
 const quickMode=get('cpsQuickMode');
@@ -94,6 +98,27 @@ assert.equal(sent.at(-1)[0],'quickSettings','Apply must send atomic config updat
 assert.equal(sent.at(-1)[1],1,'Apply must target selected profile');
 assert.equal(sent.at(-1)[2],'random');
 sent.pop();
+
+// RPM calculator in the quick profile editor must preserve decimal targets.
+const original=ctx.model.profiles[0].settings;
+ctx.model.profiles[0].settings={...original,mode:'rapid',rapidTarget:10,
+    rapidRpm:0,rapidPreset:'custom',rapidBetween:10,rapidWithin:5};
+api.cpsQuickLoad();
+assert.equal(get('cpsQuickMinLabel').textContent,'CPS cible');
+assert.equal(get('cpsQuickRapidRpmWrap').classList.contains('hidden'),false);
+get('cpsQuickRapidRpm').value='750';
+get('cpsQuickRapidRpm').events.input();
+assert.equal(get('cpsQuickApply').disabled,true,'An unapplied RPM cannot be saved with a stale CPS target');
+get('cpsQuickRapidRpmApply').onclick();
+assert.equal(get('cpsQuickMin').value,12.5);
+assert.equal(get('cpsQuickApply').disabled,false);
+get('cpsQuickApply').onclick();
+assert.equal(sent.at(-1)[2],'rapid');
+assert.equal(sent.at(-1)[6],12.5);
+assert.equal(sent.at(-1)[10],750);
+sent.pop();
+ctx.model.profiles[0].settings=original;
+api.cpsQuickLoad();
 
 assert.equal(st.source,'profile','A saved profile is the default mode');
 assert.equal(get('cpsClickArea').disabled,true);

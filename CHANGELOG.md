@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.20 - 2026-11-21
+
+- Ajoute Rapide naturel, quatrième mode pour rafales courtes : CPS cible unique (précision 0,1), nouvelle cadence à chaque maintien, micro-variations par clic et aucune hésitation volontaire.
+- Ajoute Précision (2 % / 1 %), Équilibré (4 % / 2 %), Souple (6 % / 3 %) et Personnalisé (0-10 % / 0-5 %, pas de 0,5 %).
+- Ajoute le calcul RPM arme -> CPS théorique par le bouton Calculer le CPS (60-6000 RPM) et conserve la source RPM dans le profil. Toute modification manuelle du CPS cible retire la source RPM.
+- Conserve les modes Fixe, Aléatoire et Naturel et la détection souris inchangés ; enregistre les réglages par profil, duplication, import et export.
+- Intègre le mode rapide au tableau de bord, panneau compact et Test CPS, avec édition non destructive et simulation du moteur sans clic Windows.
+- Étend les tests de cadence des rafales, conversion RPM, sauvegarde INI, contrôle UI et Tests CPS.
+
+
 ## 1.9.19 - 2026-11-21
 
 - Clarifie les trois modes : Classique vérifie régulièrement le bouton ; Automatique tente de réduire le délai du premier clic et garde un secours classique ; Événementielle utilise le démarrage rapide sans secours.
