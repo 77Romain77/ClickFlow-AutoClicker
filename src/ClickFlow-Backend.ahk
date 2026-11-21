@@ -1450,6 +1450,7 @@ EngineTick(firstFromActivation := false) {
     }
 
     now := CFNowMs()
+    newBurst := false
     if CF.cfg.mouseGate {
         if CF.mouseDetectionMode = "event" && !CF.gateRawRegistered {
             CF.gateWaiting := true
@@ -1459,6 +1460,7 @@ EngineTick(firstFromActivation := false) {
             return
         }
         if CF.gateWaiting {
+            newBurst := true
             ; Chaque nouvel appui physique crée une nouvelle rafale.
             if CF.cfg.mode = 4
                 CFRapidBurstReset(CF.cfg)
@@ -1526,7 +1528,8 @@ EngineTick(firstFromActivation := false) {
         CF.overlayRecent.Push(A_TickCount) ; l'overlay reste sur son horloge historique
     ; Garder l'échéance théorique malgré les petits retards du timer.
     ; Un retard important réinitialise la phase : aucun clic rattrapé.
-    CF.nextAt := CFNextDeadline(CF.nextAt, now, intervalMs)
+    CF.nextAt := firstFromActivation || newBurst ? now + intervalMs
+        : CFNextDeadline(CF.nextAt, now, intervalMs)
 }
 
 ; Un état de cadence par session : reset à chaque activation ou banc de test.
