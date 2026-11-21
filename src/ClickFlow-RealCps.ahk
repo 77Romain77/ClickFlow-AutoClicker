@@ -266,8 +266,8 @@ CFRealFlush() {
     CFRealUpdateStatus()
 }
 
-// Une confirmation finale peut être renvoyée à WebView2 à sa demande.
-// Le dernier résultat est conservé en mémoire, sans fichier sur disque.
+; Une confirmation finale peut être renvoyée à WebView2 à sa demande.
+; Le dernier résultat est conservé en mémoire, sans fichier sur disque.
 CFRealStatus(runId) {
     global CF
     if !RegExMatch(String(runId), "^[1-9]\d{0,8}$")
