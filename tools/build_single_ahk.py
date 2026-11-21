@@ -13,7 +13,7 @@ from pathlib import Path
 import textwrap
 import zipfile
 
-VERSION = "1.9.28"
+VERSION = "1.9.29"
 
 RUNTIME_FILES = [
     "ClickFlow-WebView2.ahk",
@@ -40,7 +40,7 @@ BOOTSTRAP = r'''#Requires AutoHotkey v2.0
 #SingleInstance Force
 #ErrorStdOut "UTF-8"
 
-; ClickFlow v1.9.28 : un seul script a telecharger, AutoHotkey v2 x64 requis.
+; ClickFlow v1.9.29 : un seul script a telecharger, AutoHotkey v2 x64 requis.
 ; Les composants sont extraits en local, sans EXE ClickFlow et sans telechargement.
 
 if A_PtrSize != 8 {
@@ -53,7 +53,7 @@ if localAppData = "" {
     ExitApp(1)
 }
 appDir := localAppData "\ClickFlow"
-runtimeDir := appDir "\Runtime-1.9.28"
+runtimeDir := appDir "\Runtime-1.9.29"
 launchFile := runtimeDir "\ClickFlow-WebView2.ahk"
 readyFlag := runtimeDir "\.extracted-ok"
 stableScript := appDir "\ClickFlow.ahk"
@@ -96,7 +96,7 @@ if !FileExist(readyFlag) || !FileExist(launchFile) || !FileExist(runtimeDir "\as
         if exitCode != 0 || !FileExist(launchFile)
             throw Error("Extraction impossible (code " exitCode ").")
         FileDelete(zipFile)
-        FileAppend("1.9.28", readyFlag, "UTF-8")
+        FileAppend("1.9.29", readyFlag, "UTF-8")
     } catch as err {
         MsgBox("Impossible de préparer ClickFlow : " err.Message, "ClickFlow", "Icon!")
         ExitApp(1)
@@ -135,7 +135,7 @@ FOOTER = ";--END-CLICKFLOW-PAYLOAD--\n"
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path("stage"))
-    parser.add_argument("--output", type=Path, default=Path("ClickFlow-v1.9.28.ahk"))
+    parser.add_argument("--output", type=Path, default=Path("ClickFlow-v1.9.29.ahk"))
     args = parser.parse_args()
     root: Path = args.root
     for rel in RUNTIME_FILES:
