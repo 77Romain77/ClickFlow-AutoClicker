@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.22 - 2026-11-21
+
+- Autorise le réglage des CPS au dixième (pas de 0,1 CPS) dans les modes Fixe, Aléatoire et Naturel.
+- Applique ce pas aux sliders, champs numériques du tableau de bord, au panneau compact et à l'éditeur du Test CPS.
+- Valide les limites décimales dans le backend et conserve les décimales dans les profils INI, les imports, les exports et les duplications, sans casser les anciens profils entiers.
+- Ajoute des tests Windows et Node sur le moteur, le calcul des intervalles, la sauvegarde et les contrôles UI.
+- Aucun changement aux modes Rapide naturel et détection souris.
+
+
 ## 1.9.21 - 2026-11-21
 
 - Corrige l'absence de bouton actif lors du choix Précision, Équilibré, Souple ou Personnalisé dans Rapide naturel (attributs HTML data-rapid-preset et data-compact-rapid).
