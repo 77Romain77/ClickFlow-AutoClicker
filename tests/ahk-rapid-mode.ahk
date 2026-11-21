@@ -100,6 +100,30 @@ try {
         || reloaded.rapidRpm != 750 || reloaded.rapidBetween != 50
         || reloaded.rapidWithin != 25 || reloaded.rapidPreset != 4
         throw Error("La sauvegarde INI du mode rapide est incorrecte.")
+    ; Le réglage rapide doit accepter les nouvelles limites et refuser
+    ; tout dépassement, pour ne pas diverger des champs du tableau de bord.
+    CF.profiles := [{id: 1, name: "Arme 750 RPM", cfg: cfg}]
+    CF.selectedId := 1
+    CF.cfg := cfg
+    CFApplyQuickSettings("1", "rapid", "8", "14", "medium",
+        "12.5", "custom", "50", "25", "750")
+    if CF.cfg.rapidBetween != 50 || CF.cfg.rapidWithin != 25
+        throw Error("Le Test CPS ne prend pas les nouvelles limites personnalisées.")
+    rejected := false
+    try CFApplyQuickSettings("1", "rapid", "8", "14", "medium",
+        "12.5", "custom", "50.5", "25", "750")
+    catch
+        rejected := true
+    if !rejected
+        throw Error("Le Test CPS accepte plus de 50 % entre les rafales.")
+    rejected := false
+    try CFApplyQuickSettings("1", "rapid", "8", "14", "medium",
+        "12.5", "custom", "50", "25.5", "750")
+    catch
+        rejected := true
+    if !rejected
+        throw Error("Le Test CPS accepte plus de 25 % entre les clics.")
+
     legacy := DefaultConfig()
     if legacy.mode != 1 || legacy.min != 8 || legacy.max != 14
         throw Error("Le mode par défaut historique est modifié.")
