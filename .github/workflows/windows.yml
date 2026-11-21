@@ -332,7 +332,7 @@ jobs:
             throw "Fractional CPS test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
-      - name: Verify phase-anchored CPS: 30s accuracy without catch-up bursts
+      - name: Verify phase-anchored CPS scheduling and no catch-up bursts
         shell: pwsh
         run: |
           $script = (Resolve-Path 'tests/ahk-phase-anchor.ahk').Path
