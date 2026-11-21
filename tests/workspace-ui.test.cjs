@@ -78,7 +78,7 @@ assert(html.includes("mode.textContent=({fixed:"),
     'Profile mode and intensity must remain in the CPS information line');
 assert(html.includes("shortcut.textContent='Activation : '+(p.settings.hotkey||'F6');"),
     'Activation line should only show hotkey');
-for(const mode of ['fixed','random','natural']) {
+for(const mode of ['fixed','random','natural','rapid']) {
     assert(new RegExp('data-mode="'+mode+'"[^>]*data-mode-tip=').test(html),
         'Expanded mode '+mode+' is missing hover help');
     assert(new RegExp('data-compact-mode="'+mode+'"[^>]*data-mode-tip=').test(html),
@@ -88,4 +88,8 @@ assert(html.includes('button[data-mode-tip]:hover::after'),
     'Mode tooltips must be styled on hover');
 assert(html.includes('button[data-mode-tip]:focus-visible::after'),
     'Mode tooltips must support keyboard focus');
+for(const id of ['rapidBlock','rapidPresetSeg','rapidRpm','rapidRpmApply',
+    'rapidBetween','rapidWithin','compactRapid','compactRapidRpm','compactRapidRpmApply',
+    'cpsQuickRapidPreset','cpsQuickRapidRpm','cpsQuickRapidRpmApply'])
+    assert(html.includes('id="'+id+'"'), 'Rapid naturel control missing: '+id);
 console.log('Workspace HTML structure, live monitor, settings, profile and quick edit JS syntax passed.');
