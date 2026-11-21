@@ -109,7 +109,8 @@ CFTestTick(now := "") {
     elapsed := Max(0, now - test.started)
     test.clicks.Push(elapsed)
     test.pending.Push(elapsed)
-    test.nextAt := now + intervalMs
+    ; Même chronologie que le moteur réel pour une comparaison fidèle.
+    test.nextAt := CFNextDeadline(test.nextAt, now, intervalMs)
     if now - test.lastFlush >= 55 || test.pending.Length >= 12
         CFTestFlush()
 }
