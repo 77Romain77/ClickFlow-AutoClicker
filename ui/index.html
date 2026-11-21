@@ -525,8 +525,9 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
   <div class="hero"><div><h2>Teste ta vitesse de clic.</h2><p>Teste tes profils et tes clics manuels, sans historique enregistré.</p></div></div>
   <div class="card cps-card">
    <div class="card-head"><div><div class="card-title">Test de clics par seconde</div><div class="card-description">Teste les CPS générés par tes profils ou ta vitesse de clic manuelle.</div></div><span class="number">TEST / CPS</span></div>
-   <div class="cps-source-row"><span class="label" style="margin:0">Mode de test</span><div class="cps-durations"><button id="cpsSourceProfile" class="btn sm primary" type="button">Profil ClickFlow</button><button id="cpsSourceManual" class="btn sm" type="button">Clics manuels</button></div></div>
-   <div id="cpsProfileControls" class="cps-profile-controls"><label for="cpsProfileSelect" class="label" style="margin:0">Profil à tester</label><select id="cpsProfileSelect" class="select" aria-label="Profil à tester"></select><button id="cpsStartProfile" class="btn primary" type="button">Démarrer le test</button></div>
+   <div class="cps-source-row"><span class="label" style="margin:0">Mode de test</span><div class="cps-durations"><button id="cpsSourceProfile" class="btn sm primary" type="button">Profil ClickFlow</button><button id="cpsSourceManual" class="btn sm" type="button">Clics manuels</button><button id="cpsSourceReal" class="btn sm" type="button">Réception réelle</button></div></div>
+   <div id="cpsProfileControls" class="cps-profile-controls"><label for="cpsProfileSelect" class="label" style="margin:0">Profil à tester</label><select id="cpsProfileSelect" class="select" aria-label="Profil à tester"></select><button id="cpsStartProfile" class="btn primary" type="button">Démarrer le test</button><button id="cpsStartReal" class="btn primary hidden" type="button">Ouvrir le test réel</button></div>
+   <div id="cpsRealInfo" class="subnote hidden" style="margin-top:8px">Une fenêtre Windows dédiée reçoit les clics du profil. Maintiens le bouton de souris dans sa zone de test. Aucun envoi n'est autorisé lorsque la fenêtre n'est pas active ou que le curseur sort de la zone. Test réservé à ClickFlow.</div>
    <div id="cpsQuickSettings" class="quick-settings">
     <div class="quick-settings-title"><strong>Réglages rapides du profil</strong><span class="subnote">Modifications appliquées uniquement après validation</span></div>
     <div class="quick-fields">
@@ -557,7 +558,8 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
      <div class="cps-metric"><small>CPS actuels <span class="cps-help" title="Clics effectués au cours des 1 000 dernières millisecondes.">ⓘ</span></small><strong id="cpsInstant">0.0</strong></div>
      <div class="cps-metric"><small>CPS moyens</small><strong id="cpsAverage">0.0</strong></div>
      <div class="cps-metric"><small>Pic sur 1 s</small><strong id="cpsPeak">0</strong></div>
-     <div class="cps-metric"><small>Nombre de clics</small><strong id="cpsClicks">0</strong></div>
+     <div class="cps-metric"><small>Nombre de clics reçus / simulés</small><strong id="cpsClicks">0</strong></div>
+     <div id="cpsRealSentMetric" class="cps-metric hidden"><small>Clics envoyés dans la zone native</small><strong id="cpsRealSent">0</strong></div>
      
     </div>
    </div>
