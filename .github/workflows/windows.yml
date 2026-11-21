@@ -332,6 +332,22 @@ jobs:
             throw "Fractional CPS test failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
+      - name: Verify phase-anchored CPS: 30s accuracy without catch-up bursts
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-phase-anchor.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError phase-anchor.err -RedirectStandardOutput phase-anchor.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Phase-anchor scheduler regression timed out.'
+          }
+          $out = if (Test-Path phase-anchor.out) { Get-Content phase-anchor.out -Raw } else { '' }
+          $err = if (Test-Path phase-anchor.err) { Get-Content phase-anchor.err -Raw } else { '' }
+          Write-Host "Phase anchor: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Phase-anchor regression failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
+          }
+
       - name: Verify natural cadence, jitter, hesitations and intensity levels
         shell: pwsh
         run: |
