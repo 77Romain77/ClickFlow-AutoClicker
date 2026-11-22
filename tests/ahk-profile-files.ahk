@@ -84,7 +84,7 @@ try {
         content := FileRead(A_LoopFileFullPath, "UTF-8")
         if InStr(content, "[Other]")
             savedCorrupt += 1
-        if InStr(content, "Name=Gaming")
+        if IniRead(A_LoopFileFullPath, "ClickFlowProfile", "Name", "") = "Gaming"
             savedDuplicate += 1
     }
     if savedCorrupt != 1 || savedDuplicate != 1
