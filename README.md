@@ -1,23 +1,31 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.33 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version stable 1.10.0 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.33.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.33)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.10.0.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.10.0)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.33.ahk`.
+2. Télécharger `ClickFlow-v1.10.0.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.33`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.10.0`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Version stable v1.10.0 - Consolidation
+
+Cette version regroupe les améliorations validées dans la série v1.9.x. Elle ne modifie ni le cadenceur, ni les paramètres des modes de clic, ni la capture Raw Input. La mise à jour utilise un nouveau dossier de runtime et conserve les fichiers personnels sous `%APPDATA%\ClickFlow` (profils, raccourcis, préférences et sauvegardes). Les anciens téléchargements restent disponibles dans les Releases GitHub.
+
+Une vérification automatique garantit la cohérence des numéros de version du lanceur, de la fenêtre, de l'interface et des archives. Les tests Windows couvrent notamment la conservation des profils individuels et des réglages globaux, les raccourcis optionnels, les sauvegardes, la désinstallation, le fonctionnement des modes et les cadences jusqu'à 100 CPS. Une dernière vérification sur la machine de l'utilisateur reste recommandée avant de considérer cette version comme définitivement validée en conditions réelles.
+
+Pour mettre à jour depuis la v1.9.33 : fermer l'ancienne instance, lancer `ClickFlow-v1.10.0.ahk`, puis contrôler son profil actif et ses raccourcis. Il n'est pas nécessaire de supprimer l'ancien runtime ni de réimporter les profils.
 
 ## Diagnostic de performances intégré (v1.9.33)
 
