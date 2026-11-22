@@ -521,6 +521,7 @@ CFRealOpen(duration, runId, profileId) {
     CF.realTest := {run: runId+0, active:false, held:false,
         pendingStart:false, pendingAttempts:0, physical:0,
         rawRegistered:false, rawButtonPackets:0, rawError:0,
+        rawLastButtons:0, rawLastDevice:0,
         gui:windowGui, zone:zone, status:status, counters:counters,
         zoneHint:zoneHint, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
