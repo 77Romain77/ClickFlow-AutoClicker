@@ -40,3 +40,15 @@ Un essai manuel sur Windows reste nécessaire avant toute version stable, notamm
 Utiliser `MAJOR.MINOR.PATCH`. **Chaque modification publiée** doit changer de version dans les sources concernées : `VERSION`, lanceur, interface, script de build et workflow.
 
 Pour publier une nouvelle release stable, fusionner un commit sur `main` dont le titre est exactement `release: vMAJOR.MINOR.PATCH`, après validation des tests. Le workflow génère les archives et publie la release GitHub. Aucun auto-update n'est prévu pour le moment.
+
+## Validation d'une version stable
+
+Avant toute fusion sur `main` :
+
+- Relancer toute la CI Windows, notamment les tests des profils, raccourcis optionnels, sauvegardes, CPS et démarrage du fichier unique.
+- Exécuter `node tests/release-consistency.test.cjs` pour vérifier les versions du lanceur, de l'interface, du README et des archives.
+- Exécuter le test de chargement et de rechargement des préférences enregistrées au format de la version précédente.
+- Ne pas supprimer les données personnelles lors du changement de dossier `Runtime-<version>`.
+- Tester manuellement sous Windows la mise à jour, l'activation d'un profil et l'arrêt d'urgence quand c'est possible.
+
+Une version stable de consolidation ne justifie pas à elle seule de modifier un cadenceur qui a déjà été testé. Conserver les anciennes releases comme points de retour arrière.

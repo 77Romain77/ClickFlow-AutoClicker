@@ -14,4 +14,6 @@ Les scripts de diagnostic et anciens workflows de tests ont été retirés de `m
 
 ## Version actuelle
 
-Utiliser la version stable [v1.1.0](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.1.0), au format `.ahk` unique. Le nouveau workflow ne compile aucun `.exe`.
+Utiliser la version stable [v1.10.0](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.10.0), au format `.ahk` unique. Le workflow ne compile aucun `.exe` ClickFlow.
+
+La dernière version de développement de la série 1.9, [v1.9.33](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.33), reste accessible comme version antérieure pour comparaison ou retour arrière. Les releases précédentes ne sont pas supprimées.

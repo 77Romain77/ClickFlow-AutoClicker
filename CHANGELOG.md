@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.10.0 - 2026-11-22
+
+- Publication de consolidation : aucun changement au moteur de clics, aux cadences, aux modes ou à Raw Input.
+- Synchronisation des versions affichées, du lanceur autonome, des chemins de runtime, des archives et de la documentation.
+- Ajout d'un contrôle automatique des références de version pour prévenir les incohérences lors des prochaines releases.
+- Ajout d'un test de non-régression simulant le chargement de profils et préférences v1.9.33, leur sauvegarde et leur rechargement, sans perte de raccourcis ou de réglages.
+- Maintien de la suite de tests Windows : CPS, profils, sauvegardes, raccourcis, démarrage WebView2, désinstallation et fichier unique.
+- Les configurations personnelles ne sont pas migrées vers un nouveau format et ne sont pas effacées par cette mise à jour.
+
+
 ## 1.9.33 - 2026-11-22
 
 - Ajoute **Paramètres > Diagnostic de performances** : activation manuelle, statistiques CPU/RAM/threads, graphiques et export CSV.
