@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.32 - 2026-11-22
+
+- Corrige la dérive à 100 CPS : les échéances restent ancrées sur la phase prévue au lieu d'accumuler les petites durées de SendInput ; réinitialisation uniquement après un véritable retard, sans rafale de rattrapage.
+- Applique cette correction au cadenceur général et au banc de Réception réelle ; ajoute une simulation déterministe de 30 secondes à 100 CPS.
+- Les profils individuels corrompus ou portant un nom déjà utilisé sont désormais ignorés sans bloquer le lancement. Tentative de préservation des originaux dans profiles/_recovery, sans réutiliser leurs identifiants.
+- Vérifie les touches d'urgence, les activations et les raccourcis globaux chargés depuis les INI ; les valeurs invalides utilisent un repli sûr sans supprimer les réglages valides ni réactiver le choix explicite Aucun.
+- Signale au démarrage les récupérations réalisées. Ajoute des tests Windows de régression pour les configurations incorrectes et la planification à haute cadence.
+- Les chiffres réels à 100 CPS restent à valider sur le PC utilisateur ; Raw Input, moteur naturel et interface visuelle sont conservés.
+
+
 ## 1.9.31 - 2026-11-22
 
 - Supprime le hook Windows WH_MOUSE_LL ajouté par le banc de test Réception réelle, suspecté de bloquer SendInput environ 300 ms à intervalles irréguliers.
