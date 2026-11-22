@@ -359,6 +359,21 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 .global-key-actions .btn:first-child{min-width:100px}
 .global-key-actions .kbd{font-size:11px}
 @media(max-width:540px){.settings-group>summary{flex-wrap:wrap}.global-key-row{align-items:start;flex-direction:column}.global-key-actions{width:100%}}
+
+/* Diagnostic ressources opt-in : présentation cohérente avec les réglages. */
+.perf-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:13px 0}
+.perf-toolbar .btn:disabled{opacity:.4;cursor:not-allowed}
+.perf-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:13px 0}
+.perf-stat{display:flex;flex-direction:column;gap:6px;background:#102239;border:1px solid #304865;border-radius:13px;padding:13px;min-width:0}
+.perf-stat span{font-size:11px;color:#9eb7da;font-weight:600}
+.perf-stat strong{font-size:22px;color:#e7f2ff;font-variant-numeric:tabular-nums}
+.perf-stat small{font-size:10px;color:#8fabce}
+.perf-plot-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+.perf-plot{background:#0e1e33;border:1px solid #2c4263;border-radius:13px;padding:12px;min-width:0}
+.perf-plot strong{display:block;font-size:12px;color:#e7f2ff}
+.perf-plot small{display:block;font-size:10px;color:#9cb8dc;margin-top:5px}
+.perf-plot canvas{display:block;width:100%;height:auto;max-height:230px;margin-top:8px}
+@media(max-width:620px){.perf-metrics{grid-template-columns:1fr}.perf-toolbar .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -377,7 +392,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.27 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.33 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -595,6 +610,27 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="shortcut-setting"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Affiche les informations détaillées sur la détection et le maintien de la souris. À activer seulement pour analyser un problème.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris dans les paramètres" aria-pressed="false"></button></div>
     <p class="subnote hidden" id="gateMethodSettings" style="margin:6px 0 15px">Aucun clic conditionné enregistré pour cette session.</p>
     <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Mesure les délais logiciels du premier clic. Raw Input reste disponible dans les modes Automatique et Événementielle, même sans diagnostic.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
+   <details class="settings-group" id="perfPanel"><summary>Diagnostic de performances <small>CPU, RAM, threads et WebView2 - à la demande</small></summary><div class="settings-group-body">
+    <p class="subnote">Mesure locale toutes les 2 secondes, désactivée par défaut. Les mesures sont conservées uniquement en mémoire (30 dernières minutes au maximum). Le diagnostic peut légèrement influencer les performances à haute cadence.</p>
+    <div class="perf-toolbar">
+     <button class="btn primary" id="perfStart" type="button">Démarrer la mesure</button>
+     <button class="btn quiet" id="perfStop" type="button" disabled>Arrêter</button>
+     <button class="btn quiet" id="perfExport" type="button" disabled>Exporter le rapport CSV</button>
+     <button class="btn quiet" id="perfClear" type="button" disabled>Effacer</button>
+    </div>
+    <div class="subnote" id="perfStatus" aria-live="polite">Désactivé - aucun relevé en cours.</div>
+    <div class="perf-metrics">
+     <div class="perf-stat"><span>CPU ClickFlow + WebView2</span><strong id="perfCpu">-</strong><small id="perfCpuSplit">AHK : - | WebView2 : -</small></div>
+     <div class="perf-stat"><span>RAM privée cumulée</span><strong id="perfRam">-</strong><small id="perfRamSplit">AHK : - | WebView2 : -</small></div>
+     <div class="perf-stat"><span>Threads</span><strong id="perfThreads">-</strong><small>Processus détectés</small></div>
+     <div class="perf-stat"><span>WebView2 associés</span><strong id="perfProcesses">-</strong><small id="perfDuration">Durée : 0 s</small></div>
+    </div>
+    <div class="perf-plot-grid">
+     <div class="perf-plot"><strong>Évolution du CPU</strong><small>Pourcentage normalisé sur tous les processeurs logiques</small><canvas id="perfCpuChart" width="800" height="210" aria-label="Historique CPU"></canvas></div>
+     <div class="perf-plot"><strong>Évolution de la RAM privée</strong><small>Mémoire propre aux processus, en Mo</small><canvas id="perfRamChart" width="800" height="210" aria-label="Historique RAM"></canvas></div>
+    </div>
+    <p class="subnote">La mesure WebView2 inclut uniquement les processus enfants détectables de ClickFlow. Un navigateur ou un jeu externe n'est pas mesuré. L'export CSV s'effectue uniquement si tu cliques sur Exporter.</p>
+   </div></details>
    <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
     <div class="shortcut-setting"><div><strong>Overlay ClickFlow</strong><p class="subnote">Statut et CPS moyens calculés sur une durée personnalisable.</p></div><button class="switch" data-preference="floatShown" aria-label="Activer l'overlay" aria-pressed="false"></button></div>
     <div class="shortcut-setting"><div><strong>Toujours afficher l'overlay</strong><p class="subnote">Sinon, il disparaît environ 2 secondes après l'arrêt.</p></div><button class="switch" data-preference="overlayAlwaysVisible" aria-label="Toujours afficher l'overlay" aria-pressed="false"></button></div>
