@@ -824,7 +824,7 @@ RegisterEmergency() {
         try Hotkey("~*F12", EmergencyStop, "On")
         catch {
             CF.emergencyKey := ""
-            CFShortcutRecoveryWarn("F12 indisponible ; arrêt via ClickFlow.")
+            CFShortcutRecoveryWarn("F12 indisponible - arrêt via ClickFlow.")
         }
     }
 }
@@ -1498,7 +1498,12 @@ SetNotice(message) {
 ; précédente imposait une remise à zéro à CHAQUE clic à 100 CPS.
 ; Une petite avance de sécurité empêche toujours les rafales de rattrapage.
 CFDeadlineMinLead(intervalMs) {
-    return Max(2, Min(4, intervalMs * 0.2))
+    ; Conserver exactement la protection historique jusqu'à 50 CPS.
+    ; Au-delà, une marge proportionnelle de 2-4 ms suffit pour
+    ; éviter les rafales sans ajouter la surcharge à chaque échéance.
+    if intervalMs >= 20
+        return Max(10, intervalMs * 0.5)
+    return Max(2, intervalMs * 0.2)
 }
 
 CFNextDeadline(previousDue, now, intervalMs) {
