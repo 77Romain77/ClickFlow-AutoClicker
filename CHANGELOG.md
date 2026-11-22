@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 1.9.33 - 2026-11-22
+
+- Ajoute **Paramètres > Diagnostic de performances** : activation manuelle, statistiques CPU/RAM/threads, graphiques et export CSV.
+- Mesure le processus AutoHotkey et les descendants WebView2 détectables via les API natives Windows sans application supplémentaire.
+- Réalise un relevé toutes les 2 secondes uniquement pendant un diagnostic actif ; conserve un maximum de 900 relevés en mémoire et aucun fichier automatiquement.
+- Affiche le CPU normalisé sur les processeurs logiques, la mémoire privée cumulée et les comptes de processus/threads. L'instrumentation peut légèrement influer sur la cadence.
+- Ajoute des tests de mesure native, de démarrage/arrêt et d'export CSV, sans modifier les profils ni le moteur de clics.
+
+
 ## 1.9.32 - 2026-11-22
 
 - Corrige la dérive à 100 CPS : les échéances restent ancrées sur la phase prévue au lieu d'accumuler les petites durées de SendInput ; réinitialisation uniquement après un véritable retard, sans rafale de rattrapage.
