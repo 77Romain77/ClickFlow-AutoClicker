@@ -35,6 +35,25 @@ try {
     if SameKey(parsed.activation, CF.emergencyKey)
         throw Error("Un raccourci d'activation bloque l'arret d'urgence.")
 
+    ; Un arrêt d'urgence invalide dans un INI est corrigé sans
+    ; réactiver F12 lorsque l'utilisateur a choisi Aucun.
+    IniWrite("UnknownEmergencyKey", CF.configFile, "General", "EmergencyKey")
+    CFLoadEmergencyShortcut()
+    if CF.emergencyKey != "F12"
+        throw Error("Un arrêt d'urgence corrompu n'a pas été corrigé.")
+    IniWrite("", CF.configFile, "General", "EmergencyKey")
+    CFLoadEmergencyShortcut()
+    if CF.emergencyKey != ""
+        throw Error("Aucun ne doit pas être transformé en F12.")
+    CF.emergencyKey := "F10"
+    IniWrite("BadActivationName", CFProfileFile(1), "Settings", "activation")
+    parsed := ReadConfig(CFProfileFile(1), "Settings", DefaultConfig())
+    if !SameKey(parsed.activation, "F6")
+        throw Error("Une touche d'activation inconnue n'a pas été corrigée.")
+    if !CF.HasOwnProp("shortcutRecoveryWarnings")
+        || CF.shortcutRecoveryWarnings.Length < 2
+        throw Error("Les raccourcis corrigés n'ont pas été signalés.")
+
     FileAppend("before GUI\n", "*", "UTF-8")
     g := Gui("+Resize +MinSize460x480", "ClickFlow-test-view")
     g.Show("w900 h760")
