@@ -359,6 +359,21 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
 .global-key-actions .btn:first-child{min-width:100px}
 .global-key-actions .kbd{font-size:11px}
 @media(max-width:540px){.settings-group>summary{flex-wrap:wrap}.global-key-row{align-items:start;flex-direction:column}.global-key-actions{width:100%}}
+
+/* Diagnostic ressources opt-in : présentation cohérente avec les réglages. */
+.perf-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:13px 0}
+.perf-toolbar .btn:disabled{opacity:.4;cursor:not-allowed}
+.perf-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:13px 0}
+.perf-stat{display:flex;flex-direction:column;gap:6px;background:#102239;border:1px solid #304865;border-radius:13px;padding:13px;min-width:0}
+.perf-stat span{font-size:11px;color:#9eb7da;font-weight:600}
+.perf-stat strong{font-size:22px;color:#e7f2ff;font-variant-numeric:tabular-nums}
+.perf-stat small{font-size:10px;color:#8fabce}
+.perf-plot-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+.perf-plot{background:#0e1e33;border:1px solid #2c4263;border-radius:13px;padding:12px;min-width:0}
+.perf-plot strong{display:block;font-size:12px;color:#e7f2ff}
+.perf-plot small{display:block;font-size:10px;color:#9cb8dc;margin-top:5px}
+.perf-plot canvas{display:block;width:100%;height:auto;max-height:230px;margin-top:8px}
+@media(max-width:620px){.perf-metrics{grid-template-columns:1fr}.perf-toolbar .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -377,7 +392,7 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
  </div>
  <div class="side-spacer"></div>
  <div class="small-card"><span class="pill"><i class="dot"></i> Application Windows</span><strong>Interface WebView2</strong><p>Connexion au moteur en cours.</p></div>
- <div class="side-footer">ClickFlow v1.9.27 · AHK v2</div>
+ <div class="side-footer">ClickFlow v1.9.33 · AHK v2</div>
 </aside>
 <main>
  <div class="topline"><span class="breadcrumb" id="crumb">VOTRE ESPACE / TABLEAU DE BORD</span><div class="top-controls"><span class="badge">INITIALISATION</span><button class="view-button" id="viewToggle" title="Changer la taille de l'interface">Mode compact</button></div></div>
@@ -595,6 +610,27 @@ body.compact .monitor-idle{min-height:34px;font-size:10px;padding:7px}
     <div class="shortcut-setting"><div><strong>Diagnostics détaillés de la détection souris</strong><p class="subnote">Affiche les informations détaillées sur la détection et le maintien de la souris. À activer seulement pour analyser un problème.</p></div><button class="switch" data-preference="gateDebugEnabled" aria-label="Activer les diagnostics de détection souris dans les paramètres" aria-pressed="false"></button></div>
     <p class="subnote hidden" id="gateMethodSettings" style="margin:6px 0 15px">Aucun clic conditionné enregistré pour cette session.</p>
     <div class="shortcut-setting"><div><strong>Activer les diagnostics de latence</strong><p class="subnote">Mesure les délais logiciels du premier clic. Raw Input reste disponible dans les modes Automatique et Événementielle, même sans diagnostic.</p></div><button class="switch" data-preference="diagnosticsEnabled" aria-label="Activer les diagnostics de latence dans les paramètres" aria-pressed="false"></button></div></div></details>
+   <details class="settings-group" id="perfPanel"><summary>Diagnostic de performances <small>CPU, RAM, threads et WebView2 - à la demande</small></summary><div class="settings-group-body">
+    <p class="subnote">Mesure locale toutes les 2 secondes, désactivée par défaut. Les mesures sont conservées uniquement en mémoire (30 dernières minutes au maximum). Le diagnostic peut légèrement influencer les performances à haute cadence.</p>
+    <div class="perf-toolbar">
+     <button class="btn primary" id="perfStart" type="button">Démarrer la mesure</button>
+     <button class="btn quiet" id="perfStop" type="button" disabled>Arrêter</button>
+     <button class="btn quiet" id="perfExport" type="button" disabled>Exporter le rapport CSV</button>
+     <button class="btn quiet" id="perfClear" type="button" disabled>Effacer</button>
+    </div>
+    <div class="subnote" id="perfStatus" aria-live="polite">Désactivé - aucun relevé en cours.</div>
+    <div class="perf-metrics">
+     <div class="perf-stat"><span>CPU ClickFlow + WebView2</span><strong id="perfCpu">-</strong><small id="perfCpuSplit">AHK : - | WebView2 : -</small></div>
+     <div class="perf-stat"><span>RAM privée cumulée</span><strong id="perfRam">-</strong><small id="perfRamSplit">AHK : - | WebView2 : -</small></div>
+     <div class="perf-stat"><span>Threads</span><strong id="perfThreads">-</strong><small>Processus détectés</small></div>
+     <div class="perf-stat"><span>WebView2 associés</span><strong id="perfProcesses">-</strong><small id="perfDuration">Durée : 0 s</small></div>
+    </div>
+    <div class="perf-plot-grid">
+     <div class="perf-plot"><strong>Évolution du CPU</strong><small>Pourcentage normalisé sur tous les processeurs logiques</small><canvas id="perfCpuChart" width="800" height="210" aria-label="Historique CPU"></canvas></div>
+     <div class="perf-plot"><strong>Évolution de la RAM privée</strong><small>Mémoire propre aux processus, en Mo</small><canvas id="perfRamChart" width="800" height="210" aria-label="Historique RAM"></canvas></div>
+    </div>
+    <p class="subnote">La mesure WebView2 inclut uniquement les processus enfants détectables de ClickFlow. Un navigateur ou un jeu externe n'est pas mesuré. L'export CSV s'effectue uniquement si tu cliques sur Exporter.</p>
+   </div></details>
    <details class="settings-group" open><summary>Overlay <small>Affichage, taille et position</small></summary><div class="settings-group-body">
     <div class="shortcut-setting"><div><strong>Overlay ClickFlow</strong><p class="subnote">Statut et CPS moyens calculés sur une durée personnalisable.</p></div><button class="switch" data-preference="floatShown" aria-label="Activer l'overlay" aria-pressed="false"></button></div>
     <div class="shortcut-setting"><div><strong>Toujours afficher l'overlay</strong><p class="subnote">Sinon, il disparaît environ 2 secondes après l'arrêt.</p></div><button class="switch" data-preference="overlayAlwaysVisible" aria-label="Toujours afficher l'overlay" aria-pressed="false"></button></div>
@@ -1131,7 +1167,7 @@ function setLiveAppearance() {
     document.querySelector('.small-card .pill').textContent='Moteur connecté';
     document.querySelector('.small-card strong').textContent='ClickFlow Windows';
     document.querySelector('.small-card p').textContent='Les profils et les réglages sont enregistrés localement.';
-    document.querySelector('.side-footer').textContent='ClickFlow v1.9.27 · AutoHotkey v2';
+    document.querySelector('.side-footer').textContent='ClickFlow v1.9.33 · AutoHotkey v2';
     document.querySelector('.status-box .safe').textContent=model.emergencyKey
         ?model.emergencyKey+" : arrêt d'urgence. Les clics démarrent avec votre raccourci dans la fenêtre cible."
         :"Arrêt par le bouton ClickFlow ou la zone de notification (aucune touche d'urgence).";
@@ -2285,6 +2321,108 @@ function navigatePage(page) {
 }
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>
     navigatePage(btn.dataset.page));
+// Diagnostic local de ressources : aucune mesure si l'utilisateur ne démarre pas.
+const perfUi={active:false,samples:[],limit:900};
+function perfMetric(value,suffix='') {
+    return Number.isFinite(Number(value))
+        ?Number(value).toFixed(2).replace('.',',')+suffix:'-';
+}
+function perfDrawChart(id,key,color,unit) {
+    const canvas=$(id),ctx=canvas.getContext('2d');
+    if(!ctx)return;
+    const w=canvas.width,h=canvas.height,left=49,right=15,top=16,bottom=33;
+    ctx.clearRect(0,0,w,h);
+    ctx.font='13px system-ui, sans-serif';
+    ctx.fillStyle='#9fb8d8';
+    const pts=perfUi.samples;
+    if(!pts.length){
+        ctx.textAlign='center';ctx.fillText('Aucune mesure pour le moment',w/2,h/2);
+        return;
+    }
+    const values=pts.map(p=>Math.max(0,Number(p[key])||0));
+    let min=key==='cpu'?0:Math.max(0,Math.floor(Math.min(...values)*0.8/10)*10);
+    let max=key==='cpu'?Math.max(1,Math.ceil(Math.max(...values)*1.15)):
+        Math.ceil(Math.max(...values, min+5)*1.12/10)*10;
+    if(max<=min)max=min+1;
+    const innerW=w-left-right,innerH=h-top-bottom;
+    const lastTime=Math.max(1,Number(pts[pts.length-1].elapsed)||1);
+    const x=t=>left+innerW*Math.max(0,Number(t)||0)/lastTime;
+    const y=v=>top+innerH*(1-(v-min)/(max-min));
+    ctx.lineWidth=1;ctx.strokeStyle='#2b425f';ctx.textAlign='right';
+    for(let i=0;i<=4;i++){
+        const value=min+(max-min)*i/4,yy=y(value);
+        ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
+        ctx.fillText(value.toFixed(key==='cpu'?1:0),left-7,yy+4);
+    }
+    ctx.textAlign='left';
+    ctx.fillText('0 s',left,h-8);
+    ctx.textAlign='right';
+    ctx.fillText(lastTime.toFixed(0)+' s',w-right,h-8);
+    ctx.strokeStyle=color;ctx.lineWidth=2.7;ctx.beginPath();
+    const stride=Math.max(1,Math.floor(pts.length/300));
+    for(let i=0;i<pts.length;i+=stride){
+        const xx=x(pts[i].elapsed),yy=y(values[i]);
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+    }
+    const end=pts.length-1;
+    ctx.lineTo(x(pts[end].elapsed),y(values[end]));
+    ctx.stroke();
+    ctx.fillStyle=color;
+    ctx.fillText(unit,w-right-2,13);
+}
+function perfRender(){
+    $('perfStart').disabled=perfUi.active||!connected;
+    $('perfStop').disabled=!perfUi.active||!connected;
+    $('perfExport').disabled=!connected||!perfUi.samples.length||perfUi.active;
+    $('perfClear').disabled=!connected||(!perfUi.active&&!perfUi.samples.length);
+    const p=perfUi.samples.at(-1);
+    $('perfStatus').textContent=perfUi.active
+        ?'Mesure en cours - '+perfUi.samples.length+' relevés'
+        :perfUi.samples.length
+            ?'Mesure arrêtée - '+perfUi.samples.length+' relevés conservés en mémoire'
+            :'Désactivé - aucun relevé en cours.';
+    $('perfCpu').textContent=p?perfMetric(p.cpu,' %'):'-';
+    $('perfRam').textContent=p?perfMetric(p.privateMB,' Mo'):'-';
+    $('perfThreads').textContent=p?String(p.threads):'-';
+    $('perfProcesses').textContent=p?String(p.webCount):'-';
+    $('perfCpuSplit').textContent=p
+        ?'AHK : '+perfMetric(Math.max(0,p.cpu-p.webCpu),' %')
+            +' | WebView2 : '+perfMetric(p.webCpu,' %')
+        :'AHK : - | WebView2 : -';
+    $('perfRamSplit').textContent=p
+        ?'AHK : '+perfMetric(p.ahkMB,' Mo')
+            +' | WebView2 : '+perfMetric(p.webMB,' Mo')
+        :'AHK : - | WebView2 : -';
+    $('perfDuration').textContent='Durée : '+(p?Number(p.elapsed).toFixed(0):'0')+' s';
+    if($('perfPanel').open){
+        perfDrawChart('perfCpuChart','cpu','#67b5ff','CPU %');
+        perfDrawChart('perfRamChart','privateMB','#71d6c2','Mo');
+    }
+}
+function perfHandle(msg){
+    if(msg.action==='start'||msg.action==='clear')perfUi.samples=[];
+    perfUi.active=!!msg.active;
+    if(msg.sample&&typeof msg.sample==='object'&&msg.action!=='clear'){
+        const p=msg.sample,last=perfUi.samples.at(-1);
+        if(!last||Number(p.elapsed)!==Number(last.elapsed)){
+            perfUi.samples.push(p);
+            if(perfUi.samples.length>perfUi.limit)perfUi.samples.shift();
+        }
+    }
+    perfRender();
+    if(msg.action==='error')toast('Diagnostic : '+(msg.message||'Erreur de mesure.'));
+    if(msg.action==='exported')toast(msg.message||'Rapport CSV enregistré.');
+}
+for(const action of ['start','stop','export','clear']){
+    $('perf'+action[0].toUpperCase()+action.slice(1)).onclick=()=>{
+        if(!connected){
+            toast('Disponible uniquement dans ClickFlow Windows.');return;
+        }
+        send('perf',action);
+    };
+}
+$('perfPanel').addEventListener('toggle',()=>{if($('perfPanel').open)perfRender();});
+perfRender();
 if(bridge) {
     window.chrome.webview.addEventListener('message',event=>{
         let msg=event.data;
@@ -2334,6 +2472,7 @@ if(bridge) {
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
         else if(msg.type==='cpsTest') cpsHandleEngineMessage(msg);
         else if(msg.type==='cpsReal') cpsHandleRealMessage(msg);
+        else if(msg.type==='perf') perfHandle(msg);
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;

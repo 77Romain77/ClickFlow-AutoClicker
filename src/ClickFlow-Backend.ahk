@@ -104,6 +104,8 @@ BackendInit(hwnd, web) {
     CF.engineTimerActive := false
     CF.statsTimerActive := false
     SetTimer(UpdateStats, 1000)
+    ; Aucun timer de diagnostic actif au repos.
+    CFPerfReset()
     OnExit(BackendExit)
     SaveSettings()
     CFDesktopInit()
@@ -137,6 +139,7 @@ BackendExit(*) {
     CF.pressed := false
     try CFEngineSetTimer(false)
     try SetTimer(UpdateStats, 0)
+    try SetTimer(CFPerfSampleTimer, 0)
     try SetTimer(SaveSettings, 0)
     try SetTimer(SendState, 0)
     CF.desktopReady := false
@@ -460,6 +463,7 @@ BackendMessage(sender, args) {
             SendState()
             SendStats()
             CFSendShortcutStatus()
+            CFPerfPost("sync")
             return
         }
         if cmd = "connected" {
@@ -585,6 +589,24 @@ BackendMessage(sender, args) {
                     CFBackupRestore()
             } catch as err {
                 CFProfileMessage("Sauvegarde impossible : " err.Message, true)
+            }
+            return
+        }
+        if cmd = "perf" && parts.Length >= 2 {
+            try {
+                switch parts[2] {
+                    case "start":
+                        CFPerfStart()
+                    case "stop":
+                        CFPerfStop()
+                    case "clear":
+                        CFPerfReset()
+                        CFPerfPost("clear")
+                    case "export":
+                        CFPerfExport()
+                }
+            } catch as err {
+                CFPerfPost("error", err.Message)
             }
             return
         }
@@ -2141,4 +2163,248 @@ DisplayKey(key) {
         try return GetKeyName(key)
     }
     return key
+}
+
+
+; ===========================================
+; Diagnostic ressources à la demande (Windows)
+; ===========================================
+; CPU agrégé normalisé par le nombre de coeurs logiques.
+; RAM privée = mémoire non partagée, afin d'éviter le double comptage.
+CFPerfReset() {
+    global CF
+    try SetTimer(CFPerfSampleTimer, 0)
+    CF.perf := {active:false, samples:[], previous:Map(), startedAt:0,
+        lastAt:0, cpuCount:Max(1, DllCall("Kernel32\GetActiveProcessorCount",
+            "UShort", 0xFFFF, "UInt")), maxSamples:900}
+}
+
+CFPerfProcesses() {
+    parents := Map(), names := Map(), threads := Map()
+    snapshot := DllCall("Kernel32\CreateToolhelp32Snapshot",
+        "UInt", 0x2, "UInt", 0, "Ptr")
+    if snapshot = -1 || !snapshot
+        return {parents:parents, names:names, threads:threads}
+    try {
+        size := A_PtrSize = 8 ? 568 : 556
+        parentAt := A_PtrSize = 8 ? 32 : 24
+        threadsAt := A_PtrSize = 8 ? 28 : 20
+        exeAt := A_PtrSize = 8 ? 44 : 36
+        entry := Buffer(size, 0)
+        NumPut("UInt", size, entry, 0)
+        ok := DllCall("Kernel32\Process32FirstW",
+            "Ptr", snapshot, "Ptr", entry.Ptr, "Int")
+        while ok {
+            pid := NumGet(entry, 8, "UInt")
+            if pid {
+                parents[pid] := NumGet(entry, parentAt, "UInt")
+                threads[pid] := NumGet(entry, threadsAt, "UInt")
+                names[pid] := StrLower(StrGet(entry.Ptr + exeAt, 260, "UTF-16"))
+            }
+            ok := DllCall("Kernel32\Process32NextW",
+                "Ptr", snapshot, "Ptr", entry.Ptr, "Int")
+        }
+    } finally {
+        DllCall("Kernel32\CloseHandle", "Ptr", snapshot)
+    }
+    return {parents:parents, names:names, threads:threads}
+}
+
+CFPerfDescendsFrom(pid, root, parents) {
+    seen := Map()
+    Loop 32 {
+        if !parents.Has(pid) || seen.Has(pid)
+            return false
+        seen[pid] := true
+        pid := parents[pid]
+        if pid = root
+            return true
+        if !pid
+            return false
+    }
+    return false
+}
+
+CFPerfReadProcess(pid) {
+    handle := DllCall("Kernel32\OpenProcess",
+        "UInt", 0x1010, "Int", 0, "UInt", pid, "Ptr")
+    if !handle
+        return 0
+    try {
+        mem := Buffer(A_PtrSize = 8 ? 80 : 44, 0)
+        NumPut("UInt", mem.Size, mem, 0)
+        if !DllCall("Psapi\GetProcessMemoryInfo", "Ptr", handle,
+            "Ptr", mem.Ptr, "UInt", mem.Size, "Int")
+            return 0
+        created := Buffer(8, 0), exited := Buffer(8, 0)
+        kernel := Buffer(8, 0), user := Buffer(8, 0)
+        if !DllCall("Kernel32\GetProcessTimes", "Ptr", handle,
+            "Ptr", created.Ptr, "Ptr", exited.Ptr,
+            "Ptr", kernel.Ptr, "Ptr", user.Ptr, "Int")
+            return 0
+        privateAt := A_PtrSize = 8 ? 72 : 40
+        workingAt := A_PtrSize = 8 ? 16 : 12
+        return {cpuMs:(NumGet(kernel, 0, "Int64")
+                + NumGet(user, 0, "Int64")) / 10000,
+            privateBytes:NumGet(mem, privateAt, "UPtr"),
+            workingBytes:NumGet(mem, workingAt, "UPtr"),
+            created:NumGet(created, 0, "Int64")}
+    } finally {
+        DllCall("Kernel32\CloseHandle", "Ptr", handle)
+    }
+}
+
+CFPerfTakeSample() {
+    global CF
+    if !CF.perf.active || CF.shuttingDown
+        return
+    now := CFNowMs()
+    root := DllCall("Kernel32\GetCurrentProcessId", "UInt")
+    tree := CFPerfProcesses()
+    targets := [root]
+    for pid, name in tree.names {
+        if name = "msedgewebview2.exe"
+            && CFPerfDescendsFrom(pid, root, tree.parents)
+            targets.Push(pid)
+    }
+    totals := {cpu:0, webCpu:0, private:0, working:0,
+        ahkPrivate:0, webPrivate:0, threads:0, webCount:0}
+    previous := CF.perf.previous
+    nextPrevious := Map()
+    wallMs := Max(1, now-CF.perf.lastAt)
+    for pid in targets {
+        details := CFPerfReadProcess(pid)
+        if !IsObject(details)
+            continue
+        nextPrevious[pid] := {cpu:details.cpuMs, created:details.created}
+        isWeb := pid != root
+        totals.private += details.privateBytes
+        totals.working += details.workingBytes
+        totals.threads += tree.threads.Get(pid, 0)
+        if isWeb {
+            totals.webCount += 1
+            totals.webPrivate += details.privateBytes
+        } else
+            totals.ahkPrivate += details.privateBytes
+        if previous.Has(pid) && previous[pid].created = details.created {
+            delta := Max(0, details.cpuMs-previous[pid].cpu)
+            totals.cpu += delta
+            if isWeb
+                totals.webCpu += delta
+        }
+    }
+    CF.perf.previous := nextPrevious
+    CF.perf.lastAt := now
+    if !nextPrevious.Has(root)
+        throw Error("Impossible de lire les ressources du processus ClickFlow.")
+    cpu := Min(100, 100*totals.cpu/wallMs/CF.perf.cpuCount)
+    webCpu := Min(100, 100*totals.webCpu/wallMs/CF.perf.cpuCount)
+    mb := 1048576
+    point := {elapsed:Round((now-CF.perf.startedAt)/1000, 1),
+        cpu:Round(cpu, 2), webCpu:Round(webCpu, 2),
+        privateMB:Round(totals.private/mb, 2),
+        ahkMB:Round(totals.ahkPrivate/mb, 2),
+        webMB:Round(totals.webPrivate/mb, 2),
+        workingMB:Round(totals.working/mb, 2),
+        threads:totals.threads, webCount:totals.webCount}
+    CF.perf.samples.Push(point)
+    if CF.perf.samples.Length > CF.perf.maxSamples
+        CF.perf.samples.RemoveAt(1)
+    CFPerfPost("sample")
+}
+
+CFPerfSampleTimer(*) {
+    global CF
+    if !CF.perf.active
+        return
+    try CFPerfTakeSample()
+    catch as err {
+        CFPerfStop()
+        CFPerfPost("error", err.Message)
+    }
+}
+
+CFPerfStart() {
+    global CF
+    CFPerfReset()
+    CF.perf.active := true
+    CF.perf.startedAt := CFNowMs()
+    try {
+        ; Le premier échantillon fixe la référence CPU.
+        CFPerfTakeSample()
+        SetTimer(CFPerfSampleTimer, 2000)
+        CFPerfPost("start")
+    } catch as err {
+        ; Aucun état actif fantôme si la lecture système échoue.
+        CFPerfReset()
+        throw err
+    }
+}
+
+CFPerfStop() {
+    global CF
+    if !CF.perf.active
+        return
+    CF.perf.active := false
+    SetTimer(CFPerfSampleTimer, 0)
+    CFPerfPost("stop")
+}
+
+CFPerfPointJson(p) {
+    return ('{"elapsed":' p.elapsed ',"cpu":' p.cpu
+        ',"webCpu":' p.webCpu ',"privateMB":' p.privateMB
+        ',"ahkMB":' p.ahkMB ',"webMB":' p.webMB
+        ',"workingMB":' p.workingMB ',"threads":' p.threads
+        ',"webCount":' p.webCount '}')
+}
+
+CFPerfPost(action, message := "") {
+    global CF
+    if !CF.web || CF.shuttingDown
+        return
+    last := CF.perf.samples.Length ? CFPerfPointJson(
+        CF.perf.samples[CF.perf.samples.Length]) : "null"
+    json := ('{"type":"perf","action":' JsonQuote(action)
+        ',"active":' (CF.perf.active ? "true" : "false")
+        ',"count":' CF.perf.samples.Length
+        ',"sample":' last ',"message":' JsonQuote(message) '}')
+    try CF.web.PostWebMessageAsString(json)
+}
+
+CFPerfExportTo(path) {
+    global CF
+    if CF.perf.samples.Length = 0
+        throw Error("Aucune mesure à exporter.")
+    file := FileOpen(path, "w", "UTF-8")
+    if !file
+        throw Error("Impossible de créer le rapport.")
+    try {
+        file.Write("ClickFlow - Diagnostic performances;Mesures toutes les 2 secondes" Chr(10))
+        file.Write("Temps (s);CPU total (%);CPU WebView2 (%);"
+            "RAM privee totale (Mo);RAM AHK (Mo);RAM WebView2 (Mo);"
+            "Memoire residente (Mo);Threads;Processus WebView2" Chr(10))
+        for p in CF.perf.samples {
+            file.Write(p.elapsed ";" p.cpu ";" p.webCpu ";"
+                p.privateMB ";" p.ahkMB ";" p.webMB ";"
+                p.workingMB ";" p.threads ";" p.webCount Chr(10))
+        }
+    } finally {
+        file.Close()
+    }
+}
+
+CFPerfExport() {
+    global CF
+    if CF.perf.active
+        throw Error("Arrête la mesure avant d'exporter le rapport.")
+    if !CF.perf.samples.Length
+        throw Error("Aucune mesure à exporter.")
+    path := FileSelect("S16", , "Exporter le diagnostic ClickFlow",
+        "CSV (*.csv)")
+    if path = ""
+        return
+    if !RegExMatch(path, "i)\.csv$")
+        path .= ".csv"
+    CFPerfExportTo(path)
+    CFPerfPost("exported", "Rapport CSV enregistré.")
 }
