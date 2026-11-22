@@ -81,12 +81,9 @@ BackendInit(hwnd, web) {
         if FileExist(CF.configFile) && !FileExist(CF.configFile ".backup-webview2")
             FileCopy(CF.configFile, CF.configFile ".backup-webview2")
     }
-    CF.emergencyKey := IniRead(CF.configFile, "General", "EmergencyKey", "F12")
+    CF.shortcutRecoveryWarnings := []
+    CFLoadEmergencyShortcut()
     CF.compactMode := IniRead(CF.configFile, "General", "CompactMode", "0") = "1"
-    ; Une chaîne vide est un choix explicite "Aucun", pas une erreur.
-    ; F12 ne sert que de valeur initiale si la préférence n'existe pas.
-    if CF.emergencyKey = "!" || CF.emergencyKey = "Escape"
-        CF.emergencyKey := "F12"
     LoadSettings()
     CFDesktopReadPreferences()
     ; Au démarrage un raccourci d'urgence ne doit jamais entrer en conflit
@@ -110,7 +107,19 @@ BackendInit(hwnd, web) {
     OnExit(BackendExit)
     SaveSettings()
     CFDesktopInit()
-    SetNotice("Prêt. Choisis une fenêtre cible et utilise " DisplayKey(CF.cfg.activation) ".")
+    recovered := CF.HasOwnProp("profileRecoveryWarnings")
+        ? CF.profileRecoveryWarnings.Length : 0
+    corrected := CF.shortcutRecoveryWarnings.Length
+    if recovered || corrected {
+        notice := "Démarrage sécurisé : " recovered " profil(s) endommagé(s)"
+            " ignoré(s), " corrected " raccourci(s) corrigé(s). "
+        if recovered
+            notice .= "Fichiers sauvegardés si possible dans profiles\\_recovery. "
+        notice .= "Vérifie tes réglages."
+        SetNotice(notice)
+    } else
+        SetNotice("Prêt. Choisis une fenêtre cible et utilise "
+            DisplayKey(CF.cfg.activation) ".")
 }
 
 BackendExit(*) {
@@ -767,10 +776,57 @@ SameKey(a, b) {
     return false
 }
 
+CFShortcutRecoveryWarn(message) {
+    global CF
+    if !CF.HasOwnProp("shortcutRecoveryWarnings")
+        CF.shortcutRecoveryWarnings := []
+    CF.shortcutRecoveryWarnings.Push(message)
+}
+
+; Les données chargées depuis un INI ne passent pas par les contrôles
+; WebView2 : refuser les pseudo-hotkeys, les préfixes et noms inconnus.
+; Les raccourcis utilisateur sont des touches simples, pas des combinaisons.
+CFValidSavedShortcut(key, allowNone := false) {
+    if key = ""
+        return allowNone
+    if StrLen(key) > 32 || key = "!" || key = "Escape" || key = "Esc"
+        || RegExMatch(key, "[\s#!^+~*]")
+        return false
+    for modifier in ["Shift","LShift","RShift","Ctrl","LCtrl","RCtrl",
+        "Alt","LAlt","RAlt","LWin","RWin"]
+        if key = modifier
+            return false
+    try return GetKeyVK(key) != 0
+    return false
+}
+
+CFLoadEmergencyShortcut() {
+    global CF
+    key := IniRead(CF.configFile, "General", "EmergencyKey", "F12")
+    if !CFValidSavedShortcut(key, true) {
+        CFShortcutRecoveryWarn("Arrêt d'urgence invalide restauré sur F12.")
+        key := "F12"
+    }
+    CF.emergencyKey := key
+}
+
 RegisterEmergency() {
     global CF
-    if CF.emergencyKey != ""
+    if CF.emergencyKey = ""
+        return
+    try {
         Hotkey("~*" CF.emergencyKey, EmergencyStop, "On")
+    } catch as err {
+        CFShortcutRecoveryWarn("Raccourci d'urgence refusé par Windows.")
+        CF.emergencyKey := "F12"
+        ; Le cas très improbable d'un F12 impossible ne doit pas
+        ; empêcher le lancement : l'arrêt via l'interface reste possible.
+        try Hotkey("~*F12", EmergencyStop, "On")
+        catch {
+            CF.emergencyKey := ""
+            CFShortcutRecoveryWarn("F12 indisponible ; arrêt via ClickFlow.")
+        }
+    }
 }
 
 UnregisterEmergency() {
@@ -823,8 +879,18 @@ ApplyWindowMode() {
 RegisterActivation() {
     global CF
     name := CF.cfg.activation
-    Hotkey("~*" name, ActivationDown, "On")
-    Hotkey("~*" name " Up", ActivationUp, "On")
+    try {
+        Hotkey("~*" name, ActivationDown, "On")
+        Hotkey("~*" name " Up", ActivationUp, "On")
+    } catch {
+        try Hotkey("~*" name, "Off")
+        try Hotkey("~*" name " Up", "Off")
+        fallback := SameKey(CF.emergencyKey, "F6") ? "F7" : "F6"
+        CFShortcutRecoveryWarn("Activation de profil rétablie sur " fallback ".")
+        CF.cfg.activation := fallback
+        Hotkey("~*" fallback, ActivationDown, "On")
+        Hotkey("~*" fallback " Up", ActivationUp, "On")
+    }
 }
 
 UnregisterActivation() {
@@ -1937,8 +2003,12 @@ ReadConfig(file, section, base) {
         cfg.clickButton := "Left"
     if !HasValue(["LButton", "RButton", "MButton", "XButton1", "XButton2"], cfg.gateButton)
         cfg.gateButton := "RButton"
-    if cfg.activation = "" || cfg.activation = "!" || SameKey(cfg.activation, CF.emergencyKey)
+    if !CFValidSavedShortcut(cfg.activation)
+        || SameKey(cfg.activation, CF.emergencyKey) {
+        CFShortcutRecoveryWarn("Activation invalide dans " section
+            " : réinitialisée.")
         cfg.activation := SameKey(CF.emergencyKey, "F6") ? "F7" : "F6"
+    }
     return cfg
 }
 
