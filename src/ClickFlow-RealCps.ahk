@@ -180,7 +180,7 @@ CFRealBeginPending(*) {
         CFRealPost("started", ',"duration":' test.duration
             ',"profile":' JsonQuote(test.profile)
             ',"trigger":' JsonQuote(test.trigger))
-        SetTimer(CFRealTick, 50)
+        SetTimer(CFRealWatchdog, 250)
     }
     test.nextAt := now
     if test.cfg.mode = 4
@@ -200,6 +200,21 @@ CFRealReleasePending(*) {
     if !test.held && !CF.armed && !CF.test.active
         CFEngineSetTimer(false)
     CFRealFlush()
+    CFRealUpdateStatus()
+}
+
+CFRealWatchdog(*) {
+    global CF
+    test := CF.realTest
+    if !test.run || !test.active
+        return
+    ; Ce timer ne produit JAMAIS de clic. Il garde uniquement le
+    ; compte à rebours actif si le bouton physique a été relâché.
+    if CFNowMs() >= test.endAt {
+        if !test.dispatching
+            CFRealTick()
+        return
+    }
     CFRealUpdateStatus()
 }
 
@@ -263,10 +278,16 @@ CFRealFlush() {
     test.pending := []
     test.pendingSent := []
     test.lastSent := test.sent
+    postStarted := CFNowMs()
     CFRealPost("ticks", ',"ticks":' events
         ',"sentTicks":' sentEvents
         ',"sent":' test.sent ',"received":' test.received)
-    CFRealUpdateStatus()
+    postDuration := Max(0, CFNowMs()-postStarted)
+    test.maxPostMs := Max(test.maxPostMs, postDuration)
+    if postDuration >= 50
+        test.slowPost += 1
+    ; Les contrôles de la GUI ne sont rafraîchis que par le watchdog.
+    ; Cela évite de modifier des contrôles Windows pendant un clic reçu.
 }
 
 ; Une confirmation finale peut être renvoyée à WebView2 à sa demande.
@@ -297,7 +318,7 @@ CFRealEnd(reason := "arrêté", completed := false) {
     test.held := false
     test.active := false
     test.pendingStart := false
-    try SetTimer(CFRealTick, 0)
+    try SetTimer(CFRealWatchdog, 0)
     try SetTimer(CFRealBeginPending, 0)
     try SetTimer(CFRealReleasePending, 0)
     try SetTimer(CFRealUpdateStatus, 0)
@@ -318,7 +339,14 @@ CFRealEnd(reason := "arrêté", completed := false) {
             ',"sent":' test.sent
             ',"received":' test.received
             ',"ticks":' CFTestArrayJson(test.clicks)
-            ',"sentTicks":' CFTestArrayJson(test.sentTicks) '}')
+            ',"sentTicks":' CFTestArrayJson(test.sentTicks)
+            ',"maxSendInputMs":' Round(test.maxSendInputMs, 3)
+            ',"slowSendInput":' test.slowSendInput
+            ',"maxSchedulerDelayMs":' Round(test.maxSchedulerDelayMs, 3)
+            ',"slowScheduler":' test.slowScheduler
+            ',"blockedDispatch":' test.blockedDispatch
+            ',"maxPostMs":' Round(test.maxPostMs, 3)
+            ',"slowPost":' test.slowPost '}')
         CF.realResult := {run: test.run, json: resultJson}
         if !CF.shuttingDown
             CFTestPost(resultJson)
@@ -361,7 +389,7 @@ CFRealMouse(wParam, lParam, msg, hwnd) {
                 test.received += 1
                 ; Réduire les échanges WebView2 : le récepteur natif
                 ; reste léger même pendant les tests continus à 100 CPS.
-                if CFNowMs()-test.lastFlush >= 120 || test.pending.Length >= 16 {
+                if CFNowMs()-test.lastFlush >= 330 || test.pending.Length >= 32 {
                     test.lastFlush := CFNowMs()
                     CFRealFlush()
                 }
@@ -431,6 +459,10 @@ CFRealOpen(duration, runId, profileId) {
         started:0, endAt:0, nextAt:0,
         sent:0, received:0, lastSent:0, clicks:[],pending:[],
         sentTicks:[], pendingSent:[], lastFlush:0,
+        dispatching:false, blockedDispatch:0,
+        maxSendInputMs:0, slowSendInput:0,
+        maxSchedulerDelayMs:0, slowScheduler:0,
+        maxPostMs:0, slowPost:0,
         anyMouse:0, lastMsg:0, lastHwnd:0, lastExtra:0}
     ; Seuls les clics injectés identifiés sont comptabilisés.
     for message in [0x201,0x202,0x203,0x204,0x205,0x206,0x207,0x208,0x209]
@@ -457,53 +489,77 @@ CFRealTick(now := "") {
     test := CF.realTest
     if !test.run || !test.active || CF.shuttingDown
         return
-    if now = ""
-        now := CFNowMs()
-    if now >= test.endAt {
-        CFRealFlush()
-        CFRealEnd("Test terminé.", true)
+    ; Le watchdog et le cadenceur de haute précision ne doivent jamais
+    ; pouvoir envoyer deux clics à partir de la même échéance.
+    if test.dispatching {
+        test.blockedDispatch += 1
         return
     }
-    focused := IsObject(test.gui) && WinExist("A") = test.gui.Hwnd
-    inside := focused && CFRealInside()
-    if !focused || (test.held && !inside) {
-        CFRealEnd(!focused ? "Fenêtre de test non active."
-            : "Curseur sorti de la zone de test.")
-        return
-    }
-    if !test.held {
-        if test.pending.Length || test.lastSent != test.sent
+    test.dispatching := true
+    try {
+        if now = ""
+            now := CFNowMs()
+        if now >= test.endAt {
             CFRealFlush()
-        CFRealUpdateStatus()
-        return
-    }
-    ; Le WM_*BUTTONUP physique non marqué est la référence.
-    ; GetKeyState peut être temporairement faussé si l'on injecte
-    ; le même bouton que celui qui est maintenu : ne pas l'utiliser
-    ; comme motif d'arrêt pendant ce test.
-    if now < test.nextAt
-        return
-    ; Contrôle de destination juste avant SendInput. Si la fenêtre ou la
-    ; zone a changé, arrêter sans injecter dans la nouvelle destination.
-    if !CFRealCanSend(focused, inside, test.held, test.active)
-        return
-    period := GetNextIntervalMs(test.cfg, now)
-    input := CFRealInputBuffer(test.outButton)
-    sent := DllCall("User32\SendInput", "UInt",2,
-        "Ptr",input.data.Ptr, "Int",input.stride, "UInt")
-    if sent != 2 {
-        CFRealEnd("SendInput n'a pas pu envoyer les deux événements.")
-        return
-    }
-    test.sent += 1
-    ; Horodatage indépendant à l'envoi (QPC). À comparer à l'instant
-    ; de traitement des messages WM_* dans CFRealMouse.
-    sentOffset := Max(0, CFNowMs()-test.started)
-    test.sentTicks.Push(sentOffset)
-    test.pendingSent.Push(sentOffset)
-    test.nextAt := CFNextDeadline(test.nextAt, now, period)
-    if now-test.lastFlush >= 160 {
-        test.lastFlush := now
-        CFRealFlush()
+            CFRealEnd("Test terminé.", true)
+            return
+        }
+        focused := IsObject(test.gui) && WinExist("A") = test.gui.Hwnd
+        inside := focused && CFRealInside()
+        if !focused || (test.held && !inside) {
+            CFRealEnd(!focused ? "Fenêtre de test non active."
+                : "Curseur sorti de la zone de test.")
+            return
+        }
+        if !test.held {
+            if test.pending.Length || test.pendingSent.Length
+                || test.lastSent != test.sent
+                CFRealFlush()
+            return
+        }
+        ; Seul ce chemin de dispatch gère les clics, jamais le watchdog.
+        if now < test.nextAt
+            return
+        if !CFRealCanSend(focused, inside, test.held, test.active)
+            return
+        schedulerDelay := Max(0, now-test.nextAt)
+        test.maxSchedulerDelayMs := Max(test.maxSchedulerDelayMs, schedulerDelay)
+        if schedulerDelay >= 100
+            test.slowScheduler += 1
+
+        period := GetNextIntervalMs(test.cfg, now)
+        input := CFRealInputBuffer(test.outButton)
+        ; Réserver l'échéance AVANT SendInput : les messages Windows peuvent
+        ; interrompre le thread AHK pendant l'appel système.
+        test.nextAt := CFNextDeadline(test.nextAt, now, period)
+        sendStart := CFNowMs()
+        sent := DllCall("User32\SendInput", "UInt", 2,
+            "Ptr", input.data.Ptr, "Int", input.stride, "UInt")
+        sendDone := CFNowMs()
+        sendDuration := Max(0, sendDone-sendStart)
+        test.maxSendInputMs := Max(test.maxSendInputMs, sendDuration)
+        if sendDuration >= 50
+            test.slowSendInput += 1
+        if !test.run || !test.active
+            return
+        if sent != 2 {
+            CFRealEnd("SendInput n'a pas pu envoyer les deux événements.")
+            return
+        }
+        test.sent += 1
+        sentOffset := Max(0, sendDone-test.started)
+        test.sentTicks.Push(sentOffset)
+        test.pendingSent.Push(sentOffset)
+
+        ; Pas de rafale de rattrapage après un SendInput bloqué : attendre
+        ; de nouveau une période normale. Garder la phase si en avance.
+        if test.nextAt < sendDone + Max(10, period * 0.5)
+            test.nextAt := sendDone + period
+        if sendDone-test.lastFlush >= 350 {
+            test.lastFlush := sendDone
+            CFRealFlush()
+        }
+    } finally {
+        test.dispatching := false
     }
 }
