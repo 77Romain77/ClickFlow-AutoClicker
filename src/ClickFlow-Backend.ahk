@@ -2345,23 +2345,23 @@ CFPerfStop() {
 }
 
 CFPerfPointJson(p) {
-    return '{"elapsed":' p.elapsed ',"cpu":' p.cpu
+    return ('{"elapsed":' p.elapsed ',"cpu":' p.cpu
         ',"webCpu":' p.webCpu ',"privateMB":' p.privateMB
         ',"ahkMB":' p.ahkMB ',"webMB":' p.webMB
         ',"workingMB":' p.workingMB ',"threads":' p.threads
-        ',"webCount":' p.webCount '}'
+        ',"webCount":' p.webCount '}')
 }
 
 CFPerfPost(action, message := "") {
     global CF
     if !CF.web || CF.shuttingDown
         return
-    last := CF.perf.samples.Length
-        ? CFPerfPointJson(CF.perf.samples[CF.perf.samples.Length]) : "null"
-    json := '{"type":"perf","action":' JsonQuote(action)
+    last := CF.perf.samples.Length ? CFPerfPointJson(
+        CF.perf.samples[CF.perf.samples.Length]) : "null"
+    json := ('{"type":"perf","action":' JsonQuote(action)
         ',"active":' (CF.perf.active ? "true" : "false")
         ',"count":' CF.perf.samples.Length
-        ',"sample":' last ',"message":' JsonQuote(message) '}'
+        ',"sample":' last ',"message":' JsonQuote(message) '}')
     try CF.web.PostWebMessageAsString(json)
 }
 
