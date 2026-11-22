@@ -3,8 +3,8 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../ui/index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/);
 assert(src,'Integrated UI JavaScript missing');
-assert(html.includes('ClickFlow v1.9.33 · AHK v2')
-    && html.includes('ClickFlow v1.9.33 · AutoHotkey v2'),
+assert(html.includes('ClickFlow v1.10.0 · AHK v2')
+    && html.includes('ClickFlow v1.10.0 · AutoHotkey v2'),
     'Both footer version strings must match the shipped version.');
 new vm.Script(src[1],{filename:'ClickFlow v1.9 UI'});
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
