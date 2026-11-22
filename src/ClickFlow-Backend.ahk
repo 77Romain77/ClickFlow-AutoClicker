@@ -1428,10 +1428,16 @@ SetNotice(message) {
 ; de clic supplémentaire. Un retard important réinitialise la phase
 ; et conserve au moins la moitié de l'intervalle entre deux échéances
 ; (10 ms minimum), pour éviter tout rattrapage brusque.
+; Conserver la phase aux cadences rapides : la marge de 10 ms
+; précédente imposait une remise à zéro à CHAQUE clic à 100 CPS.
+; Une petite avance de sécurité empêche toujours les rafales de rattrapage.
+CFDeadlineMinLead(intervalMs) {
+    return Max(2, Min(4, intervalMs * 0.2))
+}
+
 CFNextDeadline(previousDue, now, intervalMs) {
     ideal := previousDue + intervalMs
-    minGap := Max(10, intervalMs * 0.5)
-    if ideal <= now + minGap
+    if ideal <= now + CFDeadlineMinLead(intervalMs)
         return now + intervalMs
     return ideal
 }
