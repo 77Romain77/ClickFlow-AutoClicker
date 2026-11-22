@@ -130,6 +130,18 @@ try {
             ", endAt=" test.endAt
             ", lastMsg=" test.lastMsg ", extra=" test.lastExtra)
 
+    ; Une interruption ne doit jamais réentrer dans l'envoi de clics.
+    ; Le watchdog ne doit pas produire de clic supplémentaire.
+    beforeDispatch := test.sent
+    test.dispatching := true
+    CFRealTick()
+    if test.sent != beforeDispatch || test.blockedDispatch != 1
+        throw Error("Le verrou anti-reentrée du banc natif est inopérant.")
+    test.dispatching := false
+    CFRealWatchdog()
+    if test.sent != beforeDispatch
+        throw Error("Le watchdog a émis un clic hors cadenceur.")
+
     ; Avec des clics rapprochés, Windows peut émettre WM_*DBLCLK
     ; à la place de WM_*BUTTONDOWN. Tous doivent rester comptabilisés.
     test.cfg.mode := 1
@@ -153,6 +165,9 @@ try {
     if test.sentTicks.Length > 1
         && test.sentTicks[2] < test.sentTicks[1]
         throw Error("Horodatages du moteur non chronologiques.")
+    if test.maxSendInputMs < 0 || test.maxSchedulerDelayMs < 0
+        || test.maxPostMs < 0
+        throw Error("Les diagnostics de durée ont une valeur négative.")
 
     ; Le curseur hors du rectangle met fin au test sans nouvel envoi.
     MouseMove(NumGet(pt,0,"Int"),NumGet(pt,4,"Int")-120,0)
@@ -172,6 +187,9 @@ try {
     done.endAt := CFNowMs() - 100
     done.clicks := [100, 200]
     done.sentTicks := [99, 199]
+    done.maxSendInputMs := 12.5
+    done.maxSchedulerDelayMs := 250.1
+    done.blockedDispatch := 3
     done.sent := 2
     done.received := 2
     CFRealTick()
@@ -180,7 +198,10 @@ try {
     if !InStr(CF.realResult.json, '"state":"finished"')
         || !InStr(CF.realResult.json, '"ticks":[100,200]')
         || !InStr(CF.realResult.json, '"sentTicks":[99,199]')
-        throw Error("Les chronologies d'envoi/réception ne sont pas récupérables.")
+        || !InStr(CF.realResult.json, '"maxSendInputMs":12.5')
+        || !InStr(CF.realResult.json, '"maxSchedulerDelayMs":250.1')
+        || !InStr(CF.realResult.json, '"blockedDispatch":3')
+        throw Error("Les chronologies et les diagnostics ne sont pas récupérables.")
     CFRealStatus(8)
     if CF.realResult.run != 8
         throw Error("La demande status a effacé le résultat natif.")
