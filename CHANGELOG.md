@@ -4,6 +4,7 @@
 
 - Supprime le hook Windows WH_MOUSE_LL ajouté par le banc de test Réception réelle, suspecté de bloquer SendInput environ 300 ms à intervalles irréguliers.
 - Lit désormais les appuis et relâchements de souris physiques via Raw Input (WM_INPUT), indépendamment des messages de clic injectés et sans hook bas niveau supplémentaire.
+- Ignore les messages WM_INPUT à périphérique nul, effectivement générés par SendInput dans la CI Windows, pour qu'une injection ne simule jamais le relâchement physique.
 - Active l'abonnement Raw Input uniquement pendant la fenêtre native et le désactive à la fermeture, y compris lors des erreurs.
 - Conserve les protections de focus et de zone, la distinction clic physique/injecté, les diagnostics détaillés et le moteur normal inchangé.
 - Ajoute des tests Windows du branchement Raw Input, des boutons gauche/droit/milieu, du déclenchement et de la désinscription. Essai sur souris physique toujours nécessaire.
