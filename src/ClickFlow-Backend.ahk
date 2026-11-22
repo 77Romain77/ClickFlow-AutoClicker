@@ -111,8 +111,8 @@ BackendInit(hwnd, web) {
         ? CF.profileRecoveryWarnings.Length : 0
     corrected := CF.shortcutRecoveryWarnings.Length
     if recovered || corrected {
-        notice := "Démarrage sécurisé : " recovered " profil(s) endommagé(s)"
-            " ignoré(s), " corrected " raccourci(s) corrigé(s). "
+        notice := ("Démarrage sécurisé : " recovered " profil(s) endommagé(s)"
+            " ignoré(s), " corrected " raccourci(s) corrigé(s). ")
         if recovered
             notice .= "Fichiers sauvegardés si possible dans profiles\\_recovery. "
         notice .= "Vérifie tes réglages."
