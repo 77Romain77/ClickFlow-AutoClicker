@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.9.30 - 2026-11-22
+
+- Remplace le second timer actif d'envoi de clics dans la fenêtre **Réception réelle** par un watchdog non-injectant de 250 ms ; seule la boucle de haute précision peut désormais dispatcher un clic.
+- Ajoute un verrou anti-réentrée par test et réserve la prochaine échéance avant SendInput.
+- Empêche les clics immédiatement rapprochés après un SendInput long, sans inventer de clics de rattrapage et sans accélérer le profil.
+- Diminue les actualisations de la fenêtre Windows et les notifications WebView2 pendant la mesure.
+- Ajoute des diagnostics séparés de durée maximale SendInput, retard de la planification, délai d'envoi WebView2 et réentrées empêchées.
+- Étend les tests Windows AutoHotkey et JavaScript. Le moteur normal est inchangé ; la validation de la cadence sur les PC des utilisateurs reste nécessaire.
+
+
 ## 1.9.29 - 2026-11-21
 
 - Ajoute une mesure indépendante par horloge haute précision (QPC) pour chaque clic réellement envoyé par le moteur de la fenêtre native.

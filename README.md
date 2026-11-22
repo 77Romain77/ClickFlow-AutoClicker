@@ -1,23 +1,31 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.29 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.30 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.29.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.29)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.30.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.30)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.29.ahk`.
+2. Télécharger `ClickFlow-v1.9.30.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.29`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.30`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Stabilisation du cadenceur du test réel (v1.9.30)
+
+La fenêtre de **Réception réelle** n'utilise désormais qu'un seul chemin pour envoyer les clics à leur échéance. Le timer de 50 ms concurrent est remplacé par un simple watchdog non-injectant qui gère la fermeture à la fin du temps et l'état de la fenêtre. Les appels de dispatch imbriqués sont ignorés, et une échéance prévue est réservée avant l'appel à SendInput afin d'empêcher deux envois sur une même échéance.
+
+Après un éventuel blocage de SendInput, le moteur attend une nouvelle période normale plutôt que d'envoyer immédiatement un clic de rattrapage. Les transferts de mesures et le rafraîchissement des contrôles Windows sont espacés pour réduire les risques d'interruption.
+
+Le panneau **Dernier test terminé** affiche maintenant le temps maximal d'un appel SendInput, le retard maximal du cadenceur avant l'envoi d'un clic, le temps maximal d'un transfert WebView2 et les appels de dispatch concurrents évités. Ces diagnostics aident à expliquer les pauses longues observées dans la v1.9.29 sans prétendre que le test mesure la réception dans un jeu. Le moteur normal des profils n'est pas modifié.
 
 ## Mesure indépendante de la cadence d'envoi (v1.9.29)
 

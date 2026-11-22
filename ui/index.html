@@ -1508,7 +1508,7 @@ $('uninstallAll').onclick=()=>{
 const cpsTest = {
     seconds:5, source:'profile', phase:'ready', startedAt:0,
     clicks:[], sentClicks:[], samples:[], peak:0, timer:0, last:null, run:0,
-    profileName:'', sent:0, finalizationRequested:false,
+    profileName:'', sent:0, finalizationRequested:false, diagnostics:null,
     lastPulseAt:-1000, audioEnabled:true, audio:null, clickBuffer:null
 };
 const cpsDurations=[2,5,10,30,60];
@@ -1715,6 +1715,7 @@ function cpsResetTest() {
     cpsTest.phase='ready';cpsTest.startedAt=0;
     cpsTest.clicks=[];cpsTest.sentClicks=[];cpsTest.samples=[];cpsTest.peak=0;
     cpsTest.profileName='';cpsTest.sent=0;cpsTest.finalizationRequested=false;
+    cpsTest.diagnostics=null;
     cpsRender(cpsNow());
 }
 function cpsFinish(now,replaceIncomplete=false) {
@@ -1735,6 +1736,7 @@ function cpsFinish(now,replaceIncomplete=false) {
         source:cpsTest.source,target,meanInterval,sent:cpsTest.sent,
         sending:cpsTest.source==='real'?cpsTimingSummary(cpsTest.sentClicks):null,
         receiving:cpsTest.source==='real'?cpsTimingSummary(cpsTest.clicks):null,
+        diagnostics:cpsTest.source==='real'?cpsTest.diagnostics:null,
         profile:cpsTest.source==='manual'?'Clics manuels':cpsTest.profileName
     };
     cpsLastRender();
@@ -1744,8 +1746,9 @@ function cpsStart(now) {
     cpsStopTimer();
     cpsTest.phase='running';cpsTest.startedAt=now;
     cpsTest.clicks=[];cpsTest.sentClicks=[];cpsTest.samples=[{t:0,v:0}];cpsTest.peak=0;
-    cpsTest.finalizationRequested=false;
-    cpsTest.timer=setInterval(()=>cpsRender(cpsNow()),85);
+    cpsTest.finalizationRequested=false;cpsTest.diagnostics=null;
+    cpsTest.timer=setInterval(()=>cpsRender(cpsNow()),
+        cpsTest.source==='real'?200:85);
 }
 function cpsSyncProfiles() {
     const selector=$('cpsProfileSelect');
@@ -1923,6 +1926,14 @@ function cpsHandleRealMessage(msg) {
         if(cpsTest.phase!=='running'
             &&!(cpsTest.phase==='done'&&cpsTest.last?.incomplete))return;
         cpsTest.sent=Number(msg.sent)||0;
+        const diagFields=['maxSendInputMs','slowSendInput',
+            'maxSchedulerDelayMs','slowScheduler','blockedDispatch',
+            'maxPostMs','slowPost'];
+        cpsTest.diagnostics=diagFields.some(key=>Number.isFinite(Number(msg[key])))
+            &&diagFields.some(key=>msg[key]!==undefined)
+            ?Object.fromEntries(diagFields.map(key=>[key,
+                Number.isFinite(Number(msg[key]))?Number(msg[key]):0]))
+            :null;
         if(Array.isArray(msg.sentTicks)) {
             cpsTest.sentClicks=msg.sentTicks.filter(x=>Number.isFinite(x)
                 &&x>=0&&x<cpsTest.seconds*1000).map(x=>cpsTest.startedAt+x);
@@ -1982,6 +1993,17 @@ function cpsLastRender() {
         timing.textContent=detail('Envoi moteur (horloge haute précision)',last.sending)
             +'  |  '+detail('Traitement dans la fenêtre Windows',last.receiving)
             +' Compare les maximums et les pauses pour identifier l\'origine des irrégularités.';
+        if(last.diagnostics) {
+            const d=last.diagnostics;
+            timing.textContent+='  |  Diagnostic du moteur : SendInput max '
+                +d.maxSendInputMs.toFixed(2)+' ms ('+d.slowSendInput
+                +' appels de 50 ms ou plus) ; retard avant un clic max '
+                +d.maxSchedulerDelayMs.toFixed(2)+' ms ('+d.slowScheduler
+                +' retards de 100 ms ou plus) ; messages WebView2 max '
+                +d.maxPostMs.toFixed(2)+' ms ('+d.slowPost
+                +' envois de 50 ms ou plus) ; tentatives de réentrée bloquées '
+                +d.blockedDispatch+'.';
+        }
     }
 }
 function cpsDrawChart() {
