@@ -57,6 +57,8 @@ try {
     IniWrite("77", CF.configFile, "General", "OverlayOpacity")
     IniWrite("1", CF.configFile, "General", "OverlayShowProfile")
 
+    ; Suivre le meme ordre que BackendInit lors d'un vrai demarrage.
+    CF.compactMode := IniRead(CF.configFile, "General", "CompactMode", "0") = "1"
     CFLoadEmergencyShortcut()
     LoadSettings()
     CFDesktopReadPreferences()
@@ -98,10 +100,13 @@ try {
     ; Simuler le redemarrage de la nouvelle version sur les memes fichiers.
     CF.loading := true
     CF.emergencyKey := "F12"
+    CF.compactMode := false
     CF.shortcutRecoveryWarnings := []
     CF.globalKeys := Map()
     CF.profiles := []
     CF.selectedId := 0
+    ; Suivre le meme ordre que BackendInit lors d'un vrai demarrage.
+    CF.compactMode := IniRead(CF.configFile, "General", "CompactMode", "0") = "1"
     CFLoadEmergencyShortcut()
     LoadSettings()
     CFDesktopReadPreferences()
