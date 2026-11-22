@@ -144,9 +144,18 @@ CFRealRawInput(wParam, lParam, msg, hwnd) {
     buttons := NumGet(data, headerSize+4, "UShort")
     if !(buttons & 0x003F)
         return
+    deviceId := NumGet(data, 8, "Ptr")
+    ; Win32 peut créer des WM_INPUT pour les clics SendInput avec
+    ; hDevice=NULL (vérifié dans la CI Windows). Ne JAMAIS les traiter
+    ; comme des événements matériels de maintien. Les vrais périphériques
+    ; HID disposent d'un handle hDevice non nul.
+    if !deviceId {
+        test.rawNullIgnored += 1
+        return
+    }
     test.rawButtonPackets += 1
     test.rawLastButtons := buttons
-    test.rawLastDevice := NumGet(data, 8, "Ptr")
+    test.rawLastDevice := deviceId
     pt := Buffer(8, 0)
     if !DllCall("User32\GetCursorPos", "Ptr", pt.Ptr, "Int")
         return
@@ -414,7 +423,8 @@ CFRealEnd(reason := "arrêté", completed := false) {
             ',"blockedDispatch":' test.blockedDispatch
             ',"maxPostMs":' Round(test.maxPostMs, 3)
             ',"slowPost":' test.slowPost
-            ',"rawButtonPackets":' test.rawButtonPackets '}')
+            ',"rawButtonPackets":' test.rawButtonPackets
+            ',"rawNullIgnored":' test.rawNullIgnored '}')
         CF.realResult := {run: test.run, json: resultJson}
         if !CF.shuttingDown
             CFTestPost(resultJson)
@@ -521,7 +531,7 @@ CFRealOpen(duration, runId, profileId) {
     CF.realTest := {run: runId+0, active:false, held:false,
         pendingStart:false, pendingAttempts:0, physical:0,
         rawRegistered:false, rawButtonPackets:0, rawError:0,
-        rawLastButtons:0, rawLastDevice:0,
+        rawNullIgnored:0, rawLastButtons:0, rawLastDevice:0,
         gui:windowGui, zone:zone, status:status, counters:counters,
         zoneHint:zoneHint, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
