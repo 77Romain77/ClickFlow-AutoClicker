@@ -52,6 +52,18 @@ try {
     CFGlobalReadKeys()
     if CF.globalKeys["next"] != "" || CF.globalKeys["previous"] != "F9"
         throw Error("Les affectations optionnelles ne survivent pas au redémarrage.")
+    ; Anciens fichiers INI : raccourcis non reconnus, modificateurs
+    ; injectés ou valeurs réservées ne doivent pas bloquer le démarrage.
+    IniWrite("UnknownDefinitelyInvalid", CF.configFile, "General", "GlobalTestKey")
+    IniWrite("^F6", CF.configFile, "General", "GlobalOverlayKey")
+    CFGlobalReadKeys()
+    if CF.globalKeys["test"] != "" || CF.globalKeys["overlay"] != ""
+        throw Error("Des raccourcis globaux invalides ont été chargés.")
+    if CF.globalKeys["previous"] != "F9"
+        throw Error("Un raccourci valide a été effacé par la récupération.")
+    if !CF.HasOwnProp("shortcutRecoveryWarnings")
+        || CF.shortcutRecoveryWarnings.Length < 2
+        throw Error("Les raccourcis corrigés ne sont pas signalés.")
     CFGlobalRegister()
     CFGlobalUnregister()
     try UnregisterActivation()
