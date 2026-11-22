@@ -58,6 +58,11 @@ jobs:
             if (!(Test-Path (Join-Path 'stage' $required))) { throw "Stage missing: $required" }
           }
 
+      - name: Verify release version and storage paths
+        shell: pwsh
+        run: |
+          node tests/release-consistency.test.cjs
+
       - name: Validate mouse hold regression fix
         shell: pwsh
         run: |
@@ -122,6 +127,22 @@ jobs:
           $ui = Get-Content 'ui/index.html' -Raw
           foreach ($control in @('exportProfile','importProfile','importProfilePage')) {
             if ($ui -notmatch $control) { throw "Profile import/export UI missing: $control" }
+          }
+
+      - name: Verify upgrade from v1.9.33 preserves user profiles and settings
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path 'tests/ahk-upgrade-preservation.ahk').Path
+          $p = Start-Process -FilePath $env:AHK_EXE -ArgumentList '/ErrorStdOut', $script -PassThru -RedirectStandardError upgrade-test.err -RedirectStandardOutput upgrade-test.out
+          if (-not $p.WaitForExit(20000)) {
+            Stop-Process -Id $p.Id -Force
+            throw 'Upgrade preservation test timed out'
+          }
+          $out = if (Test-Path upgrade-test.out) { Get-Content upgrade-test.out -Raw } else { '' }
+          $err = if (Test-Path upgrade-test.err) { Get-Content upgrade-test.err -Raw } else { '' }
+          Write-Host "Upgrade preservation: $out"
+          if ($p.ExitCode -ne 0 -or $err -or $out -notmatch 'passed') {
+            throw "Upgrade preservation failed: exit=$($p.ExitCode) stderr=$err stdout=$out"
           }
 
       - name: Verify manual CPS tester behavior in Node.js
