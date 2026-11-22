@@ -64,6 +64,37 @@ try {
     if !FileExist(CFProfileFile(3))
         throw Error("Le profil importé n'a pas été sauvegardé.")
 
+    ; Un profil corrompu et un nom dupliqué ne bloquent pas le
+    ; lancement. Les fichiers originaux sont isolés sans être détruits.
+    corrupted := CFProfileFile(4)
+    FileAppend("[Other]" Chr(10) "Name=Invalide", corrupted, "UTF-8")
+    duplicate := CFProfileFile(5)
+    FileCopy(two, duplicate)
+    IniWrite("4", CF.configFile, "Profiles", "Selected")
+    LoadSettings()
+    if CF.profiles.Length != 3 || CF.selectedId = 4
+        throw Error("Un profil corrompu empêche le chargement des profils valides.")
+    if CF.profileRecoveryWarnings.Length != 2
+        throw Error("Les deux profils défectueux n'ont pas été signalés.")
+    if FileExist(corrupted) || FileExist(duplicate)
+        throw Error("Les fichiers invalides n'ont pas été isolés.")
+    savedCorrupt := 0
+    savedDuplicate := 0
+    Loop Files CF.profilesDir "\_recovery\*", "F" {
+        content := FileRead(A_LoopFileFullPath, "UTF-8")
+        if InStr(content, "[Other]")
+            savedCorrupt += 1
+        if InStr(content, "Name=Gaming")
+            savedDuplicate += 1
+    }
+    if savedCorrupt != 1 || savedDuplicate != 1
+        throw Error("Le contenu original de la récupération a été altéré.")
+    if CF.nextId <= 5
+        throw Error("Les identifiants de profils invalides sont réutilisables.")
+    SaveSettings()
+    if FileExist(corrupted) || FileExist(duplicate)
+        throw Error("SaveSettings a écrasé un profil isolé.")
+
     ; Retirer un seul fichier ne doit pas modifier les autres profils.
     FileDelete(one)
     LoadSettings()
