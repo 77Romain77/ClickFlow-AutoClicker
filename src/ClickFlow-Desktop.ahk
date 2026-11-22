@@ -1,4 +1,4 @@
-; ClickFlow v1.8.0 - Tray Windows et overlay d'état léger.
+; ClickFlow - Tray Windows et overlay d'état léger.
 ; Pas de WebView2 secondaire, de courbe GDI, ni d'historique disque.
 CFDesktopInt(value, fallback, minimum, maximum) {
     if String(value) = "-99999"
