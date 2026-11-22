@@ -2329,10 +2329,16 @@ CFPerfStart() {
     CFPerfReset()
     CF.perf.active := true
     CF.perf.startedAt := CFNowMs()
-    ; Le premier échantillon fixe la référence CPU.
-    CFPerfTakeSample()
-    SetTimer(CFPerfSampleTimer, 2000)
-    CFPerfPost("start")
+    try {
+        ; Le premier échantillon fixe la référence CPU.
+        CFPerfTakeSample()
+        SetTimer(CFPerfSampleTimer, 2000)
+        CFPerfPost("start")
+    } catch {
+        ; Aucun état actif fantôme si la lecture système échoue.
+        CFPerfReset()
+        throw
+    }
 }
 
 CFPerfStop() {
@@ -2389,6 +2395,8 @@ CFPerfExportTo(path) {
 
 CFPerfExport() {
     global CF
+    if CF.perf.active
+        throw Error("Arrête la mesure avant d'exporter le rapport.")
     if !CF.perf.samples.Length
         throw Error("Aucune mesure à exporter.")
     path := FileSelect("S16", , "Exporter le diagnostic ClickFlow",
