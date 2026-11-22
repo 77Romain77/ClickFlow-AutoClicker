@@ -52,6 +52,43 @@ CF.overlayRecent := []
 CF.floatShown := false
 targetGui := 0
 try {
+    ; Diagnostic intégré : jamais de timer tant que non demandé,
+    ; relevés Windows et export CSV sans application tierce.
+    CFPerfReset()
+    if CF.perf.active || CF.perf.samples.Length
+        throw Error("Le diagnostic de ressources est actif au repos.")
+    rootPid := DllCall("Kernel32\GetCurrentProcessId", "UInt")
+    if !IsObject(CFPerfReadProcess(rootPid))
+        throw Error("Lecture Win32 du CPU/RAM du processus impossible.")
+    info := CFPerfProcesses()
+    if !info.names.Has(rootPid)
+        throw Error("Énumération des processus Windows indisponible.")
+    tree := Map(10, 8, 8, rootPid)
+    if !CFPerfDescendsFrom(10, rootPid, tree)
+        || CFPerfDescendsFrom(10, 999, tree)
+        throw Error("Détection de descendance WebView2 incorrecte.")
+    CFPerfStart()
+    if !CF.perf.active || CF.perf.samples.Length != 1
+        throw Error("La première mesure du diagnostic est absente.")
+    measured := CF.perf.samples[1]
+    if measured.privateMB <= 0 || measured.threads <= 0
+        throw Error("RAM privée ou nombre de threads invalides.")
+    if measured.webCount < 0 || measured.cpu < 0 || measured.cpu > 100
+        throw Error("Compteurs de ressources incohérents.")
+    CFPerfStop()
+    if CF.perf.active
+        throw Error("Le timer du diagnostic reste actif après arrêt.")
+    csvPath := A_Temp "\clickflow-perf-" A_TickCount ".csv"
+    CFPerfExportTo(csvPath)
+    report := FileRead(csvPath, "UTF-8")
+    if !InStr(report, "CPU total") || !InStr(report, "RAM")
+        || !InStr(report, "Threads")
+        throw Error("L'export CSV des mesures est incomplet.")
+    FileDelete(csvPath)
+    CFPerfReset()
+    if CF.perf.samples.Length || CF.perf.active
+        throw Error("L'effacement des relevés n'a pas libéré la session.")
+
     if CF.engineTimerActive
         throw Error("Le timer moteur doit être arrêté au repos.")
     targetGui := Gui("+AlwaysOnTop", "ClickFlow performance target")
