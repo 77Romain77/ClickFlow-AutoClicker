@@ -2321,6 +2321,108 @@ function navigatePage(page) {
 }
 document.querySelectorAll('.nav-item').forEach(btn=>btn.onclick=()=>
     navigatePage(btn.dataset.page));
+// Diagnostic local de ressources : aucune mesure si l'utilisateur ne démarre pas.
+const perfUi={active:false,samples:[],limit:900};
+function perfMetric(value,suffix='') {
+    return Number.isFinite(Number(value))
+        ?Number(value).toFixed(2).replace('.',',')+suffix:'-';
+}
+function perfDrawChart(id,key,color,unit) {
+    const canvas=$(id),ctx=canvas.getContext('2d');
+    if(!ctx)return;
+    const w=canvas.width,h=canvas.height,left=49,right=15,top=16,bottom=33;
+    ctx.clearRect(0,0,w,h);
+    ctx.font='13px system-ui, sans-serif';
+    ctx.fillStyle='#9fb8d8';
+    const pts=perfUi.samples;
+    if(!pts.length){
+        ctx.textAlign='center';ctx.fillText('Aucune mesure pour le moment',w/2,h/2);
+        return;
+    }
+    const values=pts.map(p=>Math.max(0,Number(p[key])||0));
+    let min=key==='cpu'?0:Math.max(0,Math.floor(Math.min(...values)*0.8/10)*10);
+    let max=key==='cpu'?Math.max(1,Math.ceil(Math.max(...values)*1.15)):
+        Math.ceil(Math.max(...values, min+5)*1.12/10)*10;
+    if(max<=min)max=min+1;
+    const innerW=w-left-right,innerH=h-top-bottom;
+    const lastTime=Math.max(1,Number(pts[pts.length-1].elapsed)||1);
+    const x=t=>left+innerW*Math.max(0,Number(t)||0)/lastTime;
+    const y=v=>top+innerH*(1-(v-min)/(max-min));
+    ctx.lineWidth=1;ctx.strokeStyle='#2b425f';ctx.textAlign='right';
+    for(let i=0;i<=4;i++){
+        const value=min+(max-min)*i/4,yy=y(value);
+        ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
+        ctx.fillText(value.toFixed(key==='cpu'?1:0),left-7,yy+4);
+    }
+    ctx.textAlign='left';
+    ctx.fillText('0 s',left,h-8);
+    ctx.textAlign='right';
+    ctx.fillText(lastTime.toFixed(0)+' s',w-right,h-8);
+    ctx.strokeStyle=color;ctx.lineWidth=2.7;ctx.beginPath();
+    const stride=Math.max(1,Math.floor(pts.length/300));
+    for(let i=0;i<pts.length;i+=stride){
+        const xx=x(pts[i].elapsed),yy=y(values[i]);
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+    }
+    const end=pts.length-1;
+    ctx.lineTo(x(pts[end].elapsed),y(values[end]));
+    ctx.stroke();
+    ctx.fillStyle=color;
+    ctx.fillText(unit,w-right-2,13);
+}
+function perfRender(){
+    $('perfStart').disabled=perfUi.active||!connected;
+    $('perfStop').disabled=!perfUi.active||!connected;
+    $('perfExport').disabled=!connected||!perfUi.samples.length;
+    $('perfClear').disabled=!connected||(!perfUi.active&&!perfUi.samples.length);
+    const p=perfUi.samples.at(-1);
+    $('perfStatus').textContent=perfUi.active
+        ?'Mesure en cours - '+perfUi.samples.length+' relevés'
+        :perfUi.samples.length
+            ?'Mesure arrêtée - '+perfUi.samples.length+' relevés conservés en mémoire'
+            :'Désactivé - aucun relevé en cours.';
+    $('perfCpu').textContent=p?perfMetric(p.cpu,' %'):'-';
+    $('perfRam').textContent=p?perfMetric(p.privateMB,' Mo'):'-';
+    $('perfThreads').textContent=p?String(p.threads):'-';
+    $('perfProcesses').textContent=p?String(p.webCount):'-';
+    $('perfCpuSplit').textContent=p
+        ?'AHK : '+perfMetric(Math.max(0,p.cpu-p.webCpu),' %')
+            +' | WebView2 : '+perfMetric(p.webCpu,' %')
+        :'AHK : - | WebView2 : -';
+    $('perfRamSplit').textContent=p
+        ?'AHK : '+perfMetric(p.ahkMB,' Mo')
+            +' | WebView2 : '+perfMetric(p.webMB,' Mo')
+        :'AHK : - | WebView2 : -';
+    $('perfDuration').textContent='Durée : '+(p?Number(p.elapsed).toFixed(0):'0')+' s';
+    if($('perfPanel').open){
+        perfDrawChart('perfCpuChart','cpu','#67b5ff','CPU %');
+        perfDrawChart('perfRamChart','privateMB','#71d6c2','Mo');
+    }
+}
+function perfHandle(msg){
+    if(msg.action==='start'||msg.action==='clear')perfUi.samples=[];
+    perfUi.active=!!msg.active;
+    if(msg.sample&&typeof msg.sample==='object'&&msg.action!=='clear'){
+        const p=msg.sample,last=perfUi.samples.at(-1);
+        if(!last||Number(p.elapsed)!==Number(last.elapsed)){
+            perfUi.samples.push(p);
+            if(perfUi.samples.length>perfUi.limit)perfUi.samples.shift();
+        }
+    }
+    perfRender();
+    if(msg.action==='error')toast('Diagnostic : '+(msg.message||'Erreur de mesure.'));
+    if(msg.action==='exported')toast(msg.message||'Rapport CSV enregistré.');
+}
+for(const action of ['start','stop','export','clear']){
+    $('perf'+action[0].toUpperCase()+action.slice(1)).onclick=()=>{
+        if(!connected){
+            toast('Disponible uniquement dans ClickFlow Windows.');return;
+        }
+        send('perf',action);
+    };
+}
+$('perfPanel').addEventListener('toggle',()=>{if($('perfPanel').open)perfRender();});
+perfRender();
 if(bridge) {
     window.chrome.webview.addEventListener('message',event=>{
         let msg=event.data;
@@ -2370,6 +2472,7 @@ if(bridge) {
         else if(msg.type==='profileAction') toast(msg.message||'Action terminée.');
         else if(msg.type==='cpsTest') cpsHandleEngineMessage(msg);
         else if(msg.type==='cpsReal') cpsHandleRealMessage(msg);
+        else if(msg.type==='perf') perfHandle(msg);
         else if(msg.type==='shortcuts') {
             model.shortcuts.desktop=!!msg.desktop;
             model.shortcuts.start=!!msg.start;
