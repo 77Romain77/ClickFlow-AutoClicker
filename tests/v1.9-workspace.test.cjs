@@ -3,16 +3,20 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../ui/index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)<\/script>/);
 assert(src,'Integrated UI JavaScript missing');
-assert(html.includes('ClickFlow v1.9.27 · AHK v2')
-    && html.includes('ClickFlow v1.9.27 · AutoHotkey v2'),
+assert(html.includes('ClickFlow v1.9.33 · AHK v2')
+    && html.includes('ClickFlow v1.9.33 · AutoHotkey v2'),
     'Both footer version strings must match the shipped version.');
 new vm.Script(src[1],{filename:'ClickFlow v1.9 UI'});
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
 assert.equal(new Set(ids).size,ids.length,'All IDs must remain unique');
 const settings=html.slice(html.indexOf('<section id="page-settings"'),html.indexOf('<section id="page-about"'));
-assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,7,
-    'General, diagnostics, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
-const labels=['Général','Diagnostics et détection souris','Overlay','Raccourcis globaux','Raccourcis Windows',
+assert.equal((settings.match(/<details class="settings-group"/g)||[]).length,8,
+    'General, detection, performance, overlay, global shortcuts, Windows shortcuts, backup and maintenance need separate groups');
+assert(settings.includes('id="perfStart"') && settings.includes('id="perfStop"')
+    && settings.includes('id="perfExport"') && settings.includes('id="perfCpuChart"')
+    && settings.includes('id="perfRamChart"'),
+    'Native diagnostics must offer start, stop, export and two charts.');
+const labels=['Général','Diagnostics et détection souris','Diagnostic de performances','Overlay','Raccourcis globaux','Raccourcis Windows',
     'Sauvegarde complète','Maintenance'];
 assert(html.includes('Automatique (rapide)')
     && html.includes('Événementielle (rapide)')
