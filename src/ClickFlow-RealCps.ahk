@@ -94,29 +94,99 @@ CFRealInside() {
         NumGet(point, 4, "Int"))
 }
 
-; Le contrôle Text de la fenêtre ne transmet pas systématiquement
-; WM_*BUTTONDOWN à notre OnMessage. Un hook souris bas niveau, limité à
-; la durée du test, détecte les vrais appuis et ignore les clics injectés.
-; Le callback ne fait aucune injection : il signale l'état et programme
-; une intervention courte dans le thread AHK normal.
-CFRealHookCallback(nCode, wParam, lParam) {
+; Les messages WM_* n'arrivent pas toujours sur le contrôle Text.
+; La capture utilise désormais Raw Input pour les vrais appuis physiques.
+; Contrairement à WH_MOUSE_LL, Raw Input ne demande pas une réponse
+; synchrone du thread qui appelle SendInput (évite les blocages ~300 ms).
+CFRealRawButtonInfo(button) {
+    if button = "LButton"
+        return {down:0x0001, up:0x0002, wmDown:0x201, wmUp:0x202}
+    if button = "RButton"
+        return {down:0x0004, up:0x0008, wmDown:0x204, wmUp:0x205}
+    if button = "MButton"
+        return {down:0x0010, up:0x0020, wmDown:0x207, wmUp:0x208}
+    throw Error("Bouton physique non compatible avec Raw Input.")
+}
+
+CFRealRawPhysicalButtons(buttonFlags, x, y) {
     global CF
-    if nCode >= 0 && CF.realTest.run && lParam {
-        msg := wParam & 0xFFFF
-        test := CF.realTest
-        if msg = CFRealMouseMessageId(test.trigger, true)
-            || msg = CFRealMouseMessageId(test.trigger, false) {
-            flags := NumGet(lParam, 12, "UInt")
-            extra := NumGet(lParam, A_PtrSize = 8 ? 24 : 20, "UPtr")
-            if !(flags & 0x1) && !CFRealInfoIsTagged(extra) {
-                x := NumGet(lParam, 0, "Int")
-                y := NumGet(lParam, 4, "Int")
-                CFRealPhysicalMessage(msg, flags, extra, x, y)
-            }
-        }
+    test := CF.realTest
+    if !test.run
+        return
+    button := CFRealRawButtonInfo(test.trigger)
+    ; Un paquet peut contenir DOWN et UP. Respecter leur ordre logique.
+    if buttonFlags & button.down
+        CFRealPhysicalMessage(button.wmDown, 0, 0, x, y)
+    if buttonFlags & button.up
+        CFRealPhysicalMessage(button.wmUp, 0, 0, x, y)
+}
+
+CFRealRawInput(wParam, lParam, msg, hwnd) {
+    global CF
+    test := CF.realTest
+    if !test.run || !test.rawRegistered || !IsObject(test.gui)
+        || hwnd != test.gui.Hwnd || !lParam
+        return
+    headerSize := A_PtrSize = 8 ? 24 : 16
+    bytes := 0
+    rc := DllCall("User32\GetRawInputData", "Ptr", lParam, "UInt", 0x10000003,
+        "Ptr", 0, "UInt*", &bytes, "UInt", headerSize, "UInt")
+    if rc = 0xFFFFFFFF || bytes < headerSize+6 || bytes > 65536
+        return
+    data := Buffer(bytes, 0)
+    size := bytes
+    result := DllCall("User32\GetRawInputData", "Ptr", lParam,
+        "UInt", 0x10000003, "Ptr", data.Ptr,
+        "UInt*", &size, "UInt", headerSize, "UInt")
+    if result = 0xFFFFFFFF || size < headerSize+6
+        || NumGet(data, 0, "UInt") != 0
+        return
+    buttons := NumGet(data, headerSize+4, "UShort")
+    if !(buttons & 0x003F)
+        return
+    test.rawButtonPackets += 1
+    pt := Buffer(8, 0)
+    if !DllCall("User32\GetCursorPos", "Ptr", pt.Ptr, "Int")
+        return
+    CFRealRawPhysicalButtons(buttons,
+        NumGet(pt, 0, "Int"), NumGet(pt, 4, "Int"))
+}
+
+CFRealRegisterRawInput() {
+    global CF
+    test := CF.realTest
+    if !test.run || !IsObject(test.gui)
+        return false
+    device := Buffer(8+A_PtrSize, 0)
+    NumPut("UShort", 1, device, 0) ; HID Generic Desktop
+    NumPut("UShort", 2, device, 2) ; Mouse
+    NumPut("UInt", 0x100, device, 4) ; RIDEV_INPUTSINK
+    NumPut("Ptr", test.gui.Hwnd, device, 8)
+    OnMessage(0x00FF, CFRealRawInput)
+    if DllCall("User32\RegisterRawInputDevices",
+        "Ptr", device.Ptr, "UInt", 1, "UInt", device.Size, "Int") {
+        test.rawRegistered := true
+        return true
     }
-    return DllCall("User32\CallNextHookEx", "Ptr", 0, "Int", nCode,
-        "UPtr", wParam, "Ptr", lParam, "Ptr")
+    test.rawError := DllCall("Kernel32\GetLastError", "UInt")
+    OnMessage(0x00FF, CFRealRawInput, 0)
+    return false
+}
+
+CFRealUnregisterRawInput() {
+    global CF
+    test := CF.realTest
+    if test.rawRegistered {
+        device := Buffer(8+A_PtrSize, 0)
+        NumPut("UShort", 1, device, 0)
+        NumPut("UShort", 2, device, 2)
+        NumPut("UInt", 1, device, 4) ; RIDEV_REMOVE, HWND = NULL
+        NumPut("Ptr", 0, device, 8)
+        DllCall("User32\RegisterRawInputDevices",
+            "Ptr", device.Ptr, "UInt", 1, "UInt", device.Size, "Int")
+        test.rawRegistered := false
+    }
+    OnMessage(0x00FF, CFRealRawInput, 0)
 }
 
 CFRealPhysicalMessage(msg, flags, extra, x, y) {
@@ -322,12 +392,7 @@ CFRealEnd(reason := "arrêté", completed := false) {
     try SetTimer(CFRealBeginPending, 0)
     try SetTimer(CFRealReleasePending, 0)
     try SetTimer(CFRealUpdateStatus, 0)
-    if test.hook
-        DllCall("User32\UnhookWindowsHookEx", "Ptr", test.hook, "Int")
-    if test.callback
-        CallbackFree(test.callback)
-    test.hook := 0
-    test.callback := 0
+    CFRealUnregisterRawInput()
     if !CF.armed && !CF.test.active
         CFEngineSetTimer(false)
     if completed {
@@ -346,7 +411,8 @@ CFRealEnd(reason := "arrêté", completed := false) {
             ',"slowScheduler":' test.slowScheduler
             ',"blockedDispatch":' test.blockedDispatch
             ',"maxPostMs":' Round(test.maxPostMs, 3)
-            ',"slowPost":' test.slowPost '}')
+            ',"slowPost":' test.slowPost
+            ',"rawButtonPackets":' test.rawButtonPackets '}')
         CF.realResult := {run: test.run, json: resultJson}
         if !CF.shuttingDown
             CFTestPost(resultJson)
@@ -397,8 +463,8 @@ CFRealMouse(wParam, lParam, msg, hwnd) {
         }
         return
     }
-    ; L'appui physique est reçu par WH_MOUSE_LL, pas par le contrôle
-    ; statique. WM_* ne sert plus qu'à mesurer les clics injectés.
+    ; L'appui physique est reçu par Raw Input, pas par ce contrôle.
+    ; WM_* sert uniquement à compter les clics injectés.
 
 }
 
@@ -437,8 +503,8 @@ CFRealOpen(duration, runId, profileId) {
     counters := windowGui.AddText("x30 y158 w560 h43 Center Background142943",
         "Appuis physiques : 0     Envoyés : 0     Reçus : 0")
     windowGui.SetFont("s11 w700 cEAF2FF", "Segoe UI")
-    ; Le contrôle est volontairement statique : le hook reçoit les vrais
-    ; boutons même lorsque Windows ne lui adresse pas WM_LBUTTONDOWN.
+    ; Le contrôle est volontairement statique : Raw Input distingue
+    ; les appuis matériels des clics injectés par SendInput.
     zone := windowGui.AddText("x30 y217 w560 h184 Center Border 0x100 Background223E64",
         "ZONE DE RÉCEPTION" "`n`n"
         "Place le curseur ici et maintiens ton bouton.")
@@ -452,7 +518,7 @@ CFRealOpen(duration, runId, profileId) {
     windowGui.OnEvent("Escape", CFRealClose)
     CF.realTest := {run: runId+0, active:false, held:false,
         pendingStart:false, pendingAttempts:0, physical:0,
-        hook:0, callback:0,
+        rawRegistered:false, rawButtonPackets:0, rawError:0,
         gui:windowGui, zone:zone, status:status, counters:counters,
         zoneHint:zoneHint, cfg:cfg, profile:profile.name,
         trigger:trigger, outButton:cfg.clickButton, duration:duration+0,
@@ -470,14 +536,11 @@ CFRealOpen(duration, runId, profileId) {
     windowGui.Show("w620 h505")
     CFRealWindowTheme(windowGui, close)
     test := CF.realTest
-    test.callback := CallbackCreate(CFRealHookCallback, "Fast", 3)
-    module := DllCall("Kernel32\GetModuleHandleW", "Ptr", 0, "Ptr")
-    test.hook := DllCall("User32\SetWindowsHookExW",
-        "Int", 14, "Ptr", test.callback, "Ptr", module,
-        "UInt", 0, "Ptr")
-    if !test.hook {
-        CFRealEnd("Impossible d'installer la détection physique.")
-        throw Error("Impossible d'installer le hook souris physique Windows.")
+    if !CFRealRegisterRawInput() {
+        errorCode := test.rawError
+        CFRealEnd("Détection physique Raw Input indisponible.")
+        throw Error("Impossible d'activer Raw Input pour le test réel (Win32 "
+            errorCode ").")
     }
     CFRealPost("opened", ',"profile":' JsonQuote(profile.name)
         ',"trigger":' JsonQuote(trigger)
