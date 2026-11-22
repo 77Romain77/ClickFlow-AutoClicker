@@ -145,6 +145,8 @@ CFRealRawInput(wParam, lParam, msg, hwnd) {
     if !(buttons & 0x003F)
         return
     test.rawButtonPackets += 1
+    test.rawLastButtons := buttons
+    test.rawLastDevice := NumGet(data, 8, "Ptr")
     pt := Buffer(8, 0)
     if !DllCall("User32\GetCursorPos", "Ptr", pt.Ptr, "Int")
         return
