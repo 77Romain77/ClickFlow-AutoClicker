@@ -2373,7 +2373,7 @@ function perfDrawChart(id,key,color,unit) {
 function perfRender(){
     $('perfStart').disabled=perfUi.active||!connected;
     $('perfStop').disabled=!perfUi.active||!connected;
-    $('perfExport').disabled=!connected||!perfUi.samples.length;
+    $('perfExport').disabled=!connected||!perfUi.samples.length||perfUi.active;
     $('perfClear').disabled=!connected||(!perfUi.active&&!perfUi.samples.length);
     const p=perfUi.samples.at(-1);
     $('perfStatus').textContent=perfUi.active
