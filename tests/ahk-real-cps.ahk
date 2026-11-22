@@ -114,6 +114,7 @@ try {
         || !test.held
         throw Error("Le bouton injecté relâche le maintien physique. held=" test.held
             " rawPackets=" test.rawButtonPackets
+            " rawNullIgnored=" test.rawNullIgnored
             " rawFlags=" test.rawLastButtons
             " rawDevice=" test.rawLastDevice
             " sent=" test.sent " received=" test.received)
