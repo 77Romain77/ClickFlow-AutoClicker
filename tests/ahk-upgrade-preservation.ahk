@@ -93,9 +93,12 @@ try {
         || IniRead(CF.configFile, "General", "EmergencyKey", "MISSING") != ""
         || IniRead(CF.configFile, "General", CFGlobalIniKey("overlay"), "") != "F9"
         throw Error("La sauvegarde apres mise a jour n'est pas persistante.")
-    if IniRead(CFProfileFile(7), "Settings", "min", "") != "8"
-        || IniRead(CFProfileFile(7), "Settings", "activation", "") != "F7"
-        throw Error("La sauvegarde a altere le profil Naturel.")
+    savedMin := IniRead(CFProfileFile(7), "Settings", "min", "")
+    savedActivation := IniRead(CFProfileFile(7), "Settings", "activation", "")
+    if savedMin = "" || Abs((savedMin + 0) - 8) > 0.001
+        || savedActivation != "F7"
+        throw Error("La sauvegarde a altere le profil Naturel : min="
+            savedMin ", activation=" savedActivation)
 
     ; Simuler le redemarrage de la nouvelle version sur les memes fichiers.
     CF.loading := true
