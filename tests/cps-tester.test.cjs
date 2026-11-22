@@ -335,4 +335,27 @@ get('cpsReset').onclick();
 api.cpsSetSource('manual');
 assert.equal(get('cpsTimingDiagnostics').classList.contains('hidden'),false,
     'Last finished native diagnostic is retained across source changes');
+// v1.9.30 : diagnostic des pauses dans le moteur, sans perte de résultat.
+api.cpsSetSource('real');
+get('cpsStartReal').onclick();
+const guardRun=sent.at(-1)[3];
+time=30100;
+api.cpsHandleRealMessage({state:'started',run:guardRun,profile:'Gaming'});
+api.cpsHandleRealMessage({state:'ticks',run:guardRun,sent:3,received:3,
+    sentTicks:[0,81,162],ticks:[1,82,163]});
+time=31500;
+api.cpsHandleRealMessage({state:'finished',run:guardRun,duration:2,
+    profile:'Gaming',sent:3,received:3,
+    sentTicks:[0,81,162],ticks:[1,82,163],
+    maxSendInputMs:135.25,slowSendInput:2,
+    maxSchedulerDelayMs:280.75,slowScheduler:1,
+    blockedDispatch:3,maxPostMs:14.125,slowPost:0});
+assert.equal(st.phase,'done','The diagnostic must not affect completion');
+assert.equal(st.last.diagnostics.maxSendInputMs,135.25);
+assert.equal(st.last.diagnostics.slowSendInput,2);
+assert.equal(st.last.diagnostics.maxSchedulerDelayMs,280.75);
+assert.equal(st.last.diagnostics.blockedDispatch,3);
+assert(get('cpsTimingDiagnostics').textContent.includes('SendInput max 135.25 ms'));
+assert(get('cpsTimingDiagnostics').textContent.includes('retard avant un clic max 280.75 ms'));
+assert(get('cpsTimingDiagnostics').textContent.includes('tentatives de réentrée bloquées 3'));
 console.log('CPS simulation, manual clicking and native sent/received Windows test passed.');
