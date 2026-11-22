@@ -560,6 +560,14 @@ CFRealOpen(duration, runId, profileId) {
         ',"button":' JsonQuote(cfg.clickButton))
 }
 
+; Testable sans injection : préserver la phase malgré l'appel système,
+; mais jamais envoyer deux clics quasi simultanément après un blocage.
+CFRealDeadlineAfterSend(nextDue, sendDone, intervalMs) {
+    if nextDue <= sendDone + CFDeadlineMinLead(intervalMs)
+        return sendDone + intervalMs
+    return nextDue
+}
+
 CFRealTick(now := "") {
     global CF
     test := CF.realTest
@@ -627,10 +635,11 @@ CFRealTick(now := "") {
         test.sentTicks.Push(sentOffset)
         test.pendingSent.Push(sentOffset)
 
-        ; Pas de rafale de rattrapage après un SendInput bloqué : attendre
-        ; de nouveau une période normale. Garder la phase si en avance.
-        if test.nextAt < sendDone + Max(10, period * 0.5)
-            test.nextAt := sendDone + period
+        ; Ne pas additionner systématiquement la durée de SendInput
+        ; à l'intervalle demandé (cela plafonnait le test à ~88 CPS).
+        ; Si l'échéance est déjà dépassée ou trop proche, replanifier
+        ; une seule période complète : aucun clic de rattrapage.
+        test.nextAt := CFRealDeadlineAfterSend(test.nextAt, sendDone, period)
         if sendDone-test.lastFlush >= 350 {
             test.lastFlush := sendDone
             CFRealFlush()

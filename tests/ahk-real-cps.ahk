@@ -46,6 +46,17 @@ try {
         || !CFRealCanSend(true,true,true,true)
         throw Error("Un clic serait possible hors de la fenêtre native.")
 
+    ; A 100 CPS, 1-5 ms de SendInput ne doivent pas être
+    ; ajoutées aux 10 ms demandées à chaque clic.
+    if CFRealDeadlineAfterSend(1010, 1003, 10) != 1010
+        || CFRealDeadlineAfterSend(1010, 1007, 10) != 1010
+        throw Error("La phase 100 CPS dérive avec SendInput.")
+    if CFRealDeadlineAfterSend(1010, 1009, 10) != 1019
+        || CFRealDeadlineAfterSend(1010, 1030, 10) != 1040
+        throw Error("Une longue interruption produit un rattrapage.")
+    if CFRealDeadlineAfterSend(1081.3, 1005, 81.3) != 1081.3
+        throw Error("La cadence 12,3 CPS est perturbée.")
+
     CFRealOpen(2,7,1)
     if CF.realTest.run != 7 || !IsObject(CF.realTest.zone)
         throw Error("Fenêtre native de réception absente.")

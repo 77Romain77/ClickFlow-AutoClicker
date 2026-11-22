@@ -34,8 +34,10 @@ CFGlobalReadKeys() {
     for action in CFGlobalKeys() {
         key := IniRead(CF.configFile, "General", CFGlobalIniKey(action), "")
         ; Ne pas activer des valeurs mal formées issues d'un ancien INI.
-        if StrLen(key) > 32 || key = "Escape" || key = "Esc"
+        if !CFValidSavedShortcut(key, true) {
+            CFShortcutRecoveryWarn("Raccourci global invalide : " action ".")
             key := ""
+        }
         CF.globalKeys[action] := key
     }
     ; Ne jamais bloquer le démarrage pour un conflit dans un vieux fichier.
@@ -43,8 +45,10 @@ CFGlobalReadKeys() {
         key := CF.globalKeys[action]
         if key = ""
             continue
-        if CFGlobalConflicts(key, action)
+        if CFGlobalConflicts(key, action) {
+            CFShortcutRecoveryWarn("Conflit de raccourci global : " action ".")
             CF.globalKeys[action] := ""
+        }
     }
 }
 
@@ -76,7 +80,11 @@ CFGlobalRegister() {
         key := CF.globalKeys.Get(action, "")
         if key = ""
             continue
-        Hotkey("~*" key, CFGlobalTrigger.Bind(action), "On")
+        try Hotkey("~*" key, CFGlobalTrigger.Bind(action), "On")
+        catch {
+            CF.globalKeys[action] := ""
+            CFShortcutRecoveryWarn("Raccourci global non pris en charge : " action ".")
+        }
     }
 }
 
@@ -94,10 +102,8 @@ CFGlobalSet(action, key) {
     if !HasValue(CFGlobalKeys(), action)
         throw Error("Action globale invalide.")
     if key != "" {
-        if StrLen(key) > 32 || !GetKeyVK(key)
-            throw Error("Raccourci non reconnu.")
-        if key = "Escape" || key = "Esc"
-            throw Error("Échap est réservé à l'annulation.")
+        if !CFValidSavedShortcut(key)
+            throw Error("Raccourci non reconnu ou réservé.")
         if CFGlobalConflicts(key, action)
             throw Error("Cette touche est déjà utilisée par une action ou un profil.")
     }

@@ -1,29 +1,37 @@
 # ClickFlow - AutoCliker
 
-**Version d'essai 1.9.31 - AutoClicker pour Windows, sans application .exe à installer.**
+**Version d'essai 1.9.32 - AutoClicker pour Windows, sans application .exe à installer.**
 
 ClickFlow est un auto-clicker Windows avec une interface graphique WebView2, un moteur AutoHotkey v2, plusieurs modes de CPS et des profils sauvegardés.
 
 ## Télécharger
 
-Télécharger le fichier unique **[ClickFlow-v1.9.31.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.31)** depuis les Releases GitHub.
+Télécharger le fichier unique **[ClickFlow-v1.9.32.ahk](https://github.com/77Romain77/ClickFlow-AutoClicker/releases/tag/v1.9.32)** depuis les Releases GitHub.
 
 **Prérequis :** Windows 10/11 64 bits, [AutoHotkey v2 64 bits](https://www.autohotkey.com/) et le runtime Microsoft WebView2 (présent sur la plupart des Windows récents).
 
 1. Installer AutoHotkey v2 si nécessaire.
-2. Télécharger `ClickFlow-v1.9.31.ahk`.
+2. Télécharger `ClickFlow-v1.9.32.ahk`.
 3. Double-cliquer sur ce fichier.
 4. Dans l'onglet **Paramètres**, créer séparément les raccourcis Bureau et menu Démarrer si nécessaire.
 
-Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.31`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
+Au premier lancement, ClickFlow extrait ses composants locaux dans `%LOCALAPPDATA%\ClickFlow\Runtime-1.9.32`. Aucun compilateur ni `.exe` ClickFlow n'est nécessaire. Il n'y a **pas de téléchargement automatique de mises à jour**.
 
 Le ZIP source accompagné de l'ensemble des composants est fourni comme alternative dans les Releases.
+
+## Précision à 100 CPS et récupération automatique (v1.9.32)
+
+À très haute cadence, le calcul d'échéance conserve désormais les intervalles théoriques malgré le léger temps d'exécution de `SendInput`. Le moteur normal et le banc de Réception réelle appliquent la même règle de conservation de phase, avec une protection contre les rafales de rattrapage si Windows bloque réellement.
+
+Les fichiers de profil illisibles ou en double ne bloquent plus le démarrage : ClickFlow essaie de les isoler dans `%APPDATA%\\ClickFlow\\profiles\\_recovery` sans les supprimer ni écraser leurs originaux. Les raccourcis invalides provenant d'anciens paramètres sont corrigés avec des valeurs sûres ; le choix explicite "Aucun" reste respecté. Les éventuelles corrections sont signalées dans l'application.
+
+Les tests automatisés couvrent désormais la conservation de phase à 100 CPS sur une simulation de 30 secondes, les récupérations de profils et la validation des raccourcis. La mesure réelle de 100 CPS pendant 30 secondes doit toujours être confirmée sur Windows après installation.
 
 ## Suppression du hook de souris bloquant dans Réception réelle (v1.9.31)
 
 Les diagnostics de la v1.9.30 montrent que les appels SendInput se bloquent 300-320 ms dans la fenêtre native, tandis que le cadenceur n'a que 1-3 ms de retard et que WebView2 n'enregistre aucune latence. La fenêtre utilisait un hook bas niveau WH_MOUSE_LL dans le même thread AutoHotkey que l'injection SendInput, une architecture susceptible de bloquer le traitement des événements souris.
 
-La v1.9.31 remplace **uniquement dans la fenêtre de test réel** le hook de souris par **Raw Input**, déjà utilisé dans ClickFlow pour certaines conditions souris. Raw Input signale les pressions physiques des boutons gauche, droit et milieu. Les événements Raw Input à périphérique nul que Windows peut émettre pour les clics SendInput sont explicitement ignorés pour éviter tout faux relâchement. Le test conserve la vérification de focus, le rectangle de réception, l'arrêt au relâchement et les statistiques séparées envoi/réception. L'inscription Raw Input est limitée à la durée de la fenêtre et retirée à sa fermeture. Aucun paramètre Windows ni registre n'est modifié.
+La v1.9.32 remplace **uniquement dans la fenêtre de test réel** le hook de souris par **Raw Input**, déjà utilisé dans ClickFlow pour certaines conditions souris. Raw Input signale les pressions physiques des boutons gauche, droit et milieu. Les événements Raw Input à périphérique nul que Windows peut émettre pour les clics SendInput sont explicitement ignorés pour éviter tout faux relâchement. Le test conserve la vérification de focus, le rectangle de réception, l'arrêt au relâchement et les statistiques séparées envoi/réception. L'inscription Raw Input est limitée à la durée de la fenêtre et retirée à sa fermeture. Aucun paramètre Windows ni registre n'est modifié.
 
 Ce changement vise à éliminer les blocages synchrones de SendInput observés en v1.9.30. Il reste à valider par un essai manuel sur la souris physique de l'utilisateur : les tests automatisés ne peuvent pas reproduire fidèlement toutes les entrées matérielles.
 

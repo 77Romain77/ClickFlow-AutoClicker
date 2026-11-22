@@ -35,8 +35,35 @@ CFWriteProfile(profile) {
     }
 }
 
+CFProfileQuarantine(path, reason) {
+    global CF
+    ; Ne jamais détruire ni réécrire un profil illisible au démarrage.
+    ; Conserver son nom et son contenu dans un sous-dossier non chargé.
+    folder := CF.profilesDir "\_recovery"
+    moved := false
+    try {
+        DirCreate(folder)
+        SplitPath(path, &filename)
+        Loop 100 {
+            dest := folder "\" filename "." A_Now "-" A_TickCount "-" A_Index ".damaged"
+            if !FileExist(dest) {
+                FileMove(path, dest)
+                moved := true
+                break
+            }
+        }
+    } catch {
+        ; Sans permission de déplacer, ignorer ce fichier pendant
+        ; la session, sans le réécrire ni empêcher les autres de démarrer.
+    }
+    CF.profileRecoveryWarnings.Push(
+        (moved ? "Profil isolé : " : "Profil ignoré (fichier conservé) : ")
+        path " (" reason ")")
+}
+
 CFLoadSeparatedProfiles() {
     global CF
+    CF.profileRecoveryWarnings := []
     if !DirExist(CF.profilesDir)
         return false
     loaded := []
@@ -45,34 +72,44 @@ CFLoadSeparatedProfiles() {
         if !RegExMatch(A_LoopFileName, "^profile-([1-9]\d{0,8})\.ini$", &match)
             continue
         id := match[1] + 0
-        path := A_LoopFileFullPath
-        if FileGetSize(path) > 65536
-            throw Error("Profil trop volumineux : " A_LoopFileName)
-        if IniRead(path, "ClickFlowProfile", "FormatVersion", "") != "1"
-            throw Error("Profil illisible : " A_LoopFileName)
-        name := Trim(IniRead(path, "ClickFlowProfile", "Name", ""))
-        if name = "" || StrLen(name) > 36
-            throw Error("Nom de profil invalide : " A_LoopFileName)
-        for previous in loaded
-            if StrLower(previous.name) = StrLower(name)
-                throw Error("Deux profils utilisent le même nom : " name)
-        favorite := IniRead(path, "ClickFlowProfile", "Favorite", "0") = "1"
-        rank := IniRead(path, "ClickFlowProfile", "SortOrder", String(id))
-        if !RegExMatch(rank, "^\d{1,9}$")
-            rank := id
-        loaded.Push({id: id, name: name, favorite: favorite,
-            sortOrder: rank + 0, cfg: ReadConfig(path, "Settings", DefaultConfig())})
         maxId := Max(maxId, id)
+        path := A_LoopFileFullPath
+        try {
+            if FileGetSize(path) > 65536
+                throw Error("Profil trop volumineux.")
+            if IniRead(path, "ClickFlowProfile", "FormatVersion", "") != "1"
+                throw Error("Format de profil illisible.")
+            name := Trim(IniRead(path, "ClickFlowProfile", "Name", ""))
+            if name = "" || StrLen(name) > 36
+                throw Error("Nom de profil invalide.")
+            for previous in loaded
+                if StrLower(previous.name) = StrLower(name)
+                    throw Error("Nom de profil déjà utilisé : " name)
+            favorite := IniRead(path, "ClickFlowProfile", "Favorite", "0") = "1"
+            rank := IniRead(path, "ClickFlowProfile", "SortOrder", String(id))
+            if !RegExMatch(rank, "^\d{1,9}$")
+                rank := id
+            cfg := ReadConfig(path, "Settings", DefaultConfig())
+            loaded.Push({id: id, name: name, favorite: favorite,
+                sortOrder: rank + 0, cfg: cfg})
+        } catch as err {
+            CFProfileQuarantine(path, err.Message)
+        }
     }
     if loaded.Length = 0 {
         ; Après migration, une suppression manuelle des fichiers ne doit pas
         ; restaurer des profils historiques cachés dans settings.ini.
         if IniRead(CF.configFile, "Profiles", "StorageVersion", "") != "2"
+            && CF.profileRecoveryWarnings.Length = 0
             return false
         defaults := DefaultConfig()
-        CF.profiles := [{id: 1, name: "Principal", cfg: defaults}]
-        CF.selectedId := 1
-        CF.nextId := Max(2, IniRead(CF.configFile, "Profiles", "NextId", 2) + 0)
+        ; Si un profil corrompu n'a pas pu être déplacé, ne jamais
+        ; réutiliser son identifiant en sauvegardant le profil de secours.
+        fallbackId := maxId + 1
+        CF.profiles := [{id: fallbackId, name: "Principal", cfg: defaults}]
+        CF.selectedId := fallbackId
+        CF.nextId := Max(fallbackId + 1,
+            IniRead(CF.configFile, "Profiles", "NextId", 2) + 0)
         CF.cfg := defaults
         return true
     }
