@@ -64,15 +64,24 @@ try {
     if !CFRealInside()
         throw Error("Le curseur n'est pas dans la zone native de test.")
 
-    ; Un vrai appui dans la zone déclenche maintenant le test, sans
-    ; dépendre de WM_LBUTTONDOWN reçu par le contrôle Text. Les
-    ; injections système (LLMHF_INJECTED=1) ne doivent jamais le faire.
+    ; Raw Input distingue les appuis physiques des clics injectés.
+    ; Les tests unitaires des transitions sont déterministes, mais une
+    ; vraie souris physique doit être vérifiée sur le poste utilisateur.
     test := CF.realTest
     test.cfg.mode := 1
     test.cfg.min := 1
     test.cfg.max := 1
-    if !test.hook
-        throw Error("Le hook souris physique n'a pas été installé.")
+    if !test.rawRegistered
+        throw Error("Raw Input n'a pas été activé pour le récepteur natif.")
+    if test.HasOwnProp("hook") || test.HasOwnProp("callback")
+        throw Error("Le test natif installe encore un hook bas niveau.")
+    for btn in [{key:"LButton",down:1,up:2},
+        {key:"RButton",down:4,up:8},
+        {key:"MButton",down:16,up:32}] {
+        flags := CFRealRawButtonInfo(btn.key)
+        if flags.down != btn.down || flags.up != btn.up
+            throw Error("Mapping Raw Input incorrect pour " btn.key)
+    }
     centerX := NumGet(pt, 0, "Int")
     centerY := NumGet(pt, 4, "Int")
     if CFRealPhysicalMessage(0x201, 1, CFRealMarker(), centerX, centerY)
@@ -81,8 +90,8 @@ try {
         throw Error("Un clic injecté a armé le test réel.")
     if CFRealPhysicalMessage(0x201, 0, 0, centerX, centerY-260)
         throw Error("Un appui hors de la zone a armé le test réel.")
-    if !CFRealPhysicalMessage(0x201, 0, 0, centerX, centerY)
-        || !test.held || !test.pendingStart || test.physical != 1
+    CFRealRawPhysicalButtons(0x0001, centerX, centerY)
+    if !test.held || !test.pendingStart || test.physical != 1
         throw Error("Le premier appui physique dans la zone n'est pas détecté.")
     CFRealBeginPending()
     if !test.active || test.pendingStart
@@ -104,8 +113,8 @@ try {
         || CFRealPhysicalMessage(0x202, 1, 0, centerX, centerY)
         || !test.held
         throw Error("Le bouton injecté relâche le maintien physique.")
-    if !CFRealPhysicalMessage(0x202, 0, 0, centerX, centerY)
-        || test.held
+    CFRealRawPhysicalButtons(0x0002, centerX, centerY)
+    if test.held
         throw Error("Le vrai relâchement ne met pas fin au maintien.")
     CFRealReleasePending()
     if CF.engineTimerActive
@@ -113,8 +122,8 @@ try {
     if test.received != test.sent
         throw Error("Les compteurs envoyés/reçus divergent sur le récepteur natif.")
     ; Nouvel appui physique : la même fenêtre doit rester utilisable.
-    if !CFRealPhysicalMessage(0x201, 0, 0, centerX, centerY)
-        || test.physical != 2
+    CFRealRawPhysicalButtons(0x0001, centerX, centerY)
+    if test.physical != 2
         throw Error("Le second appui physique n'a pas été détecté.")
     CFRealBeginPending()
     CFEngineSetTimer(false)
@@ -175,6 +184,8 @@ try {
     CFRealTick()
     if CF.realTest.run != 0
         throw Error("La sortie de zone n'a pas fermé le test.")
+    if test.rawRegistered
+        throw Error("L'abonnement Raw Input est resté actif après fermeture.")
     if test.sent != test.received
         throw Error("Un clic a été envoyé hors zone.")
     ; Une fin native doit rester récupérable, même après destruction
@@ -206,7 +217,7 @@ try {
     if CF.realResult.run != 8
         throw Error("La demande status a effacé le résultat natif.")
     MouseMove(savedX,savedY,0)
-    FileAppend("Native physical DOWN/UP, injected-input filter, tagged SendInput delivery, focus/zone guard, completion recovery and cleanup passed.",
+    FileAppend("Native Raw Input DOWN/UP, injected-input filter, tagged SendInput delivery, focus/zone guard, completion recovery and cleanup passed.",
         "*","UTF-8")
     ExitApp(0)
 } catch as err {
