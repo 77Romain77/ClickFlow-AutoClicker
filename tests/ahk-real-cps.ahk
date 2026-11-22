@@ -112,7 +112,11 @@ try {
     if !test.held || CFRealPhysicalMessage(0x202, 1, CFRealMarker(), centerX, centerY)
         || CFRealPhysicalMessage(0x202, 1, 0, centerX, centerY)
         || !test.held
-        throw Error("Le bouton injecté relâche le maintien physique.")
+        throw Error("Le bouton injecté relâche le maintien physique. held=" test.held
+            " rawPackets=" test.rawButtonPackets
+            " rawFlags=" test.rawLastButtons
+            " rawDevice=" test.rawLastDevice
+            " sent=" test.sent " received=" test.received)
     CFRealRawPhysicalButtons(0x0002, centerX, centerY)
     if test.held
         throw Error("Le vrai relâchement ne met pas fin au maintien.")
