@@ -45,8 +45,7 @@ CFProfileQuarantine(path, reason) {
         DirCreate(folder)
         SplitPath(path, &filename)
         Loop 100 {
-            dest := folder "\" filename "." A_Now "-" A_TickCount
-                "-" A_Index ".damaged"
+            dest := folder "\" filename "." A_Now "-" A_TickCount "-" A_Index ".damaged"
             if !FileExist(dest) {
                 FileMove(path, dest)
                 moved := true
