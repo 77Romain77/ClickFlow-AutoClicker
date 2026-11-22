@@ -2334,10 +2334,10 @@ CFPerfStart() {
         CFPerfTakeSample()
         SetTimer(CFPerfSampleTimer, 2000)
         CFPerfPost("start")
-    } catch {
+    } catch as err {
         ; Aucun état actif fantôme si la lecture système échoue.
         CFPerfReset()
-        throw
+        throw err
     }
 }
 
