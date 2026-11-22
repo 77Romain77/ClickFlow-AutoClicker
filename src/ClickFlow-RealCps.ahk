@@ -627,9 +627,11 @@ CFRealTick(now := "") {
         test.sentTicks.Push(sentOffset)
         test.pendingSent.Push(sentOffset)
 
-        ; Pas de rafale de rattrapage après un SendInput bloqué : attendre
-        ; de nouveau une période normale. Garder la phase si en avance.
-        if test.nextAt < sendDone + Max(10, period * 0.5)
+        ; Ne pas additionner systématiquement la durée de SendInput
+        ; à l'intervalle demandé (cela plafonnait le test à ~88 CPS).
+        ; Si l'échéance est déjà dépassée ou trop proche, replanifier
+        ; une seule période complète : aucun clic de rattrapage.
+        if test.nextAt <= sendDone + CFDeadlineMinLead(period)
             test.nextAt := sendDone + period
         if sendDone-test.lastFlush >= 350 {
             test.lastFlush := sendDone
