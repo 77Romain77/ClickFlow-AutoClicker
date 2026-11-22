@@ -560,6 +560,14 @@ CFRealOpen(duration, runId, profileId) {
         ',"button":' JsonQuote(cfg.clickButton))
 }
 
+; Testable sans injection : préserver la phase malgré l'appel système,
+; mais jamais envoyer deux clics quasi simultanément après un blocage.
+CFRealDeadlineAfterSend(nextDue, sendDone, intervalMs) {
+    if nextDue <= sendDone + CFDeadlineMinLead(intervalMs)
+        return sendDone + intervalMs
+    return nextDue
+}
+
 CFRealTick(now := "") {
     global CF
     test := CF.realTest
@@ -631,8 +639,7 @@ CFRealTick(now := "") {
         ; à l'intervalle demandé (cela plafonnait le test à ~88 CPS).
         ; Si l'échéance est déjà dépassée ou trop proche, replanifier
         ; une seule période complète : aucun clic de rattrapage.
-        if test.nextAt <= sendDone + CFDeadlineMinLead(period)
-            test.nextAt := sendDone + period
+        test.nextAt := CFRealDeadlineAfterSend(test.nextAt, sendDone, period)
         if sendDone-test.lastFlush >= 350 {
             test.lastFlush := sendDone
             CFRealFlush()
