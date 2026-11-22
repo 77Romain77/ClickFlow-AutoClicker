@@ -42,7 +42,8 @@ includesAll('CHANGELOG.md', '## ' + version + ' - ');
 const backend = read('src/ClickFlow-Backend.ahk');
 const launcher = read('tools/build_single_ahk.py');
 includesAll('src/ClickFlow-Backend.ahk',
-    'CF.profilesDir :=', 'CF.configFile :=');
+    'configFile: A_AppData "\\ClickFlow\\settings.ini"',
+    'profilesDir: A_AppData "\\ClickFlow\\profiles"');
 assert(
     launcher.includes('stableScript := appDir "\\ClickFlow.ahk"'),
     'Stable user launcher path must not be versioned'
