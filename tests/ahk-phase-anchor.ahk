@@ -21,8 +21,14 @@ try {
         throw Error("Un retard important ne remet pas à zéro la phase.")
     if CFNextDeadline(1000, 1050, 81) != 1131
         throw Error("Une échéance trop rapprochée génère un rattrapage.")
-    if CFNextDeadline(1000, 1000.9, 10) < 1010
-        throw Error("La limite de 100 CPS peut être dépassée.")
+    if Abs(CFNextDeadline(1000, 1000.9, 10) - 1010) > 0.001
+        throw Error("La phase à 100 CPS ne doit pas dériver à chaque clic.")
+    if Abs(CFNextDeadline(1000, 1001.5, 10) - 1010) > 0.001
+        throw Error("Le bruit de timer à 100 CPS accumule un retard.")
+    if CFNextDeadline(1000, 1009, 10) < 1019
+        throw Error("Le cadenceur rattrape une échéance trop proche.")
+    if CFNextDeadline(1000, 1400, 10) != 1410
+        throw Error("Une longue pause produit des clics de rattrapage.")
 
     cfg := DefaultConfig()
     cfg.mode := 1
@@ -61,6 +67,38 @@ try {
     recentAverage := (ticks[ticks.Length]-ticks[ticks.Length-60])/60
     if Abs(recentAverage - 1000/12.3) > 0.04
         throw Error("La phase n'est pas compensée : " recentAverage " ms.")
+
+    ; Simulation déterministe : 30 s à 100 CPS avec 1,3 ms de
+    ; surcharge entre réveil et émission, sans aucune rafale artificielle.
+    high := DefaultConfig()
+    high.mode := 1
+    high.min := 100
+    high.max := 100
+    CF.profiles := [{id:2,name:"Fixe 100",cfg:high}]
+    CFTestStart(30, 773, 2)
+    CFEngineSetTimer(false)
+    CFStatsSetTimer(false)
+    started := CF.test.started
+    count := 0
+    Loop 3200 {
+        if !CF.test.active
+            break
+        due := CF.test.nextAt
+        tickAt := due + (count = 0 ? 0 : 1.3)
+        if tickAt >= started + 30000
+            break
+        CFTestTick(tickAt)
+        count += 1
+    }
+    CFTestTick(started + 30001)
+    if CF.test.clicks.Length != 3000
+        throw Error("La phase à 100 CPS dérive : "
+            CF.test.clicks.Length " clics / 3000 attendus.")
+    highTicks := CF.test.clicks
+    if Abs((highTicks[3000] - highTicks[2940]) / 60 - 10) > 0.001
+        throw Error("La moyenne à 100 CPS n'est pas de 10 ms.")
+    ; Restaurer le profil 12,3 CPS pour le test d'interruption.
+    CF.profiles := [{id:1,name:"Fixe 12,3",cfg:cfg}]
 
     ; Si le système reste bloqué 2 secondes, on doit produire un seul
     ; déclenchement au retour puis repartir normalement, pas 25 clics.
